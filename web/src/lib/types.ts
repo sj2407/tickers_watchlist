@@ -1,7 +1,7 @@
 // Shape of the snapshot produced by the Python pipeline (tracker/snapshot.py)
 // and enriched by the Claude routine. Keep in sync with that module.
 
-export type Lean = "pile_on" | "trim" | "hold";
+export type Lean = "pile_on" | "hold" | "trim" | "exit" | "watch";
 export type Sentiment = "bullish" | "bearish" | "neutral" | "mixed";
 export type BadgeTone = "good" | "bad" | "warn" | "info";
 
@@ -52,6 +52,38 @@ export interface Technicals {
   avg_vol_20d?: number | null;
   rel_volume?: number | null;
   trend?: "uptrend" | "downtrend" | "mixed" | "n/a";
+  macd_state?: "bullish_cross" | "bearish_cross" | "no_cross" | null;
+  macd_hist?: number | null;
+  ma_cross?: "golden_cross" | "death_cross" | "above" | "below" | "insufficient";
+  support_dist_pct?: number | null;
+  resistance_dist_pct?: number | null;
+  support_price?: number | null;
+  resistance_price?: number | null;
+  breakout?: boolean;
+  breakout_confirmed?: boolean;
+}
+
+export interface Fundamentals {
+  source?: string | null;
+  report_date?: string | null;
+  fiscal_period?: string | null;
+  revenue?: number | null;
+  revenue_yoy?: number | null;
+  revenue_qoq_pct?: number | null;
+  eps?: number | null;
+  eps_yoy?: number | null;
+  eps_ttm?: number | null;
+  gross_margin?: number | null;
+  gross_margin_qoq_pp?: number | null;
+  eps_miss_count_last3?: number | null;
+  pe?: number | null;
+}
+
+export interface ThesisBreak {
+  revenue_qoq_drop?: boolean | null;
+  margin_compression?: boolean | null;
+  repeated_eps_miss?: boolean | null;
+  any?: boolean;
 }
 
 export interface Position {
@@ -105,6 +137,7 @@ export interface Signals {
   provisional_lean: Lean;
   pile_points: string[];
   trim_points: string[];
+  drivers?: { pile: string[]; deterioration: string[]; blocks: string[] };
 }
 
 export interface Ticker {
@@ -113,6 +146,8 @@ export interface Ticker {
   returns: Returns;
   relative_strength: Record<string, number | null>;
   technicals: Technicals;
+  fundamentals?: Fundamentals | null;
+  thesis_break?: ThesisBreak | null;
   series: PricePoint[];
   position: Position;
   earnings: Earnings;
@@ -126,6 +161,8 @@ export interface Ticker {
   earnings_recap: string | null;
   final_lean: Lean | null;
   rationale: string | null;
+  entry_guidance?: string | null;
+  invalidation?: string | null;
 }
 
 export interface Portfolio {

@@ -1,0 +1,290 @@
+[
+  {
+    "key": "rsi14",
+    "label": "RSI (14)",
+    "category": "technical",
+    "definition": "Momentum oscillator from 0\u2013100; how hot or cold the recent move is.",
+    "how_computed": "Wilder's RSI over the last 14 daily closes.",
+    "good_when": "30\u201370 is neutral; <30 oversold (possible add timing); >70 overbought (don't chase).",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "macd",
+    "label": "MACD",
+    "category": "technical",
+    "definition": "Trend/momentum crossover signal.",
+    "how_computed": "EMA(12) \u2212 EMA(26) vs its 9-day signal line; we read the latest crossover.",
+    "good_when": "A bullish cross is favorable; a bearish cross is caution.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "ma_cross",
+    "label": "50/200-day cross",
+    "category": "technical",
+    "definition": "Medium-term vs long-term trend relationship.",
+    "how_computed": "State of SMA(50) vs SMA(200): golden/death cross, or above/below.",
+    "good_when": "Golden cross / 50 above 200 = uptrend; death cross / below = downtrend.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "trend",
+    "label": "Trend",
+    "category": "technical",
+    "definition": "Overall direction of the price.",
+    "how_computed": "Price vs the 50-day, and the 50-day vs the 200-day.",
+    "good_when": "Uptrend (price > 50d > 200d) is favorable.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "dist_sma20_pct",
+    "label": "vs 20-day avg",
+    "category": "technical",
+    "definition": "How far price sits above/below its short-term average.",
+    "how_computed": "(close / SMA20 \u2212 1) \u00d7 100.",
+    "good_when": "Far above (\u2265~12%) = extended/overbought zone \u2014 wait for a pullback, don't chase.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "dist_sma50_pct",
+    "label": "vs 50-day avg",
+    "category": "technical",
+    "definition": "How far price sits above/below its medium-term average.",
+    "how_computed": "(close / SMA50 \u2212 1) \u00d7 100.",
+    "good_when": "Modestly above in an uptrend is healthy; far above = extended (don't chase).",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "dist_sma200_pct",
+    "label": "vs 200-day avg",
+    "category": "technical",
+    "definition": "Price vs its long-term average.",
+    "how_computed": "(close / SMA200 \u2212 1) \u00d7 100.",
+    "good_when": "Above the 200-day is a long-term uptrend.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "dist_52w_high_pct",
+    "label": "From 52-week high",
+    "category": "technical",
+    "definition": "How far below the past year's high.",
+    "how_computed": "(close / max(last 252 closes) \u2212 1) \u00d7 100.",
+    "good_when": "Near 0% = relative strength.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "support_dist_pct",
+    "label": "Distance to support",
+    "category": "technical",
+    "definition": "How far above the nearest support level.",
+    "how_computed": "% above the nearest swing-low pivot below price.",
+    "good_when": "Near support = tightly definable risk and a better add zone.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "resistance_dist_pct",
+    "label": "Distance to resistance",
+    "category": "technical",
+    "definition": "How far below the nearest resistance level.",
+    "how_computed": "% below the nearest swing-high pivot above price.",
+    "good_when": "A confirmed break above resistance signals momentum.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "rel_volume",
+    "label": "Relative volume",
+    "category": "technical",
+    "definition": "Today's volume vs its recent average \u2014 conviction behind the move.",
+    "how_computed": "latest volume / mean(prior 20 sessions).",
+    "good_when": "\u22651.5\u00d7 confirms a breakout/breakdown; light volume = less conviction.",
+    "source_type": "market_data"
+  },
+  {
+    "key": "atr14_pct",
+    "label": "Daily swing (ATR%)",
+    "category": "technical",
+    "definition": "How much the stock typically moves in a day.",
+    "how_computed": "ATR(14) \u00f7 price \u00d7 100.",
+    "good_when": "Context: a 4% move is normal for a high-ATR name, alarming for a low one.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "breakout",
+    "label": "Breakout",
+    "category": "technical",
+    "definition": "Whether price just made a new short-term high.",
+    "how_computed": "close > max(prior 20 closes); 'confirmed' adds \u22651.5\u00d7 volume.",
+    "good_when": "A volume-confirmed breakout is a momentum signal.",
+    "source_type": "chart_data"
+  },
+  {
+    "key": "ret_1d",
+    "label": "1-day return",
+    "category": "momentum",
+    "definition": "Price change today.",
+    "how_computed": "(close/prev_close \u2212 1) \u00d7 100.",
+    "good_when": "Context, not a signal alone.",
+    "source_type": "market_data"
+  },
+  {
+    "key": "ret_5d",
+    "label": "1-week return",
+    "category": "momentum",
+    "definition": "Move over 5 trading days.",
+    "how_computed": "Trailing 5-session return.",
+    "good_when": "Sustained strength is favorable.",
+    "source_type": "market_data"
+  },
+  {
+    "key": "ret_20d",
+    "label": "1-month return",
+    "category": "momentum",
+    "definition": "Move over ~20 trading days.",
+    "how_computed": "Trailing 20-session return.",
+    "good_when": "Sustained strength is favorable.",
+    "source_type": "market_data"
+  },
+  {
+    "key": "rs_5d",
+    "label": "Rel. strength vs SPY (1wk)",
+    "category": "momentum",
+    "definition": "Is it beating the market this week?",
+    "how_computed": "Ticker 5-day return \u2212 SPY 5-day return.",
+    "good_when": "Positive = leading the market (idiosyncratic strength).",
+    "source_type": "market_data"
+  },
+  {
+    "key": "rs_20d",
+    "label": "Rel. strength vs SPY (1mo)",
+    "category": "momentum",
+    "definition": "Is it beating the market this month?",
+    "how_computed": "Ticker 20-day return \u2212 SPY 20-day return.",
+    "good_when": "Positive = leading; sustained negative = a deterioration signal.",
+    "source_type": "market_data"
+  },
+  {
+    "key": "revenue_growth_yoy",
+    "label": "Revenue growth (YoY)",
+    "category": "fundamental",
+    "definition": "Is the top line still growing?",
+    "how_computed": "(latest-quarter revenue / same quarter a year ago \u2212 1) \u00d7 100.",
+    "good_when": "Stable or accelerating; 15%+ for growth names. Deceleration is a warning.",
+    "source_type": "filing_data"
+  },
+  {
+    "key": "eps_growth_yoy",
+    "label": "EPS growth (YoY)",
+    "category": "fundamental",
+    "definition": "Is profit per share growing?",
+    "how_computed": "(latest-quarter EPS / a year ago \u2212 1) \u00d7 100.",
+    "good_when": "Stable/accelerating, roughly tracking revenue. Deterioration is a warning.",
+    "source_type": "filing_data"
+  },
+  {
+    "key": "gross_margin",
+    "label": "Gross margin",
+    "category": "fundamental",
+    "definition": "Profitability of each sale.",
+    "how_computed": "Gross profit \u00f7 revenue, latest quarter.",
+    "good_when": "Stable or expanding. Falling margins can signal a broken thesis.",
+    "source_type": "filing_data"
+  },
+  {
+    "key": "pe_vs_history",
+    "label": "P/E vs own history",
+    "category": "fundamental",
+    "definition": "Is it expensive relative to its own past?",
+    "how_computed": "Current P/E (price \u00f7 trailing-4Q EPS) vs its ~8-quarter range.",
+    "good_when": "At/below its own history is fine if growth is intact; stretched + slowing growth is caution.",
+    "source_type": "valuation_data"
+  },
+  {
+    "key": "since_entry_pct",
+    "label": "Since entry",
+    "category": "position",
+    "definition": "Your return since you bought it.",
+    "how_computed": "(price / your average cost \u2212 1) \u00d7 100.",
+    "good_when": "Informational \u2014 not a buy/sell trigger on its own.",
+    "source_type": "user_defined"
+  },
+  {
+    "key": "weight_pct",
+    "label": "Weight of book",
+    "category": "position",
+    "definition": "This position as a % of THIS watchlist sleeve.",
+    "how_computed": "position market value \u00f7 total book value.",
+    "good_when": "INFORMATIONAL ONLY. Never a reason to trim \u2014 this is a small satellite sleeve.",
+    "source_type": "user_defined"
+  },
+  {
+    "key": "dist_to_stop_pct",
+    "label": "Distance to stop",
+    "category": "risk",
+    "definition": "How far price is above your stop level (if set).",
+    "how_computed": "(price / stop \u2212 1) \u00d7 100.",
+    "good_when": "A breached stop is a prompt to re-check the thesis \u2014 not an auto-cut.",
+    "source_type": "user_defined"
+  },
+  {
+    "key": "dist_to_target_pct",
+    "label": "Distance to target",
+    "category": "risk",
+    "definition": "How far below your price target (if set).",
+    "how_computed": "(target / price \u2212 1) \u00d7 100.",
+    "good_when": "Hitting a target is a prompt to reassess, not a forced sell.",
+    "source_type": "user_defined"
+  },
+  {
+    "key": "reward_risk",
+    "label": "Reward : risk",
+    "category": "risk",
+    "definition": "Upside to target vs downside to stop.",
+    "how_computed": "(target \u2212 price) \u00f7 (price \u2212 stop).",
+    "good_when": "\u2265 2:1 is a healthier setup. Informational.",
+    "source_type": "user_defined"
+  },
+  {
+    "key": "tb_revenue_qoq_drop",
+    "label": "Revenue rolling over",
+    "category": "thesis",
+    "definition": "Sequential revenue decline \u2014 a deterioration signal.",
+    "how_computed": "Latest-quarter revenue falls vs the prior quarter by \u2265 threshold.",
+    "good_when": "False is good. True contributes to a trim/exit case.",
+    "source_type": "filing_data"
+  },
+  {
+    "key": "tb_margin_compression",
+    "label": "Margin compression",
+    "category": "thesis",
+    "definition": "Gross margin falling quarter-over-quarter.",
+    "how_computed": "Gross margin drops vs the prior quarter by \u2265 threshold (pp).",
+    "good_when": "False is good. True contributes to a trim/exit case.",
+    "source_type": "filing_data"
+  },
+  {
+    "key": "tb_repeated_eps_miss",
+    "label": "Repeated EPS misses",
+    "category": "thesis",
+    "definition": "Consistently missing estimates \u2014 execution concern.",
+    "how_computed": "\u22652 of the last 3 quarters reported EPS below estimate.",
+    "good_when": "False is good. True is a strong deterioration signal.",
+    "source_type": "filing_data"
+  },
+  {
+    "key": "days_to_earnings",
+    "label": "Days to earnings",
+    "category": "event",
+    "definition": "Time until the next report \u2014 the biggest scheduled catalyst.",
+    "how_computed": "Calendar days to the next confirmed earnings date.",
+    "good_when": "\u22647 = watch closely; \u22641 = don't size into the print.",
+    "source_type": "event_data"
+  },
+  {
+    "key": "analyst_consensus",
+    "label": "Analyst consensus",
+    "category": "analyst",
+    "definition": "Wall Street's buy/hold/sell tilt.",
+    "how_computed": "Counts of strong-buy/buy/hold/sell/strong-sell.",
+    "good_when": "A strong buy tilt is supportive; a bearish tilt is caution.",
+    "source_type": "market_data"
+  }
+]

@@ -20,7 +20,15 @@ function sma(points: PricePoint[], period: number) {
   return out;
 }
 
-export default function PriceChart({ series }: { series: PricePoint[] }) {
+export default function PriceChart({
+  series,
+  support,
+  resistance,
+}: {
+  series: PricePoint[];
+  support?: number | null;
+  resistance?: number | null;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,9 +67,17 @@ export default function PriceChart({ series }: { series: PricePoint[] }) {
       ma50.setData(sma(series, 50));
     }
 
+    // support / resistance levels (dashed horizontal lines)
+    if (support) {
+      candles.createPriceLine({ price: support, color: "#22d3ee", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "support" });
+    }
+    if (resistance) {
+      candles.createPriceLine({ price: resistance, color: "#f59e0b", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: "resistance" });
+    }
+
     chart.timeScale().fitContent();
     return () => chart.remove();
-  }, [series]);
+  }, [series, support, resistance]);
 
   if (series.length === 0)
     return <div className="h-64 grid place-items-center text-sm text-zinc-500">No price history</div>;

@@ -57,7 +57,13 @@ export default async function TickerPage({
             </p>
             {!t.final_lean && <p className="mt-1 text-[11px] text-zinc-500">Auto-generated from signals — the routine refines this.</p>}
           </div>
-          <p className="mt-2 text-[11px] text-zinc-500">Decision-support, not advice — you place every order. ${minPos} floor on trims.</p>
+          {t.entry_guidance && (
+            <p className="mt-2 text-sm text-zinc-300"><span className="text-zinc-500">Entry: </span>{t.entry_guidance}</p>
+          )}
+          {t.invalidation && (
+            <p className="mt-1.5 text-sm text-zinc-300"><span className="text-zinc-500">What would change this: </span>{t.invalidation}</p>
+          )}
+          <p className="mt-2 text-[11px] text-zinc-500">Decision-support, not advice — you place every order. ${minPos} floor on trims. <Link href="/methodology" className="text-sky-400">How this is decided →</Link></p>
         </section>
 
         {/* What's happening — news & sentiment narrative */}
@@ -70,7 +76,7 @@ export default async function TickerPage({
 
         {/* Chart */}
         <section className="mt-4 rounded-2xl bg-zinc-900/70 p-3 ring-1 ring-zinc-800">
-          <PriceChart series={t.series} />
+          <PriceChart series={t.series} support={t.technicals.support_price} resistance={t.technicals.resistance_price} />
           <p className="px-1 pt-1 text-[11px] text-zinc-500">Daily candles · blue line = 50-day average · pinch / scroll to zoom</p>
         </section>
 
@@ -94,11 +100,38 @@ export default async function TickerPage({
             <Metric label="Trend" value={trendWord(tech.trend)} hint={tech.trend === "uptrend" ? "above key avgs" : tech.trend === "downtrend" ? "below key avgs" : "no clear direction"} />
             <Metric label="vs 50-day" value={pct(tech.dist_sma50_pct)} className={signClass(tech.dist_sma50_pct)} hint="medium-term" />
             <Metric label="vs 200-day" value={pct(tech.dist_sma200_pct)} className={signClass(tech.dist_sma200_pct)} hint="long-term" />
+            <Metric label="50/200 cross" value={(tech.ma_cross ?? "—").replace("_", " ")} hint="golden = bullish" />
+            <Metric label="MACD" value={tech.macd_state ? tech.macd_state.replace("_", " ") : "—"} hint="momentum" />
             <Metric label="From 52w high" value={pct(tech.dist_52w_high_pct)} className={signClass(tech.dist_52w_high_pct)} />
+            <Metric label="Support" value={tech.support_price != null ? `${usd(tech.support_price)}` : "—"} hint={tech.support_dist_pct != null ? `${tech.support_dist_pct.toFixed(0)}% below` : "nearest"} />
+            <Metric label="Resistance" value={tech.resistance_price != null ? `${usd(tech.resistance_price)}` : "—"} hint={tech.resistance_dist_pct != null ? `${tech.resistance_dist_pct.toFixed(0)}% above` : "nearest"} />
             <Metric label="Daily swing" value={pct(tech.atr14_pct)} hint="typical move (ATR)" />
-            <Metric label="Volume" value={tech.rel_volume != null ? `${tech.rel_volume.toFixed(1)}x` : "—"} hint={relVolWord(tech.rel_volume)} />
           </div>
         </section>
+
+        {/* Fundamentals */}
+        {t.fundamentals && (t.fundamentals.revenue_yoy != null || t.fundamentals.pe != null || t.fundamentals.gross_margin != null) && (
+          <section className="mt-4 rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-zinc-800">
+            <SectionHeader title="Fundamentals" hint="Is the business itself still working?" />
+            <div className="grid grid-cols-3 gap-3">
+              <Metric label="Revenue growth" value={pct(t.fundamentals.revenue_yoy)} className={signClass(t.fundamentals.revenue_yoy)} hint="YoY" />
+              <Metric label="EPS growth" value={pct(t.fundamentals.eps_yoy)} className={signClass(t.fundamentals.eps_yoy)} hint="YoY" />
+              <Metric label="Gross margin" value={t.fundamentals.gross_margin != null ? `${t.fundamentals.gross_margin.toFixed(0)}%` : "—"} />
+              <Metric label="P/E" value={t.fundamentals.pe != null ? t.fundamentals.pe.toFixed(1) : "—"} hint="vs own history" />
+              <Metric label="Rev QoQ" value={pct(t.fundamentals.revenue_qoq_pct)} className={signClass(t.fundamentals.revenue_qoq_pct)} hint="sequential" />
+            </div>
+            {t.thesis_break?.any && (
+              <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-200 ring-1 ring-rose-500/20">
+                ⚠ Thesis-break flag(s):{" "}
+                {[
+                  t.thesis_break.revenue_qoq_drop ? "revenue rolling over" : null,
+                  t.thesis_break.margin_compression ? "margin compression" : null,
+                  t.thesis_break.repeated_eps_miss ? "repeated EPS misses" : null,
+                ].filter(Boolean).join(", ")}
+              </p>
+            )}
+          </section>
+        )}
 
         {/* Position + editor */}
         <section className="mt-4 rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-zinc-800">

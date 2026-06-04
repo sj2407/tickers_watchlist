@@ -13,14 +13,22 @@ export const signClass = (n: number | null | undefined) =>
   n == null ? "text-zinc-400" : n > 0 ? "text-emerald-400" : n < 0 ? "text-rose-400" : "text-zinc-300";
 
 export const leanLabel = (l: Lean | null): string =>
-  l === "pile_on" ? "Pile on" : l === "trim" ? "Trim" : l === "hold" ? "Hold" : "—";
+  l === "pile_on" ? "Pile on"
+    : l === "trim" ? "Trim"
+      : l === "exit" ? "Exit"
+        : l === "watch" ? "Watch"
+          : l === "hold" ? "Hold" : "—";
 
 export const leanClass = (l: Lean | null): string =>
   l === "pile_on"
     ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
     : l === "trim"
       ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30"
-      : "bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30";
+      : l === "exit"
+        ? "bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/30"
+        : l === "watch"
+          ? "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30"
+          : "bg-zinc-500/15 text-zinc-300 ring-1 ring-zinc-500/30";
 
 export const sentimentLabel = (s: Sentiment | null) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1) : null;

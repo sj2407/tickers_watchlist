@@ -7,8 +7,8 @@ import type { Lean } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-// Sort: things needing attention first (trim, then pile_on), then by |day move|.
-const leanRank: Record<string, number> = { trim: 0, pile_on: 1, hold: 2 };
+// Sort: things needing attention first (exit, trim, pile_on), then hold, then watch.
+const leanRank: Record<string, number> = { exit: -1, trim: 0, pile_on: 1, hold: 2, watch: 3 };
 
 export default async function Home() {
   const snap = await getLatestSnapshot();
@@ -42,10 +42,13 @@ export default async function Home() {
       <div className="mx-auto max-w-2xl px-4 pt-6">
         <header className="mb-4 flex items-baseline justify-between">
           <h1 className="text-xl font-semibold">Watchlist</h1>
-          <span className="text-xs text-zinc-500">
-            {snap.mode === "preopen" ? "Pre-open brief" : "Post-close recap"} ·{" "}
-            {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-          </span>
+          <div className="flex items-baseline gap-3">
+            <Link href="/methodology" className="text-xs text-sky-400">Methodology</Link>
+            <span className="text-xs text-zinc-500">
+              {snap.mode === "preopen" ? "Pre-open brief" : "Post-close recap"} ·{" "}
+              {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </span>
+          </div>
         </header>
 
         {/* Market recap — words first */}

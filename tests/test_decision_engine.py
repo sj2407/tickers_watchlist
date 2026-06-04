@@ -86,3 +86,16 @@ def test_determinism():
 def test_referenced_keys_all_exist_in_registry():
     missing = signals.REFERENCED_KEYS - metrics.all_keys()
     assert not missing, f"engine references metrics not in the registry: {missing}"
+
+
+def test_action_set_is_exactly_the_documented_five():
+    """The engine emits only the documented actions — keeps Lean type + glossary in sync."""
+    seen = {
+        lean(mk(held=False, shares=0)),                                          # watch
+        lean(mk()),                                                              # pile_on
+        lean(mk(rsi=78.0)),                                                      # hold
+        lean(mk(trend="downtrend", ma_cross="below", rs20=-3.0)),               # trim
+        lean(mk(tb={"revenue_qoq_drop": True, "margin_compression": True,
+                    "repeated_eps_miss": False, "any": True})),                  # exit
+    }
+    assert seen == {"watch", "pile_on", "hold", "trim", "exit"}

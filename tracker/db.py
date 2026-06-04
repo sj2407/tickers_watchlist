@@ -178,6 +178,18 @@ def upsert_fundamentals(ticker: str, d: dict[str, Any]) -> None:
         )
 
 
+def claim_alert(ticker: str, trigger: str, alert_date) -> bool:
+    """Dedup: claim (ticker, trigger) for the given ET date. Returns True only on the
+    FIRST claim that day (idempotent via the PK + ON CONFLICT DO NOTHING)."""
+    with connect() as c:
+        n = c.execute(
+            "INSERT INTO intraday_alerts (ticker, trigger, alert_date) VALUES (%s, %s, %s) "
+            "ON CONFLICT DO NOTHING",
+            (ticker.upper(), trigger, alert_date),
+        ).rowcount
+    return n > 0
+
+
 def transaction_count(ticker: str) -> int:
     with connect() as c:
         row = c.execute("SELECT count(*) AS n FROM transactions WHERE ticker = %s", (ticker.upper(),)).fetchone()

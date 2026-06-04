@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from . import market_data as md
-from . import sources, signals, store, thesis, api_cache
+from . import sources, signals, store, thesis, api_cache, triggers, db
 from .calendar_utils import session_phase
 from .config import load_config, load_env
 
@@ -104,6 +104,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     bench_hist = sources.price_history(cfg["benchmark"], cfg["history_days"])
 
     rows: list[dict[str, Any]] = []
+    intraday_triggered: list[str] = []
     book_value = 0.0
     # first pass for book value (needs last prices)
     last_prices: dict[str, float | None] = {}
@@ -173,9 +174,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             "position": pos,
             "earnings": earn,
             "analyst": api_cache.cached(f"finnhub:reco:{tk}", lambda tk=tk: sources.recommendation_trend(tk)),
-            "news": sources.company_news(
-                tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"]
-            ),
+            "news": [],  # fetched below: always on full runs, only for triggered names intraday
             # filled by the Claude routine (subscription), left empty by the pipeline:
             "takeaway": None,        # one plain-English line: what's going on + what to consider
             "sentiment": None,       # bullish | bearish | neutral | mixed
@@ -185,6 +184,19 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             "rationale": None,
         }
         row["signals"] = signals.build_signals(row, cfg)
+
+        # Intraday = light entry-watch: only fetch news for names that trip a fresh
+        # trigger (deduped once per ET day). Full runs always fetch news.
+        if mode == "intraday":
+            trigs = triggers.compute_triggers(row, cfg)
+            fresh = [tg for tg in trigs if (not db.using_db()) or db.claim_alert(tk, tg, today)]
+            if fresh:
+                intraday_triggered.append(tk)
+                row["triggers"] = fresh
+                row["news"] = sources.company_news(tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"])
+        else:
+            row["news"] = sources.company_news(tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"])
+
         rows.append(row)
 
     portfolio = _portfolio_block(rows, book_value)
@@ -201,6 +213,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         "market_recap": None,
         "macro_context": None,
         "alerts": _mechanical_alerts(rows, cfg),
+        "intraday_triggered": intraday_triggered,
     }
 
     # Carry forward the prior run's narrative onto this fresh quant so no run — intraday

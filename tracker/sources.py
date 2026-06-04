@@ -21,6 +21,18 @@ from .config import get_key
 FINNHUB_BASE = "https://finnhub.io/api/v1"
 _session = requests.Session()
 
+# Per-run Finnhub call counter (lets us prove light intraday runs make ~0 metered calls).
+_finnhub_calls = 0
+
+
+def finnhub_call_count() -> int:
+    return _finnhub_calls
+
+
+def reset_finnhub_calls() -> None:
+    global _finnhub_calls
+    _finnhub_calls = 0
+
 
 # --------------------------------------------------------------------------- #
 # yfinance
@@ -71,9 +83,11 @@ def earnings_dates_yf(ticker: str) -> list[date]:
 # Finnhub
 # --------------------------------------------------------------------------- #
 def _finnhub_get(path: str, params: dict[str, Any]) -> Any:
+    global _finnhub_calls
     key = get_key("FINNHUB_API_KEY")
     if not key:
         return None
+    _finnhub_calls += 1  # count metered Finnhub calls actually attempted
     params = {**params, "token": key}
     for attempt in range(3):
         try:

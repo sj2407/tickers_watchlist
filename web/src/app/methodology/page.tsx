@@ -37,18 +37,20 @@ export default function Methodology() {
           <p className="mt-2 text-sm leading-relaxed text-zinc-300">
             Each name gets a suggested action — <b>Pile on</b>, <b>Hold</b>, <b>Trim</b>, or <b>Exit</b>
             (or <b>Watch</b> if you don&apos;t hold it). It&apos;s built in two steps: a transparent
-            rule layer proposes a lean from the signals below, then a reasoning pass weighs the news,
-            earnings, and severity to make the final call.
+            rule layer proposes <b>Pile on / Hold / Trim</b> from the signals below; then a reasoning
+            pass weighs the news, earnings, guidance and <i>severity</i> to confirm it — and it&apos;s
+            the only step that escalates to <b>Exit</b>. The rules never call an Exit on their own.
           </p>
           <ul className="mt-3 space-y-1.5 text-sm text-zinc-300">
-            <li><span className="text-emerald-300 font-medium">Pile on</span> — uptrend, leading the market, fundamentals intact, <i>and</i> room to add (not overbought/extended, not right before earnings). Entry guidance tells you where/when.</li>
-            <li><span className="text-zinc-300 font-medium">Hold</span> — the default. Includes &quot;strong but overbought&quot; → don&apos;t chase, wait for a pullback.</li>
-            <li><span className="text-amber-300 font-medium">Trim</span> — a <i>confluence</i> of deterioration (≥2 of: downtrend, weakening fundamentals, sustained underperformance vs the market, repeated earnings misses). Keeps at least the $200 floor.</li>
-            <li><span className="text-rose-300 font-medium">Exit</span> — a <i>clear</i> thesis break (e.g. revenue rolling over + margins compressing, or guidance cut / catalyst failed). Closes the position.</li>
+            <li><span className="text-emerald-300 font-medium">Pile on</span> — uptrend, <i>leading the market</i> (positive relative strength), fundamentals intact, <i>and</i> room to add (not overbought/extended, not within a day of earnings). Entry guidance tells you where/when.</li>
+            <li><span className="text-zinc-300 font-medium">Hold</span> — the default. Includes &quot;strong but overbought&quot; → don&apos;t chase; a name reporting within a day → wait out the print; and a <i>single</i> mild negative (it takes a confluence to trim).</li>
+            <li><span className="text-amber-300 font-medium">Trim</span> — a <i>confluence</i> of ≥2 distinct deterioration signals: confirmed downtrend, revenue weakening, gross-margin compression, sustained underperformance vs the market, or deteriorating earnings quality (negative EPS growth / repeated misses). Keeps at least the $200 floor.</li>
+            <li><span className="text-rose-300 font-medium">Exit</span> — escalated by the reasoning pass on a <i>confirmed</i> thesis break (guidance cut, catalyst failed, or a clear multi-quarter breakdown — not one soft quarter). Closes the position fully (the only action that overrides the $200 floor).</li>
           </ul>
           <div className="mt-4 space-y-2 border-t border-zinc-800 pt-3 text-xs text-zinc-400">
             <p><b className="text-zinc-300">Trim/exit are driven by the thesis going wrong — never by position size.</b> This is a small thematic sleeve; a name being a large % of it is not a reason to sell.</p>
             <p>A single mild negative is not enough to trim — it takes a confluence. Overbought alone means &quot;don&apos;t chase,&quot; not &quot;sell.&quot;</p>
+            <p>Fundamentals are quarterly and point-in-time; a small sequential margin dip is ignored for fast-growing names (normal noise, not a broken thesis). The $200 floor applies to trims; only an Exit closes a position fully.</p>
             <p>A breached stop is a <b>prompt to re-check the thesis</b>, not an automatic cut.</p>
             <p>Financial facts come only from live data or web search — never from model memory. This is <b>decision-support, not advice</b>; you place every order.</p>
           </div>

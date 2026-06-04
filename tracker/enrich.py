@@ -13,7 +13,8 @@ enrichment.json shape:
     "AAPL": {
       "takeaway": "...", "sentiment": "bullish|bearish|neutral|mixed",
       "catalyst_summary": "...", "earnings_recap": "... or null",
-      "final_lean": "pile_on|trim|hold", "rationale": "..."
+      "final_lean": "pile_on|hold|trim|exit|watch", "rationale": "...",
+      "entry_guidance": "... or null", "invalidation": "... or null"
     }
   }
 }

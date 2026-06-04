@@ -57,33 +57,27 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     pos = t.get("position", {})
     earn = t.get("earnings", {})
     badges: list[dict[str, str]] = []
-    trim_pts: list[str] = []
-    pile_pts: list[str] = []
+
+    # Badges are display-only chips. The lean is computed solely in provisional_lean()
+    # (below) — we deliberately do NOT accumulate trim/pile "points" here, so an
+    # overbought or extended reading can NEVER leak into a trim (see plan C3).
 
     # --- trend ---
     trend = tech.get("trend")
     if trend == "uptrend":
         badges.append({"label": "Trend ↑", "tone": "good"})
-        pile_pts.append("uptrend (price > 50d > 200d)")
     elif trend == "downtrend":
         badges.append({"label": "Trend ↓", "tone": "bad"})
-        trim_pts.append("downtrend (price < 50d < 200d)")
 
     # --- RSI ---
     rsi = tech.get("rsi14")
-    if rsi is not None:
-        if rsi >= s["rsi_overbought"]:
-            badges.append({"label": f"RSI {rsi:.0f}", "tone": "warn"})
-            trim_pts.append(f"overbought (RSI {rsi:.0f})")
-        elif rsi <= s["rsi_oversold"]:
-            badges.append({"label": f"RSI {rsi:.0f}", "tone": "warn"})
-            pile_pts.append(f"oversold (RSI {rsi:.0f})")
+    if rsi is not None and (rsi >= s["rsi_overbought"] or rsi <= s["rsi_oversold"]):
+        badges.append({"label": f"RSI {rsi:.0f}", "tone": "warn"})
 
-    # --- extended above 20d MA → trim watch ---
+    # --- extended above 20d MA (don't-chase flag, not a trim) ---
     d20 = tech.get("dist_sma20_pct")
     if d20 is not None and d20 >= s["extended_above_sma20_pct"]:
         badges.append({"label": f"+{d20:.0f}% vs 20d", "tone": "warn"})
-        trim_pts.append(f"extended {d20:.0f}% above 20d MA")
 
     # --- volume conviction ---
     rv = tech.get("rel_volume")
@@ -98,19 +92,17 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
 
     # NOTE: position weight is intentionally NOT a trim driver. This watchlist is a
     # small thematic satellite sleeve (>90% of the user's money is in diversified ETFs),
-    # so concentration *within this sleeve* is not a risk. Trim only on thesis break.
+    # so concentration *within this sleeve* is not a risk.
 
-    # --- analyst tilt ---
+    # --- analyst tilt (badge only) ---
     rec = t.get("analyst")
     if rec:
         bulls = (rec.get("strongBuy") or 0) + (rec.get("buy") or 0)
         bears = (rec.get("sell") or 0) + (rec.get("strongSell") or 0)
         if bulls and bulls >= 3 * max(bears, 1):
             badges.append({"label": "Analysts bullish", "tone": "good"})
-            pile_pts.append("analyst consensus tilts bullish")
         elif bears and bears >= bulls:
             badges.append({"label": "Analysts cautious", "tone": "bad"})
-            trim_pts.append("analyst consensus tilts bearish")
 
     # MACD + cross badges (from the ported technicals)
     if tech.get("macd_state") == "bullish_cross":
@@ -151,13 +143,20 @@ REFERENCED_KEYS = {
 
 
 def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
-    """The transparent rule layer (§4 truth table). Returns {lean, drivers}.
+    """The transparent rule layer (plan §4). Returns {lean, drivers}.
 
-    Actions: watch (not held) · exit (clear break) · trim (deterioration confluence)
-    · pile_on (strength + room) · hold (default / "don't chase").
+    Quant actions: watch (not held) · trim (deterioration confluence) · pile_on
+    (strength + room) · hold (default / "don't chase").
 
-    INVARIANT: position weight / size is NEVER read here — deterioration drives
-    trim/exit, never concentration.
+    The quant layer CAPS AT `trim` — it never emits `exit`. `exit` is the LLM's
+    escalation when it judges a *confirmed* break (weighing news, guidance, severity,
+    persistence). This prevents a couple of correlated single-quarter flags from
+    mechanically manufacturing an exit.
+
+    INVARIANTS:
+    - Position weight / size is NEVER read here. Deterioration drives trim, never size.
+    - A *single* mild negative → hold (needs a confluence of ≥2 distinct deterioration
+      dimensions to trim). Overbought / extended → hold ("don't chase"), never trim.
     """
     s = cfg.get("signals", {})
     tech = t.get("technicals", {}) or {}
@@ -182,17 +181,18 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     rev_yoy = fund.get("revenue_yoy")
     eps_yoy = fund.get("eps_yoy")
 
-    # deterioration signals (the only things that push toward trim/exit)
+    # Deterioration as DISTINCT dimensions (each counted once — correlated revenue
+    # signals don't double-count, per review). These are the only things that trim.
+    revenue_weakening = (rev_yoy is not None and rev_yoy < 0) or (tb.get("revenue_qoq_drop") is True)
+    earnings_quality = (eps_yoy is not None and eps_yoy < 0) or (tb.get("repeated_eps_miss") is True)
     det = {
         "downtrend": (trend == "downtrend") or (ma_cross == "death_cross"),
-        "weak_fundamentals": (rev_yoy is not None and rev_yoy < 0) or (eps_yoy is not None and eps_yoy < 0),
         "negative_rel_strength": rs20 is not None and rs20 < 0,
-        "revenue_rolling_over": tb.get("revenue_qoq_drop") is True,
+        "revenue_weakening": revenue_weakening,
         "margin_compression": tb.get("margin_compression") is True,
-        "repeated_eps_miss": tb.get("repeated_eps_miss") is True,
+        "earnings_quality_deteriorating": earnings_quality,
     }
     det_true = [k for k, v in det.items() if v]
-    thesis_true = sum(1 for k in ("revenue_qoq_drop", "margin_compression", "repeated_eps_miss") if tb.get(k) is True)
 
     # strength + room
     strong = (trend == "uptrend") or (ma_cross in ("golden_cross", "above"))
@@ -217,13 +217,11 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     if into_earnings:
         blocks.append("reports within a day (event risk)")
 
-    # ── truth table (order matters) ──────────────────────────────────
+    # ── truth table (order matters; quant caps at trim — LLM owns exit) ──
     if not held:
         lean = "watch"
-    elif thesis_true >= 2:
-        lean = "exit"          # clear fundamental break
     elif len(det_true) >= 2:
-        lean = "trim"          # deterioration confluence
+        lean = "trim"          # deterioration confluence (LLM may escalate to exit)
     elif strong and rs_ok and room:
         lean = "pile_on"
     else:

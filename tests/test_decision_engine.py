@@ -36,15 +36,42 @@ def test_strength_and_room_is_pile_on():
     assert lean(mk()) == "pile_on"
 
 
-def test_clear_break_two_thesis_flags_is_exit():
+def test_quant_caps_at_trim_never_exit():
+    """The quant layer never emits 'exit' — that's the LLM's escalation.
+    Even two thesis flags only reach 'trim' at the rule layer."""
     tb = {"revenue_qoq_drop": True, "margin_compression": True,
           "repeated_eps_miss": False, "any": True}
-    assert lean(mk(tb=tb)) == "exit"
+    assert lean(mk(tb=tb)) == "trim"
 
 
 def test_deterioration_confluence_is_trim():
-    # downtrend + negative relative strength = 2 deterioration signals, no clean break
+    # downtrend + negative relative strength = 2 distinct deterioration dimensions
     assert lean(mk(trend="downtrend", ma_cross="below", rs20=-3.0)) == "trim"
+
+
+def test_single_thesis_flag_alone_is_hold_but_visible():
+    """A lone thesis flag on an otherwise-healthy name → hold (needs confluence),
+    but it IS surfaced as a deterioration driver so it isn't invisible."""
+    tb = {"revenue_qoq_drop": False, "margin_compression": False,
+          "repeated_eps_miss": True, "any": True}
+    out = signals.provisional_lean(mk(tb=tb), CFG)
+    assert out["lean"] == "hold"
+    assert "earnings_quality_deteriorating" in out["drivers"]["deterioration"]
+
+
+def test_thesis_flag_plus_downtrend_is_trim():
+    tb = {"revenue_qoq_drop": False, "margin_compression": False,
+          "repeated_eps_miss": True, "any": True}
+    assert lean(mk(trend="downtrend", ma_cross="below", rs20=1.0, tb=tb)) == "trim"
+
+
+def test_correlated_revenue_signals_count_once():
+    """YoY decline + QoQ drop describe ONE fact → one deterioration vote, not two,
+    so they can't manufacture a trim on their own."""
+    tb = {"revenue_qoq_drop": True, "margin_compression": False,
+          "repeated_eps_miss": False, "any": True}
+    # rev_yoy negative AND a QoQ drop, but nothing else wrong → still just 1 dimension → hold
+    assert lean(mk(trend="mixed", ma_cross="above", rs20=1.0, rev_yoy=-5.0, eps_yoy=10.0, tb=tb)) == "hold"
 
 
 def test_default_otherwise_is_hold():
@@ -88,14 +115,16 @@ def test_referenced_keys_all_exist_in_registry():
     assert not missing, f"engine references metrics not in the registry: {missing}"
 
 
-def test_action_set_is_exactly_the_documented_five():
-    """The engine emits only the documented actions — keeps Lean type + glossary in sync."""
+def test_quant_action_set_excludes_exit():
+    """The quant layer emits exactly {watch, pile_on, hold, trim} — NEVER exit
+    (exit is the LLM's escalation). No input should produce exit."""
     seen = {
         lean(mk(held=False, shares=0)),                                          # watch
         lean(mk()),                                                              # pile_on
         lean(mk(rsi=78.0)),                                                      # hold
         lean(mk(trend="downtrend", ma_cross="below", rs20=-3.0)),               # trim
         lean(mk(tb={"revenue_qoq_drop": True, "margin_compression": True,
-                    "repeated_eps_miss": False, "any": True})),                  # exit
+                    "repeated_eps_miss": True, "any": True})),                   # max deterioration
     }
-    assert seen == {"watch", "pile_on", "hold", "trim", "exit"}
+    assert seen == {"watch", "pile_on", "hold", "trim"}
+    assert "exit" not in seen

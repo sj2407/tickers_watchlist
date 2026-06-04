@@ -44,8 +44,8 @@ on your **subscription**, not the API). The Python pipeline has already produced
      ("price hit your stop — is the thesis still intact?") — never an auto-cut.
 4. Write `market_recap` (1–2 sentences on the tape + the day's relevant macro) and
    `macro_context` (only macro that actually touches these names — rates, oil, the Fed, etc.).
-5. Enrich `alerts` with narrative (earnings T-7 / T-1, big moves, weight-cap breaches are
-   already seeded mechanically — add anything material from the news).
+5. Enrich `alerts` with narrative (earnings T-7 / T-1 and big moves are seeded mechanically
+   — add anything material from the news). Do NOT add position-size / weight alerts.
 6. **Deliver:** push the enriched snapshot to the app's DB, send the HTML email digest,
    and fire push alerts for time-sensitive items (earnings T-1, big gaps, halts).
 

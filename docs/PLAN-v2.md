@@ -117,20 +117,22 @@ source_ref, insufficient_data}`:
   weakening fundamentals (rev/EPS growth rolling over).
 - *Event guard:* days to next earnings.
 
-**Layer 2 — Provisional lean (transparent rules).** Explicit truth table, checked in order:
+**Layer 2 — Provisional lean (transparent rules). The quant layer CAPS AT `trim` — it never
+emits `exit`.** Explicit truth table, checked in order:
 
 | Condition | Lean |
 |---|---|
 | Not held (shares = 0) | `watch` — signals shown, no sizing action |
-| **Clear thesis break** — a quant thesis-break flag fires, OR (LLM layer) guidance cut / catalyst failed / quality gone | `exit` — close fully (overrides the $200 floor) |
-| **Deterioration confluence** — ≥2 of {confirmed downtrend, weakening fundamentals, sustained negative RS, repeated EPS misses} but not a clean break | `trim` — reduce, keep ≥ $200 |
-| **Strength** — uptrend / golden-cross / +RS, AND not overbought, AND not extended, AND not ≤1 trading day to earnings, AND fundamentals intact | `pile_on` |
-| Otherwise | `hold` (incl. overbought / extended = "don't chase") |
+| **Deterioration confluence** — ≥2 *distinct* dimensions of {confirmed downtrend, revenue weakening, gross-margin compression, sustained negative RS, deteriorating earnings quality} | `trim` — reduce, keep ≥ $200 (the LLM may escalate to `exit`) |
+| **Strength** — uptrend / golden-cross / +RS, AND not overbought, AND not extended, AND not ≤1 trading day to earnings, AND no deterioration | `pile_on` |
+| Otherwise | `hold` (incl. overbought / extended = "don't chase"; a single deterioration signal) |
 
 **Invariants:**
-- Deterioration drives `trim`/`exit` — **the thesis (growth/quality/theme/trend/fundamentals) going wrong is the reason.**
-- **Position weight / % of the sleeve is NEVER a reason** for `trim` or `exit`. It's a small satellite sleeve; concentration within it is not a risk.
-- Overbought / extended / a *single* mild negative reading → at most `hold` ("don't chase"), never `trim` on its own. Severity/confluence matters.
+- Deterioration drives `trim` — **the thesis (growth/quality/theme/trend/fundamentals) going wrong is the reason.**
+- **Position weight / % of the sleeve is NEVER a reason.** Small satellite sleeve; concentration isn't a risk.
+- Overbought / extended / a *single* deterioration signal → at most `hold` ("don't chase"), never `trim` on its own. It takes a **confluence of ≥2 distinct dimensions** to trim.
+- Deterioration dimensions are **distinct** — correlated revenue signals (YoY decline + QoQ drop) count once; gross-margin compression is **suppressed for hypergrowth names** (small dip = noise when revenue is growing fast).
+- The quant layer never emits `exit`. `exit` exists only as the LLM's escalation (Layer 3) on a *confirmed* break.
 
 **Layer 3 — LLM final lean (routine, on subscription).** Receives the snapshot + all Signals
 + deterioration flags + news + earnings recap. Applies the **qualitative judgment the quant

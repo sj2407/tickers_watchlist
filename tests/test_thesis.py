@@ -41,3 +41,24 @@ def test_missing_data_is_none_not_false():
 def test_none_fund_is_safe():
     f = thesis.thesis_break_flags(None)
     assert f["any"] is False
+
+
+def test_margin_compression_suppressed_for_hypergrowth():
+    """A small sequential margin dip is noise when revenue is growing fast — don't flag it."""
+    fund = {"gross_margin_qoq_pp": -3.0, "revenue_yoy": 100.0}  # CRWV-like
+    f = thesis.thesis_break_flags(fund)
+    assert f["margin_compression"] is False
+
+
+def test_margin_compression_fires_when_growth_is_weak():
+    """The same margin dip IS a flag when growth isn't there to excuse it."""
+    fund = {"gross_margin_qoq_pp": -3.0, "revenue_yoy": 5.0}
+    f = thesis.thesis_break_flags(fund)
+    assert f["margin_compression"] is True
+
+
+def test_severe_margin_collapse_is_never_suppressed():
+    """A −17pp collapse (OUST-like) is real deterioration even at high growth."""
+    fund = {"gross_margin_qoq_pp": -17.0, "revenue_yoy": 49.0}
+    f = thesis.thesis_break_flags(fund)
+    assert f["margin_compression"] is True

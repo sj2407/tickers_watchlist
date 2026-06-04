@@ -61,10 +61,11 @@ Quant rule layer proposes **pile_on / hold / trim** (caps at trim); the **LLM ow
 - **Satellite sleeve:** trim/exit on thesis deterioration, never on position size.
 - **Lead with narrative**, label every metric (hence the glossary).
 
-## Status of v2 (`v2-quant-and-glossary` branch — NOT yet merged)
-Built in 7 gated TDD phases, reviewed by 2 independent agents, remediated, enriched, verified
-e2e against Neon. **85 tests pass.** Pending: merge → main + redeploy (live site still on v1 UI;
-the DB already holds v2 snapshots).
+## Status of v2 — MERGED & LIVE (2026-06-04)
+Built in gated TDD phases, reviewed by 2 independent agents (plans + final code review), remediated,
+verified e2e against Neon. **103 tests pass.** **Merged `v2-quant-and-glossary` → `main` (pushed to
+GitHub) and redeployed to Vercel prod** — https://tickers-watchlist.vercel.app now serves the full
+quant engine + glossary + fundamentals + intraday + live positions. Branch kept for history.
 
 ## Known tradeoffs / open items
 - **TTM vs QoQ:** cache fundamentals are trailing-twelve-month, so QoQ sequential thesis-flags

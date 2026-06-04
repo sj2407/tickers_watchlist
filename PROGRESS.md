@@ -1,0 +1,94 @@
+# PROGRESS — tickers_watchlist
+
+> Session-spanning log so a future session knows exactly what exists, why, and what's next.
+> Map docs: `README.md` (overview), `ROUTINE.md` (what the scheduled routine does),
+> `docs/PLAN-v2.md` (the v2 design + decisions + test plan). This file = status + roadmap.
+
+## What this is
+A twice-daily (heading toward intraday) tracker for a **small thematic satellite sleeve**
+(~$200/name; >90% of the user's money is elsewhere in diversified ETFs). It helps decide
+**pile-on / hold / trim / exit** per name. Sister tool: `~/equity-research-agent` =
+*discovery* (Russell 3000 scoring, sectors/industries, market dynamics) that surfaces ideas;
+this watchlist = *close tracking* of names already entered. They're complementary.
+
+## Architecture (three layers)
+1. **Python pipeline (`tracker/`)** — pure data plumbing, NO LLM calls. Fetches prices/returns/
+   technicals/news/earnings/analyst/fundamentals, computes signals + the rule-based provisional
+   lean, writes a snapshot. Entry: `python -m tracker.run --mode {preopen|postclose}`.
+2. **Routine (Claude on the SUBSCRIPTION, not the API)** — reads the snapshot, writes the
+   qualitative overlay to `out/enrichment.json` (takeaway, sentiment, catalyst, earnings recap,
+   final lean, rationale, entry_guidance, invalidation, market recap), then `python -m
+   tracker.enrich` merges + publishes. See `ROUTINE.md`.
+3. **Web app (`web/`, Next.js 16)** — phone-first recap, ticker drill-downs (interactive chart
+   w/ support/resistance, MACD/cross, fundamentals, thesis flags), in-app trim/add editor
+   (transaction ledger), and a **/methodology** glossary tab. Deployed on Vercel.
+
+## Deployed / live
+- **App:** https://tickers-watchlist.vercel.app (Vercel Hobby, free). Passcode `APP_PASSCODE`=`AI2026`.
+- **DB:** Neon Postgres (free), via Vercel integration → env var `WATCHLIST_DATABASE_URL`.
+  Single source of truth: append-only `transactions` ledger → derived `current_positions`;
+  time-series `snapshots` (JSONB); `watchlist`; `fundamentals` cache. Migrations in `migrations/`.
+- **GitHub:** github.com/sj2407/tickers_watchlist (private). Secrets gitignored.
+- **Routines (local, run while the Claude app is open):** `~/.claude/scheduled-tasks/`
+  `watchlist-preopen` (~9:08am ET) + `watchlist-postclose` (~4:39pm ET), weekdays.
+- **Current book:** 21 tickers (18 @ $200 + NOW 8.63537sh + COHR 1.85723sh + LITE 0.63823sh).
+
+## Data sources (tiered, efficiency-first)
+- **equity-research-agent cache** (`~/equity-research-agent/data/cache.db`, read-only via
+  `tracker/cache_source.py`): for ~18/21 names, reads FMP **fundamentals**, **earnings reactions
+  (1d/5d)**, **factor scores** — ZERO API calls. Freshness-checked (per-type `meta` timestamps,
+  ≤36h), schedule-agnostic, with standalone fallback. That repo refreshes daily ~9:30am ET.
+- **Own fetch** (only for the 3 it doesn't cover + intraday): yfinance (prices, free), Finnhub
+  (news/earnings/analyst), **FMP `/stable`** (v3 is now 403-legacy), yfinance `.info` for ADRs
+  (ASML/TSM — FMP premium-gates them).
+- **Keys** come from `~/equity-research-agent/.env` (loaded in place, never copied).
+
+## The decision engine (the heart — see PLAN-v2 §4)
+Quant rule layer proposes **pile_on / hold / trim** (caps at trim); the **LLM owns `exit`**.
+- Trim = **confluence of ≥2 distinct deterioration dimensions** (downtrend, revenue weakening,
+  margin compression, sustained negative relative strength, deteriorating earnings quality).
+- **Size / % of book is NEVER a trim reason** (satellite sleeve). A single mild negative →
+  hold; overbought → "don't chase" hold, never trim. Margin compression suppressed for
+  hypergrowth unless severe (≤ −5pp). No sizing into a print. $200 floor on trims; exit closes fully.
+
+## Durable rules (also in user memory)
+- Recurring/LLM work → **subscription, not the paid API**.
+- **Never use training-data facts** for prices/figures — only datasets/APIs or live web search.
+- **Satellite sleeve:** trim/exit on thesis deterioration, never on position size.
+- **Lead with narrative**, label every metric (hence the glossary).
+
+## Status of v2 (`v2-quant-and-glossary` branch — NOT yet merged)
+Built in 7 gated TDD phases, reviewed by 2 independent agents, remediated, enriched, verified
+e2e against Neon. **85 tests pass.** Pending: merge → main + redeploy (live site still on v1 UI;
+the DB already holds v2 snapshots).
+
+## Known tradeoffs / open items
+- **TTM vs QoQ:** cache fundamentals are trailing-twelve-month, so QoQ sequential thesis-flags
+  only fire for own-fetched names. Deterioration still caught via TTM-growth-negative + trend +
+  RS + the LLM's earnings reads. Upgrade path: compute QoQ from the cache's `fundamentals_history`.
+- **Intraday not yet limit-safe:** Finnhub (~63 calls/run: news+earnings+analyst) brushes the
+  60/min free limit. **Next:** cache earnings-calendar + analyst daily (they don't change
+  intraday) → only ~21 news calls/run → safe for several intraday refreshes.
+- **FMP** is on a tier where v3 is dead and ADR quarterly is premium-gated; we work around it.
+- Snapshot prices are last-close; a same-day move (e.g., AVGO −15%) shows in the narrative
+  immediately but in the *number* on the next post-close run.
+
+## Roadmap / what we're thinking about next
+1. **Finnhub daily-caching** → unlock **intraday refreshes** (a few times/day) within limits. (next)
+2. **Merge v2 → main + redeploy.**
+3. **Backtesting:** replay stored `snapshots` (time-series) to evaluate the decision engine —
+   did pile_on/trim/exit calls precede good/bad forward returns? Tune thresholds against history.
+4. **Portfolio-history charts** (we already store every snapshot — book value / position over time).
+5. **Push/email alerts** for genuinely time-sensitive events once intraday.
+6. **Sector-relative strength** (vs sector ETF, not just SPY); QoQ via `fundamentals_history`.
+7. Consider a paid FMP tier OR fuller reliance on the equity cache + Finnhub basics.
+
+## Run / resume
+```bash
+cd ~/tickers_watchlist && source .venv/bin/activate
+python -m tracker.migrate && python -m tracker.seed      # one-time DB setup
+python -m tracker.run --mode postclose                   # pipeline → snapshot → Neon
+python -m tracker.enrich                                  # merge out/enrichment.json → Neon
+python -m pytest tests/ -q                                # 85 tests
+cd web && npm run dev                                     # local app (reads Neon)
+```

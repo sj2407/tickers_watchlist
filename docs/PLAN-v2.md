@@ -20,7 +20,7 @@ the foundation. We pull a few well-tested *quant ingredients* from the `equity-r
 | B | **Fundamentals layer**: revenue growth YoY, EPS growth YoY, gross-margin trend, P/E vs own history | adapt (new data source + table) |
 | C | **Quantified thesis-break flags**: revenue QoQ drop, margin compression, repeated EPS misses — *supporting*, not replacing, the LLM thesis-break | adapt from `checklist.py` thesis rules |
 | D | **Signal provenance + `insufficient_data`** pattern: every number carries where it came from + an honest "not enough history yet" flag | adopt `checklist.py` `Signal` design |
-| E | **Reworked decision engine** combining all of the above into pile/trim/hold — explicitly (§4) | new |
+| E | **Reworked decision engine** combining all of the above into pile / hold / trim / exit — explicitly (§4) | new |
 | F | **Dictionary / Methodology tab** in the web app, driven from a single source of truth | new |
 
 ### What we deliberately DON'T port (and why)
@@ -50,8 +50,8 @@ auto-trim on weight/size. Port stop/target/reward:risk only as *informational* t
 fields. Weight stays a neutral stat, never a warning or trigger.
 
 **C2 — Decision vocabulary mismatch.** They emit `watch/candidate/enter/hold/trim/exit`
-(entry-centric, for names you don't yet own). We emit `pile_on/trim/hold` (for names you
-hold). → **Resolution:** keep our 3-action model as the user-facing decision. Their signals
+(entry-centric, for names you don't yet own). We emit `pile_on/hold/trim/exit` (for names
+you hold). → **Resolution:** keep our action model as the user-facing decision. Their signals
 become *inputs*, not a competing output. "candidate/enter" don't apply (we hold everything);
 non-held names get a `watch-only` tag with signals shown but no sizing action.
 
@@ -99,6 +99,10 @@ Minor → standardize labels in the glossary (single source of truth, §6) so no
 - LLM routine → `final_lean` + `rationale` (subscription); trim only on thesis break.
 
 ### AFTER (v2) — three explicit layers
+**Action set (v2):** `pile_on` · `hold` · `trim` · `exit` (+ `watch` for non-held names).
+- `trim` = reduce but keep the position (respects the **$200 floor**) — for *partial* deterioration / reduced conviction.
+- `exit` = close the position fully (**overrides the $200 floor** — you no longer want any) — for a *clear* thesis break.
+
 **Layer 1 — Signal generation (Python, pure, with provenance).** For each metric emit a
 `Signal{category, metric, value_num|value_text, passed|state, suggestion, source_type,
 source_ref, insufficient_data}`:
@@ -107,34 +111,40 @@ source_ref, insufficient_data}`:
 - *Relative strength:* vs SPY (and optionally sector ETF — §10).
 - *Fundamental:* revenue growth YoY, EPS growth YoY, gross-margin trend, P/E vs own ~8-qtr history.
 - *Risk / trade-plan (informational only):* dist-to-stop, dist-to-target, reward:risk — **never auto-acts.**
-- *Thesis-break flags (quant):* revenue QoQ drop ≥ X pp, gross-margin QoQ drop ≥ Y pp,
-  ≥2 EPS misses in last 3 quarters. **These are the only quant signals that can push toward `trim`.**
+- *Deterioration signals (can push toward trim/exit):* quant thesis-break flags (revenue QoQ
+  drop ≥ X pp, gross-margin QoQ drop ≥ Y pp, ≥2 EPS misses in last 3 quarters), **confirmed
+  downtrend** (death cross / price < 50d < 200d), **sustained negative relative strength**,
+  weakening fundamentals (rev/EPS growth rolling over).
 - *Event guard:* days to next earnings.
 
-**Layer 2 — Provisional lean (transparent rules).** Explicit truth table:
+**Layer 2 — Provisional lean (transparent rules).** Explicit truth table, checked in order:
 
-| Condition (checked in order) | Provisional lean |
+| Condition | Lean |
 |---|---|
-| Not held (shares = 0) | `watch` (signals shown, no sizing action) |
-| Any **thesis-break flag** true | `trim` (the ONLY rule-based path to trim) |
-| Strength (uptrend / golden-cross / +RS) AND **not** overbought AND **not** extended AND **not** ≤1 trading day to earnings AND fundamentals not deteriorating | `pile_on` |
-| Otherwise | `hold` |
+| Not held (shares = 0) | `watch` — signals shown, no sizing action |
+| **Clear thesis break** — a quant thesis-break flag fires, OR (LLM layer) guidance cut / catalyst failed / quality gone | `exit` — close fully (overrides the $200 floor) |
+| **Deterioration confluence** — ≥2 of {confirmed downtrend, weakening fundamentals, sustained negative RS, repeated EPS misses} but not a clean break | `trim` — reduce, keep ≥ $200 |
+| **Strength** — uptrend / golden-cross / +RS, AND not overbought, AND not extended, AND not ≤1 trading day to earnings, AND fundamentals intact | `pile_on` |
+| Otherwise | `hold` (incl. overbought / extended = "don't chase") |
 
-Key invariant: overbought / extended / downtrend / negative-RS at most produce `hold`
-("don't chase" / "watch for deterioration") — **never `trim` on their own.** Size/weight
-never appears here.
+**Invariants:**
+- Deterioration drives `trim`/`exit` — **the thesis (growth/quality/theme/trend/fundamentals) going wrong is the reason.**
+- **Position weight / % of the sleeve is NEVER a reason** for `trim` or `exit`. It's a small satellite sleeve; concentration within it is not a risk.
+- Overbought / extended / a *single* mild negative reading → at most `hold` ("don't chase"), never `trim` on its own. Severity/confluence matters.
 
 **Layer 3 — LLM final lean (routine, on subscription).** Receives the snapshot + all Signals
-+ thesis-break flags + news + earnings recap. Applies the **qualitative thesis-break the quant
-can't see** (guidance cut, catalyst failure, management/regulatory). Writes `final_lean` +
-`rationale`. May override the provisional lean but **must cite the specific driver.**
-Unchanged hard rules: trim only on thesis break; never on size; no sizing into a print;
-$200 floor; decision-support, not advice.
++ deterioration flags + news + earnings recap. Applies the **qualitative judgment the quant
+can't see** (guidance cut, catalyst failure, management/regulatory) and weighs *severity* —
+escalating `trim`→`exit` or de-escalating when the deterioration looks like noise. Writes
+`final_lean` + `rationale`, may override the provisional lean, but **must cite the specific
+driver**. Unchanged hard rules: trims/exits are driven by deterioration, **never by size**;
+no sizing into a print; `trim` respects the $200 floor (`exit` doesn't); decision-support, not advice.
 
 > Net change vs v1: the lean is now driven by an explicit, auditable signal set (incl.
-> fundamentals + thesis-break flags), the quant can only *trim* via a thesis-break flag, and
-> the LLM remains the final arbiter for qualitative thesis breaks. The glossary (§6/§7) will
-> describe exactly this.
+> fundamentals + deterioration flags), adds an `exit` action for clear thesis breaks, lets a
+> *confluence* of deterioration (not just a single formal flag) justify a `trim`, and keeps the
+> hard ban on size-motivated trims. The LLM remains the final arbiter and severity-judge. The
+> glossary (§6/§7) describes exactly this.
 
 ---
 
@@ -193,9 +203,13 @@ $200 floor; decision-support, not advice.
 
 ---
 
-## 10. Open decisions for you (I'll proceed with the *proposed* default unless you say otherwise)
-1. **RSI bands:** keep our 35/70, or adopt checklist's **30/70**? → *Proposed: 30/70* (tested, and Wilder RSI comes with the port).
-2. **Fundamentals source:** yfinance quarterly (free, sometimes patchy) vs **FMP** (you have the key, cleaner). → *Proposed: FMP with yfinance fallback.*
-3. **Sector-relative strength** (vs a sector ETF, not just SPY): add now or later? → *Proposed: later (keep SPY for now).*
-4. **Stop/target entry in the app** to power the risk panel: now or defer? → *Proposed: add simple stop/target inputs now (they're already columns); reward:risk shown, never auto-acts.*
-5. **Glossary:** tab only, or tab + inline tooltips on each metric? → *Proposed: tab now, metric labels link to it; tooltips later.*
+## 10. Decisions — RESOLVED (2026-06-04)
+1. **RSI bands:** ✅ adopt **30/70** (with Wilder RSI from the port).
+2. **Fundamentals source:** ✅ **FMP** (your key) with yfinance fallback.
+3. **Sector-relative strength:** ✅ later (keep SPY for now).
+4. **Stop/target entry in the app:** ✅ add now (reuse the `target`/`stop` columns); reward:risk shown, **never auto-acts**.
+5. **Glossary:** ✅ tab now; metric labels link to it; tooltips later.
+6. **Trim/exit logic (user clarification):** trim *and* exit are valid when the thesis
+   genuinely deteriorates (thesis break / downtrend / weakening fundamentals / negative RS) —
+   confluence → trim, clear break → exit. **Position size / % of sleeve is never a reason.**
+   Folded into §3 C1 and §4.

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTicker, getLatestSnapshot } from "@/lib/data";
+import { getTicker, getLatestSnapshot, getLivePositions } from "@/lib/data";
 import { usd, pct, num, signClass, rsiWord, trendWord, relVolWord, earningsWhen, leanLabel } from "@/lib/format";
 import { BadgeRow, LeanPill, SentimentChip, Metric, SectionHeader } from "@/components/ui";
 import PriceChart from "@/components/PriceChart";
@@ -20,6 +20,11 @@ export default async function TickerPage({
   const snap = await getLatestSnapshot();
   const minPos = snap?.min_position_usd ?? 200;
   const bench = snap?.benchmark ?? "SPY";
+
+  // Position reflects the ledger LIVE (your trades show instantly); falls back to the
+  // snapshot's position in file mode. The analysis (lean/technicals) is as-of-last-run.
+  const { byTicker } = await getLivePositions(snap);
+  const pos = byTicker[t.ticker] ?? t.position;
 
   const lean = (t.final_lean ?? t.signals.provisional_lean) as Lean;
   const tech = t.technicals;
@@ -135,24 +140,30 @@ export default async function TickerPage({
 
         {/* Position + editor */}
         <section className="mt-4 rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-zinc-800">
-          <h2 className="text-sm font-medium text-zinc-200">Your position</h2>
-          <p className="mb-3 text-xs text-zinc-500">Records a trade — numbers refresh on the next run.</p>
-          {t.position.held ? (
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-medium text-zinc-200">Your position</h2>
+            <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">● live</span>
+          </div>
+          {pos.held ? (
             <div className="grid grid-cols-3 gap-3">
-              <Metric label="Shares" value={num(t.position.shares, 4)} />
-              <Metric label="Avg cost" value={usd(t.position.cost_basis)} hint="what you paid" />
-              <Metric label="Value" value={usd(t.position.market_value)} hint="worth now" />
-              <Metric label="Invested" value={usd(t.position.invested)} />
-              <Metric label="Gain/loss" value={usd(t.position.unrealized_pl)} className={signClass(t.position.unrealized_pl)} hint="unrealized" />
-              <Metric label="Since entry" value={pct(t.position.since_entry_pct)} className={signClass(t.position.since_entry_pct)} />
-              <Metric label="Weight" value={pct(t.position.weight_pct, 0)} hint="of total book" />
+              <Metric label="Shares" value={num(pos.shares, 4)} />
+              <Metric label="Avg cost" value={usd(pos.cost_basis)} hint="what you paid" />
+              <Metric label="Value" value={usd(pos.market_value)} hint="at last price" />
+              <Metric label="Invested" value={usd(pos.invested)} />
+              <Metric label="Gain/loss" value={usd(pos.unrealized_pl)} className={signClass(pos.unrealized_pl)} hint="unrealized" />
+              <Metric label="Since entry" value={pct(pos.since_entry_pct)} className={signClass(pos.since_entry_pct)} />
+              <Metric label="Weight" value={pct(pos.weight_pct, 0)} hint="of total book" />
             </div>
           ) : (
             <p className="text-sm text-zinc-500">Watch-only — add shares to start tracking P/L.</p>
           )}
+          <p className="mt-2 text-[11px] text-zinc-500">
+            Trades reflect here instantly (shares/cost/invested from your ledger; value priced at the
+            last data run). The <em>analysis</em> above re-scores at the next run.
+          </p>
           {t.price.last != null && (
             <div className="mt-3">
-              <PositionEditor ticker={t.ticker} position={t.position} lastPrice={t.price.last} minPositionUsd={minPos} />
+              <PositionEditor ticker={t.ticker} position={pos} lastPrice={t.price.last} minPositionUsd={minPos} />
             </div>
           )}
         </section>

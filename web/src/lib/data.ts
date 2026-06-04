@@ -56,6 +56,48 @@ export async function getCurrentPositions(): Promise<Record<string, CurrentPosit
   return out;
 }
 
+export interface LivePos {
+  ticker: string;
+  held: boolean;
+  shares: number;
+  cost_basis: number | null;
+  invested: number | null;
+  market_value: number | null;
+  unrealized_pl: number | null;
+  since_entry_pct: number | null;
+  weight_pct: number | null;
+}
+
+/** Live position math straight from the transaction ledger + latest snapshot prices.
+ * Shares/avg-cost/invested reflect your trades INSTANTLY (no pipeline run needed);
+ * value/P&L/weight are priced at the snapshot's last price. Empty in file mode (no ledger). */
+export async function getLivePositions(
+  snap: Snapshot | null,
+): Promise<{ book: number; byTicker: Record<string, LivePos> }> {
+  const positions = await getCurrentPositions();
+  const priceOf: Record<string, number | null> = {};
+  for (const t of snap?.tickers ?? []) priceOf[t.ticker] = t.price?.last ?? null;
+
+  let book = 0;
+  const byTicker: Record<string, LivePos> = {};
+  for (const [sym, p] of Object.entries(positions)) {
+    const last = priceOf[sym] ?? null;
+    const mv = last != null ? p.shares * last : null;
+    if (mv != null) book += mv;
+    byTicker[sym] = {
+      ticker: sym, held: p.shares > 0, shares: p.shares, cost_basis: p.avg_cost, invested: p.invested,
+      market_value: mv,
+      unrealized_pl: mv != null && p.invested != null ? mv - p.invested : null,
+      since_entry_pct: last != null && p.avg_cost ? (last / p.avg_cost - 1) * 100 : null,
+      weight_pct: null,
+    };
+  }
+  for (const v of Object.values(byTicker)) {
+    v.weight_pct = v.market_value != null && book ? (v.market_value / book) * 100 : null;
+  }
+  return { book, byTicker };
+}
+
 /** Record a trade in the append-only ledger. side: 'buy' (size up) | 'sell' (trim). */
 export async function addTransaction(t: {
   ticker: string;

@@ -181,15 +181,81 @@ no sizing into a print; `trim` respects the $200 floor (`exit` doesn't); decisio
 
 ---
 
-## 8. Implementation order (phases; tests per phase)
-1. **P1 — technicals port:** bring `technicals.py` + its tests; integrate into `market_data`;
-   remove duplicate RSI/SMA/52w; verify numbers shift as expected (C4).
-2. **P2 — Signal model + metrics registry:** provenance + `insufficient_data`; registry module.
-3. **P3 — fundamentals:** source + `fundamentals` table + migration + cached fetch in the pipeline.
-4. **P4 — thesis-break flags.**
-5. **P5 — rework provisional-lean rules** (§4 truth table); update `ROUTINE.md` LLM final-lean contract.
-6. **P6 — web:** glossary tab (from registry), drill-down signal surfacing, chart S/R lines.
-7. **P7 — wire-up + verify** end-to-end on localhost; regenerate enrichment; sanity-check leans.
+## 8. Implementation order (phases, each TDD with a gate)
+
+Implementation runs end-to-end in one pass, but **each phase is gated**: write that phase's
+tests first (red), implement until green, run the gate, and only then proceed. If a gate
+fails and can't be fixed cleanly, STOP and report rather than build on a broken layer. Test
+catalogue in §8.5.
+
+0. **P0 — test harness.** `requirements-dev.txt` (pytest, pytest-mock), `tests/` + `conftest.py`
+   with fixtures (synthetic price/volume arrays with known outcomes; a fake snapshot; a fake
+   fundamentals payload; a throwaway Postgres schema for storage tests). **Gate:** `pytest -q` runs green (0 tests OK).
+1. **P1 — technicals port.** Port `technicals.py` **and** `test_technicals.py` from checklist-tab;
+   integrate into `market_data`; delete duplicate RSI/SMA/52w. **Gate:** §8.5/T1 + a "single RSI impl" guard.
+2. **P2 — Signal model + metrics registry.** **Gate:** §8.5/T2 (registry↔signals parity, no drift).
+3. **P3 — fundamentals** (FMP + yfinance fallback) + `fundamentals` table + migration `0002`.
+   **Gate:** §8.5/T3 (mocked source math + graceful degradation + migration round-trip).
+4. **P4 — thesis-break flags.** **Gate:** §8.5/T4 (boundary + no false-positive on missing data).
+5. **P5 — decision engine** (§4 truth table) + update `ROUTINE.md` LLM contract. **Gate:** §8.5/T5
+   (full truth table + the invariant tests — this is the go/no-go).
+6. **P6 — web** glossary tab (from registry), drill-down signals, chart S/R lines. **Gate:** §8.5/T6
+   (build + typecheck + glossary↔registry parity + action-set consistency).
+7. **P7 — wire-up + e2e.** **Gate:** §8.5/T7 (pipeline smoke on a test DB + v1 backward-compat),
+   then regenerate enrichment and review on localhost.
+
+## 8.5 Test design (write these first — they're the phase gates)
+
+**Conventions:** unit/logic tests are **offline + deterministic** (no network) — those are the
+gates. Real-API checks (FMP/Finnhub/yfinance) are marked `@pytest.mark.integration` and run
+manually/nightly, never block a gate. Web checks reuse `tsc --noEmit` + `next build`.
+
+**T1 — technicals (P1)**
+- Port checklist-tab's `test_technicals.py` verbatim (RSI Wilder, MACD + crossover states,
+  golden/death cross, swing pivots, dist-to-support/resistance, breakout+volume, 52w).
+- Characterization: flat series → RSI 50; strictly rising → RSI→100; hand-built golden-cross
+  series → `state == "golden_cross"`; insufficient history → `None` (not a crash).
+- **C4 guard:** assert the pipeline uses exactly one RSI implementation (old `_rsi` removed;
+  `market_data` calls `technicals.rsi`). Grep/AST or import-level assertion.
+
+**T2 — Signal model + registry (P2)**
+- Every emitted `Signal` has `category`, `metric`, `source_type`; `metric` ∈ registry keys.
+- **No drift, both directions:** every registry key is emitted by some generator; every emitted
+  metric has a registry entry. (This is the guard that the glossary can't lie.)
+- Short-history input → `insufficient_data=True` (no fabricated value).
+
+**T3 — fundamentals (P3)**
+- Mocked FMP/yfinance payload → correct `revenue_yoy`, `eps_yoy`, gross-margin trend, P/E-vs-history.
+- Source returns empty/None → fundamentals Signals flagged `insufficient_data`; pipeline doesn't crash.
+- Migration `0002` applies on a throwaway schema; `fundamentals` row round-trips.
+
+**T4 — thesis-break flags (P4)**
+- Boundary tests: revenue QoQ drop at/above vs below threshold; margin drop; ≥2 EPS misses in
+  last 3 vs 1 miss. Each toggles the flag correctly.
+- Missing/insufficient fundamentals → flag is `None`/insufficient, **never a false `True`**.
+
+**T5 — decision engine (P5) — the go/no-go gate**
+- **Truth-table coverage** (one parametrized case per §4 row): not-held→`watch`; thesis-break
+  flag→`exit`; ≥2 deterioration signals (no clean break)→`trim`; strength+room→`pile_on`;
+  otherwise→`hold`.
+- **"Don't chase":** strong + overbought → `hold` (NOT `pile_on`, NOT `trim`).
+- **Severity guard:** a *single* mild negative (e.g. just-below-50d) → `hold`, not `trim`.
+- **Event guard:** would-be `pile_on` within ≤1 trading day of earnings → `hold`.
+- **C1 invariant (size never matters):** identical signals at weight 5% vs 90% → **identical lean**;
+  a 90%-weight position with everything healthy is NOT `trim`/`exit`.
+- **Determinism:** same inputs → same provisional lean.
+
+**T6 — web (P6)**
+- `tsc --noEmit` + `next build` pass.
+- **Glossary↔registry parity:** the data the methodology page renders == the metrics registry
+  (assert on the served JSON/registry, so docs can't drift from code).
+- **Action-set consistency:** the documented actions == the code's action enum
+  (`pile_on|hold|trim|exit|watch`) — one source, asserted equal.
+
+**T7 — end-to-end (P7)**
+- Pipeline smoke on a test DB: snapshot contains `technicals.macd`, `fundamentals`, `signals[]`,
+  `thesis_break`, and a lean ∈ {pile_on,hold,trim,exit,watch} for every ticker; no exceptions.
+- **Backward-compat:** the app renders a v1-shaped snapshot (new fields absent) without crashing.
 
 ---
 
@@ -199,6 +265,9 @@ no sizing into a print; `trim` respects the $200 floor (`exit` doesn't); decisio
      re-introduced size-based trims or duplicated math (C1–C8 checklist).
   2. **Decision-logic soundness & glossary fidelity** — does the engine match §4, and does the
      glossary text match the actual code/registry (no drift)?
+- Reviewers also vet the **tests themselves** (§8.5): are the invariants actually asserted
+  (esp. T5 C1 "size never matters" and the "don't chase" / severity guards), or vacuous? Were
+  any gates weakened to pass? Green tests aren't enough — the assertions must be real.
 - I fix findings, then hand you a **localhost** for your own review before merge.
 
 ---

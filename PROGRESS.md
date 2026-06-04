@@ -77,6 +77,14 @@ the DB already holds v2 snapshots).
 - Snapshot prices are last-close; a same-day move (e.g., AVGO −15%) shows in the narrative
   immediately but in the *number* on the next post-close run.
 
+## Live position panel — SHIPPED
+A recorded trade (add/trim via the editor → `transactions` ledger) reflects **instantly** in the
+UI — `getLivePositions()` recomputes shares/avg-cost/invested/value/P&L/since-entry/weight + book
+totals from `current_positions` + the latest snapshot price on every page load (drill-down + recap),
+marked "● live". What still waits for a run: the live **price** (value is priced at the last run —
+we don't quote on every page view) and the **analysis/lean** (re-scores at the next pipeline run).
+File mode falls back to the snapshot figures.
+
 ## Intraday + caching — SHIPPED (on `v2-quant-and-glossary`, reviewed by 2 agents, remediated)
 Single clock-branched routine; `api_cache` (per-ET-day) for earnings-cal + analyst; intraday is
 a light **entry-watch** that fetches news ONLY for newly-triggered names (deduped once/ET-day) and

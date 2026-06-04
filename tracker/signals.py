@@ -7,7 +7,48 @@ the *final* lean and rationale. We never pretend the rules are advice.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass, asdict
 from typing import Any
+
+from . import metrics
+
+
+@dataclass
+class Signal:
+    """One evaluated metric. Every chip the UI shows comes from one of these;
+    `metric` references a key in metrics.REGISTRY (provenance + glossary link)."""
+    category: str
+    metric: str                     # must be a metrics.REGISTRY key
+    value_num: float | None = None
+    value_text: str | None = None
+    passed: bool | None = None      # None = insufficient data
+    suggestion: str | None = None
+    source_type: str | None = None
+    source_ref: str | None = None
+    insufficient_data: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def signal(metric_key: str, *, value_num=None, value_text=None, passed=None,
+           suggestion=None, source_ref=None) -> Signal:
+    """Build a Signal from a registry key, pulling category/source_type from the
+    registry so they can't drift. Unknown key → ValueError (caught by tests)."""
+    md = metrics.get(metric_key)
+    if md is None:
+        raise ValueError(f"unknown metric key {metric_key!r} (not in metrics.REGISTRY)")
+    return Signal(
+        category=md.category,
+        metric=metric_key,
+        value_num=value_num,
+        value_text=value_text,
+        passed=passed,
+        suggestion=suggestion,
+        source_type=md.source_type,
+        source_ref=source_ref,
+        insufficient_data=(value_num is None and value_text is None and passed is None),
+    )
 
 
 def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:

@@ -92,6 +92,25 @@ def insert_snapshot(payload: dict[str, Any], mode: str, as_of: date, generated_a
     return row["id"]
 
 
+def get_latest_enriched() -> dict[str, Any] | None:
+    """Latest snapshot that has narrative (market_recap set by the routine) — the source
+    for carry-forward and what the app should show."""
+    with connect() as c:
+        row = c.execute(
+            "SELECT payload FROM snapshots WHERE payload->>'market_recap' IS NOT NULL "
+            "ORDER BY generated_at DESC LIMIT 1"
+        ).fetchone()
+    return row["payload"] if row else None
+
+
+def update_snapshot(snapshot_id: int, payload: dict[str, Any]) -> bool:
+    """Update a SPECIFIC snapshot row (no cross-run clobber)."""
+    with connect() as c:
+        n = c.execute("UPDATE snapshots SET payload = %s WHERE id = %s",
+                      (json.dumps(payload, default=str), snapshot_id)).rowcount
+    return n > 0
+
+
 def update_latest_snapshot(payload: dict[str, Any]) -> bool:
     """Replace the payload of the most recent snapshot (used after enrichment)."""
     with connect() as c:

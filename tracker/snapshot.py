@@ -188,20 +188,58 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         rows.append(row)
 
     portfolio = _portfolio_block(rows, book_value)
-    return {
+    snap = {
         "generated_at": datetime.now(ZoneInfo(tz)).isoformat(),
-        "mode": mode,  # "preopen" | "postclose"
+        "mode": mode,  # preopen | intraday | postclose
         "session_phase": session_phase(tz),
         "as_of_date": today.isoformat(),
         "benchmark": cfg["benchmark"],
         "min_position_usd": cfg["min_position_usd"],
         "portfolio": portfolio,
         "tickers": rows,
-        # filled by the Claude routine:
+        # filled by the Claude routine (carried forward below so it's NEVER null):
         "market_recap": None,
         "macro_context": None,
         "alerts": _mechanical_alerts(rows, cfg),
     }
+
+    # Carry forward the prior run's narrative onto this fresh quant so no run — intraday
+    # or full — ever publishes a null-narrative board. The routine then OVERWRITES it
+    # (fully on full runs; for triggered names on intraday). Cold start: flag for the
+    # routine to do a full narration instead of relying on a (nonexistent) prior.
+    prior = store.get_latest_enriched()
+    merge_narrative(snap, prior)
+    snap["needs_full_enrichment"] = (prior is None)
+    return snap
+
+
+# Narrative fields owned by the routine — carried forward verbatim when this run hasn't
+# (re)generated them, so they're never dropped.
+NARRATIVE_TICKER_FIELDS = (
+    "takeaway", "sentiment", "catalyst_summary", "earnings_recap",
+    "final_lean", "rationale", "entry_guidance", "invalidation",
+)
+NARRATIVE_TOP_FIELDS = ("market_recap", "macro_context")
+
+
+def merge_narrative(fresh: dict[str, Any], prior: dict[str, Any] | None) -> dict[str, Any]:
+    """Copy prior narrative onto `fresh` wherever fresh hasn't set it (pure; in place).
+    Covers ALL tickers (incl. would-be-triggered — the routine overwrites those) plus the
+    top-level market recap/macro. None prior (cold start) → fresh is returned unchanged."""
+    if not prior:
+        return fresh
+    prior_by_ticker = {t.get("ticker"): t for t in prior.get("tickers", [])}
+    for t in fresh.get("tickers", []):
+        p = prior_by_ticker.get(t.get("ticker"))
+        if not p:
+            continue
+        for f in NARRATIVE_TICKER_FIELDS:
+            if t.get(f) is None and p.get(f) is not None:
+                t[f] = p[f]
+    for f in NARRATIVE_TOP_FIELDS:
+        if fresh.get(f) is None and prior.get(f) is not None:
+            fresh[f] = prior[f]
+    return fresh
 
 
 def _portfolio_block(rows: list[dict[str, Any]], book_value: float) -> dict[str, Any]:

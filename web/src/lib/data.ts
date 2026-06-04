@@ -18,10 +18,18 @@ export interface CurrentPosition {
 /** Latest snapshot: from Postgres if available, else the pipeline's JSON file. */
 export async function getLatestSnapshot(): Promise<Snapshot | null> {
   if (hasDb && sql) {
+    // Prefer the latest ENRICHED snapshot (market_recap set) so an in-flight insert
+    // never flashes a dry, narration-less board; fall back to latest if none enriched yet.
     const rows = await sql<{ payload: Snapshot }[]>`
+      SELECT payload FROM snapshots
+      WHERE payload->>'market_recap' IS NOT NULL
+      ORDER BY generated_at DESC LIMIT 1
+    `;
+    if (rows.length) return rows[0].payload;
+    const fallback = await sql<{ payload: Snapshot }[]>`
       SELECT payload FROM snapshots ORDER BY generated_at DESC LIMIT 1
     `;
-    return rows.length ? rows[0].payload : null;
+    return fallback.length ? fallback[0].payload : null;
   }
   try {
     return JSON.parse(await fs.readFile(SNAPSHOT_FILE, "utf8")) as Snapshot;

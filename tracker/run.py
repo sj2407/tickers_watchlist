@@ -43,7 +43,13 @@ def main(argv: list[str] | None = None) -> int:
     with open(args.out, "w") as f:
         json.dump(snap, f, indent=2 if args.pretty else None, default=str)
     # publish to the source of truth (Postgres if configured, else file)
-    store.write_snapshot(snap, mode)
+    snapshot_id = store.write_snapshot(snap, mode)
+    # record the inserted row id so the enrich step updates THIS row (no cross-run clobber)
+    id_file = args.out.parent / ".snapshot_id"
+    if snapshot_id is not None:
+        id_file.write_text(str(snapshot_id))
+    elif id_file.exists():
+        id_file.unlink()
 
     n = len(snap.get("tickers", []))
     pf = snap.get("portfolio", {})

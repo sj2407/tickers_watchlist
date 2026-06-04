@@ -64,9 +64,17 @@ def apply_enrichment(snapshot_path: Path = SNAPSHOT, enrichment_path: Path = ENR
 
     snapshot_path.write_text(json.dumps(snap, indent=2, default=str))
 
-    # publish the enriched snapshot to the source of truth (Postgres if configured)
+    # publish to the source of truth, targeting the row this run inserted (no clobber)
     from . import store
-    store.publish_enriched(snap)
+
+    id_file = snapshot_path.parent / ".snapshot_id"
+    snapshot_id = None
+    if id_file.exists():
+        try:
+            snapshot_id = int(id_file.read_text().strip())
+        except ValueError:
+            snapshot_id = None
+    store.publish_enriched(snap, snapshot_id)
     return snap
 
 

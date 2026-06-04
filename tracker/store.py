@@ -77,21 +77,40 @@ def get_fundamentals(ticker: str, max_age_days: int = 7) -> dict[str, Any]:
     return fundamentals.compute(ticker)
 
 
-def write_snapshot(snap: dict[str, Any], mode: str) -> None:
-    """Publish a fresh snapshot (insert). Postgres → snapshots row; file → out/snapshot.json."""
+def get_latest_enriched() -> dict[str, Any] | None:
+    """The latest snapshot that already has narrative — used for carry-forward.
+    DB → snapshots with market_recap set; file → out/snapshot.json if it's enriched."""
+    if db.using_db():
+        return db.get_latest_enriched()
+    import json
+    from pathlib import Path
+
+    f = Path(__file__).resolve().parent.parent / "out" / "snapshot.json"
+    try:
+        snap = json.loads(f.read_text())
+        return snap if snap.get("market_recap") else None
+    except Exception:
+        return None
+
+
+def write_snapshot(snap: dict[str, Any], mode: str) -> int | None:
+    """Insert a fresh snapshot. Returns the new row id (DB) so enrich can update THAT
+    row (no cross-run clobber). File mode → rewrite out/snapshot.json, returns None."""
     if db.using_db():
         as_of = date.fromisoformat(snap["as_of_date"])
         gen = datetime.fromisoformat(snap["generated_at"])
-        db.insert_snapshot(snap, mode, as_of, gen)
-        return
+        return db.insert_snapshot(snap, mode, as_of, gen)
     _write_file(snap)
+    return None
 
 
-def publish_enriched(snap: dict[str, Any]) -> None:
-    """Publish the enriched snapshot. Postgres → update latest row; file → rewrite file."""
+def publish_enriched(snap: dict[str, Any], snapshot_id: int | None = None) -> None:
+    """Publish the enriched snapshot. DB → update the SPECIFIC inserted row by id (falls
+    back to latest only if no id); file → rewrite out/snapshot.json."""
     if db.using_db():
+        if snapshot_id is not None and db.update_snapshot(snapshot_id, snap):
+            return
         if not db.update_latest_snapshot(snap):
-            # no row yet (enrich ran before a pipeline insert) → insert one
             db.insert_snapshot(snap, snap.get("mode", "postclose"),
                                date.fromisoformat(snap["as_of_date"]),
                                datetime.fromisoformat(snap["generated_at"]))

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .calendar_utils import returns_window_dates
+from . import technicals as ta
 
 
 def _pct(a: float | None, b: float | None) -> float | None:
@@ -39,16 +40,8 @@ def compute_returns(hist: pd.DataFrame, windows=(1, 5, 20)) -> dict[str, float |
     return out
 
 
-def _rsi(closes: pd.Series, period: int = 14) -> float | None:
-    if len(closes) < period + 1:
-        return None
-    delta = closes.diff().dropna()
-    gain = delta.clip(lower=0).rolling(period).mean()
-    loss = (-delta.clip(upper=0)).rolling(period).mean()
-    if loss.iloc[-1] == 0:
-        return 100.0
-    rs = gain.iloc[-1] / loss.iloc[-1]
-    return round(100 - (100 / (1 + rs)), 1)
+# RSI/SMA/MACD/MA-cross/support-resistance/breakout/52w now come from
+# tracker.technicals (Wilder RSI etc.) — single source of truth (plan C4).
 
 
 def _atr(hist: pd.DataFrame, period: int = 14) -> float | None:
@@ -65,39 +58,54 @@ def compute_technicals(hist: pd.DataFrame) -> dict[str, Any]:
     if hist.empty:
         return out
     closes = hist["Close"].dropna()
+    vols = hist["Volume"].dropna()
     last = float(closes.iloc[-1])
     out["last_close"] = round(last, 2)
 
+    # Moving averages (technicals.sma — single source)
     for win in (20, 50, 200):
-        if len(closes) >= win:
-            sma = float(closes.rolling(win).mean().iloc[-1])
-            out[f"sma{win}"] = round(sma, 2)
-            out[f"dist_sma{win}_pct"] = _pct(last, sma)
-        else:
-            out[f"sma{win}"] = None
-            out[f"dist_sma{win}_pct"] = None
+        s = ta.sma(closes, win)
+        out[f"sma{win}"] = round(s, 2) if s is not None else None
+        out[f"dist_sma{win}_pct"] = _pct(last, s)
 
-    out["rsi14"] = _rsi(closes)
+    # RSI (Wilder), MACD, 50/200 cross — all from technicals
+    r = ta.rsi(closes)
+    out["rsi14"] = round(r, 1) if r is not None else None
+    m = ta.macd(closes)
+    out["macd_state"] = m.state if m else None          # bullish_cross | bearish_cross | no_cross
+    out["macd_hist"] = round(m.histogram, 3) if m else None
+    out["ma_cross"] = ta.sma_cross_state(closes).state   # golden_cross | death_cross | above | below | insufficient
+
+    # ATR (local — technicals has no ATR)
     out["atr14"] = _atr(hist)
     out["atr14_pct"] = _pct_of(out.get("atr14"), last)
 
-    # 52-week range from available history (caps at ~1y of sessions)
+    # 52-week range; distance via technicals for parity
     window = closes.tail(252)
-    hi, lo = float(window.max()), float(window.min())
-    out["high_52w"] = round(hi, 2)
-    out["low_52w"] = round(lo, 2)
-    out["dist_52w_high_pct"] = _pct(last, hi)
-    out["dist_52w_low_pct"] = _pct(last, lo)
+    out["high_52w"] = round(float(window.max()), 2)
+    out["low_52w"] = round(float(window.min()), 2)
+    d52 = ta.dist_from_52w_high(closes)
+    out["dist_52w_high_pct"] = round(d52, 2) if d52 is not None else None
+    out["dist_52w_low_pct"] = _pct(last, out["low_52w"])
 
-    # volume conviction
-    vol = hist["Volume"].dropna()
-    if len(vol) >= 20:
-        avg20 = float(vol.tail(20).mean())
-        out["avg_vol_20d"] = int(avg20)
-        last_vol = float(vol.iloc[-1])
-        out["rel_volume"] = round(last_vol / avg20, 2) if avg20 else None
+    # Support / resistance — nearest swing pivots (distance + implied level price)
+    sup = ta.dist_from_nearest_pivot_below(closes)
+    res = ta.dist_from_nearest_pivot_above(closes)
+    out["support_dist_pct"] = round(sup, 2) if sup is not None else None
+    out["resistance_dist_pct"] = round(res, 2) if res is not None else None
+    out["support_price"] = round(last / (1 + sup / 100), 2) if sup is not None else None
+    out["resistance_price"] = round(last * (1 + res / 100), 2) if res is not None else None
 
-    # trend label
+    # Volume conviction + breakout
+    rv = ta.volume_vs_avg(vols, 20)
+    out["rel_volume"] = round(rv, 2) if rv is not None else None
+    if len(vols) >= 20:
+        out["avg_vol_20d"] = int(vols.tail(20).mean())
+    bo = ta.breakout_confirmed(closes, vols)
+    if bo is not None:
+        out["breakout"] = bo.is_breakout
+        out["breakout_confirmed"] = bo.is_confirmed
+
     out["trend"] = _trend_label(out)
     return out
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getLatestSnapshot } from "@/lib/data";
+import { getLatestSnapshot, getLivePositions } from "@/lib/data";
 import { usd, pct, signClass } from "@/lib/format";
 import { BadgeRow, LeanPill, SentimentChip, Metric } from "@/components/ui";
 import EarningsCalendar, { type EarningsEvent } from "@/components/EarningsCalendar";
@@ -7,8 +7,8 @@ import type { Lean } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-// Sort: things needing attention first (trim, then pile_on), then by |day move|.
-const leanRank: Record<string, number> = { trim: 0, pile_on: 1, hold: 2 };
+// Sort: things needing attention first (exit, trim, pile_on), then hold, then watch.
+const leanRank: Record<string, number> = { exit: -1, trim: 0, pile_on: 1, hold: 2, watch: 3 };
 
 export default async function Home() {
   const snap = await getLatestSnapshot();
@@ -21,6 +21,16 @@ export default async function Home() {
   }
 
   const pf = snap.portfolio;
+  // Live position math from the ledger (reflects trades instantly). Falls back to the
+  // snapshot's figures in file mode (no ledger).
+  const { book, byTicker } = await getLivePositions(snap);
+  const liveOn = Object.keys(byTicker).length > 0;
+  const liveInvested = Object.values(byTicker).reduce((s, p) => s + (p.invested ?? 0), 0);
+  const liveUnrealized = Object.values(byTicker).reduce((s, p) => s + (p.unrealized_pl ?? 0), 0);
+  const bookValue = liveOn ? book : pf.book_value;
+  const unrealized = liveOn ? liveUnrealized : pf.unrealized_pl;
+  const returnPct = liveOn ? (liveInvested ? (liveUnrealized / liveInvested) * 100 : null) : pf.unrealized_pl_pct;
+  const positionsCount = liveOn ? Object.values(byTicker).filter((p) => p.held).length : pf.positions_count;
   const earningsEvents: EarningsEvent[] = snap.tickers
     .filter((t) => t.earnings?.next_date)
     .map((t) => ({
@@ -42,10 +52,13 @@ export default async function Home() {
       <div className="mx-auto max-w-2xl px-4 pt-6">
         <header className="mb-4 flex items-baseline justify-between">
           <h1 className="text-xl font-semibold">Watchlist</h1>
-          <span className="text-xs text-zinc-500">
-            {snap.mode === "preopen" ? "Pre-open brief" : "Post-close recap"} ·{" "}
-            {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-          </span>
+          <div className="flex items-baseline gap-3">
+            <Link href="/methodology" className="text-xs text-sky-400">Methodology</Link>
+            <span className="text-xs text-zinc-500">
+              {snap.mode === "preopen" ? "Pre-open brief" : snap.mode === "intraday" ? "Intraday update" : "Post-close recap"} ·{" "}
+              {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            </span>
+          </div>
         </header>
 
         {/* Market recap — words first */}
@@ -65,10 +78,10 @@ export default async function Home() {
         <section className="mb-5 rounded-2xl bg-zinc-900/70 p-5 ring-1 ring-zinc-800">
           <h2 className="mb-3 text-sm font-medium text-zinc-300">Your book</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Metric label="Book value" value={usd(pf.book_value)} hint="total market value" />
-            <Metric label="Unrealized P/L" value={usd(pf.unrealized_pl)} className={signClass(pf.unrealized_pl)} hint="vs what you paid" />
-            <Metric label="Return" value={pct(pf.unrealized_pl_pct)} className={signClass(pf.unrealized_pl_pct)} hint="since entry" />
-            <Metric label="Positions" value={pf.positions_count} hint="names held" />
+            <Metric label="Book value" value={usd(bookValue)} hint="total market value" />
+            <Metric label="Unrealized P/L" value={usd(unrealized)} className={signClass(unrealized)} hint="vs what you paid" />
+            <Metric label="Return" value={pct(returnPct)} className={signClass(returnPct)} hint="since entry" />
+            <Metric label="Positions" value={positionsCount} hint="names held" />
           </div>
           {pf.top_gainer && pf.top_loser && (
             <div className="mt-3 flex gap-4 border-t border-zinc-800 pt-3 text-xs text-zinc-400">
@@ -120,11 +133,11 @@ export default async function Home() {
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-                  {t.position.held ? (
+                  {(byTicker[t.ticker]?.held ?? t.position.held) ? (
                     <>
-                      <span>Value <span className="text-zinc-300">{usd(t.position.market_value)}</span></span>
-                      <span>Since entry <span className={signClass(t.position.since_entry_pct)}>{pct(t.position.since_entry_pct)}</span></span>
-                      <span>{pct(t.position.weight_pct, 0)} of book</span>
+                      <span>Value <span className="text-zinc-300">{usd((byTicker[t.ticker] ?? t.position).market_value)}</span></span>
+                      <span>Since entry <span className={signClass((byTicker[t.ticker] ?? t.position).since_entry_pct)}>{pct((byTicker[t.ticker] ?? t.position).since_entry_pct)}</span></span>
+                      <span>{pct((byTicker[t.ticker] ?? t.position).weight_pct, 0)} of book</span>
                     </>
                   ) : (
                     <span className="rounded bg-zinc-800 px-2 py-0.5 text-zinc-400">watch-only</span>

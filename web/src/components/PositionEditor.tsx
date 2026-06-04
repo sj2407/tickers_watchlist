@@ -1,8 +1,14 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Position } from "@/lib/types";
 import { usd } from "@/lib/format";
+
+// Only the fields the editor reads — satisfied by both Position and LivePos.
+type EditablePosition = {
+  shares?: number;
+  cost_basis?: number | null;
+  market_value?: number | null;
+};
 
 // Records a BUY (size up) or SELL (trim) in the ledger at the current price.
 // Average cost is derived server-side, so there's nothing to type by hand.
@@ -15,7 +21,7 @@ export default function PositionEditor({
   minPositionUsd,
 }: {
   ticker: string;
-  position: Position;
+  position: EditablePosition;
   lastPrice: number | null;
   minPositionUsd: number;
 }) {

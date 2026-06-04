@@ -13,7 +13,8 @@ enrichment.json shape:
     "AAPL": {
       "takeaway": "...", "sentiment": "bullish|bearish|neutral|mixed",
       "catalyst_summary": "...", "earnings_recap": "... or null",
-      "final_lean": "pile_on|trim|hold", "rationale": "..."
+      "final_lean": "pile_on|hold|trim|exit|watch", "rationale": "...",
+      "entry_guidance": "... or null", "invalidation": "... or null"
     }
   }
 }
@@ -35,6 +36,8 @@ _TICKER_FIELDS = (
     "earnings_recap",
     "final_lean",
     "rationale",
+    "entry_guidance",
+    "invalidation",
 )
 
 
@@ -61,9 +64,17 @@ def apply_enrichment(snapshot_path: Path = SNAPSHOT, enrichment_path: Path = ENR
 
     snapshot_path.write_text(json.dumps(snap, indent=2, default=str))
 
-    # publish the enriched snapshot to the source of truth (Postgres if configured)
+    # publish to the source of truth, targeting the row this run inserted (no clobber)
     from . import store
-    store.publish_enriched(snap)
+
+    id_file = snapshot_path.parent / ".snapshot_id"
+    snapshot_id = None
+    if id_file.exists():
+        try:
+            snapshot_id = int(id_file.read_text().strip())
+        except ValueError:
+            snapshot_id = None
+    store.publish_enriched(snap, snapshot_id)
     return snap
 
 

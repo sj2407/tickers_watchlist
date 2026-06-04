@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTicker, getLatestSnapshot } from "@/lib/data";
+import { getTicker, getLatestSnapshot, getLivePositions } from "@/lib/data";
 import { usd, pct, num, signClass, rsiWord, trendWord, relVolWord, earningsWhen, leanLabel } from "@/lib/format";
 import { BadgeRow, LeanPill, SentimentChip, Metric, SectionHeader } from "@/components/ui";
 import PriceChart from "@/components/PriceChart";
@@ -20,6 +20,11 @@ export default async function TickerPage({
   const snap = await getLatestSnapshot();
   const minPos = snap?.min_position_usd ?? 200;
   const bench = snap?.benchmark ?? "SPY";
+
+  // Position reflects the ledger LIVE (your trades show instantly); falls back to the
+  // snapshot's position in file mode. The analysis (lean/technicals) is as-of-last-run.
+  const { byTicker } = await getLivePositions(snap);
+  const pos = byTicker[t.ticker] ?? t.position;
 
   const lean = (t.final_lean ?? t.signals.provisional_lean) as Lean;
   const tech = t.technicals;
@@ -57,7 +62,13 @@ export default async function TickerPage({
             </p>
             {!t.final_lean && <p className="mt-1 text-[11px] text-zinc-500">Auto-generated from signals — the routine refines this.</p>}
           </div>
-          <p className="mt-2 text-[11px] text-zinc-500">Decision-support, not advice — you place every order. ${minPos} floor on trims.</p>
+          {t.entry_guidance && (
+            <p className="mt-2 text-sm text-zinc-300"><span className="text-zinc-500">Entry: </span>{t.entry_guidance}</p>
+          )}
+          {t.invalidation && (
+            <p className="mt-1.5 text-sm text-zinc-300"><span className="text-zinc-500">What would change this: </span>{t.invalidation}</p>
+          )}
+          <p className="mt-2 text-[11px] text-zinc-500">Decision-support, not advice — you place every order. ${minPos} floor on trims. <Link href="/methodology" className="text-sky-400">How this is decided →</Link></p>
         </section>
 
         {/* What's happening — news & sentiment narrative */}
@@ -70,7 +81,7 @@ export default async function TickerPage({
 
         {/* Chart */}
         <section className="mt-4 rounded-2xl bg-zinc-900/70 p-3 ring-1 ring-zinc-800">
-          <PriceChart series={t.series} />
+          <PriceChart series={t.series} support={t.technicals.support_price} resistance={t.technicals.resistance_price} />
           <p className="px-1 pt-1 text-[11px] text-zinc-500">Daily candles · blue line = 50-day average · pinch / scroll to zoom</p>
         </section>
 
@@ -94,32 +105,65 @@ export default async function TickerPage({
             <Metric label="Trend" value={trendWord(tech.trend)} hint={tech.trend === "uptrend" ? "above key avgs" : tech.trend === "downtrend" ? "below key avgs" : "no clear direction"} />
             <Metric label="vs 50-day" value={pct(tech.dist_sma50_pct)} className={signClass(tech.dist_sma50_pct)} hint="medium-term" />
             <Metric label="vs 200-day" value={pct(tech.dist_sma200_pct)} className={signClass(tech.dist_sma200_pct)} hint="long-term" />
+            <Metric label="50/200 cross" value={(tech.ma_cross ?? "—").replace("_", " ")} hint="golden = bullish" />
+            <Metric label="MACD" value={tech.macd_state ? tech.macd_state.replace("_", " ") : "—"} hint="momentum" />
             <Metric label="From 52w high" value={pct(tech.dist_52w_high_pct)} className={signClass(tech.dist_52w_high_pct)} />
+            <Metric label="Support" value={tech.support_price != null ? `${usd(tech.support_price)}` : "—"} hint={tech.support_dist_pct != null ? `${tech.support_dist_pct.toFixed(0)}% below` : "nearest"} />
+            <Metric label="Resistance" value={tech.resistance_price != null ? `${usd(tech.resistance_price)}` : "—"} hint={tech.resistance_dist_pct != null ? `${tech.resistance_dist_pct.toFixed(0)}% above` : "nearest"} />
             <Metric label="Daily swing" value={pct(tech.atr14_pct)} hint="typical move (ATR)" />
-            <Metric label="Volume" value={tech.rel_volume != null ? `${tech.rel_volume.toFixed(1)}x` : "—"} hint={relVolWord(tech.rel_volume)} />
           </div>
         </section>
 
+        {/* Fundamentals */}
+        {t.fundamentals && (t.fundamentals.revenue_yoy != null || t.fundamentals.pe != null || t.fundamentals.gross_margin != null) && (
+          <section className="mt-4 rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-zinc-800">
+            <SectionHeader title="Fundamentals" hint="Is the business itself still working?" />
+            <div className="grid grid-cols-3 gap-3">
+              <Metric label="Revenue growth" value={pct(t.fundamentals.revenue_yoy)} className={signClass(t.fundamentals.revenue_yoy)} hint="YoY" />
+              <Metric label="EPS growth" value={pct(t.fundamentals.eps_yoy)} className={signClass(t.fundamentals.eps_yoy)} hint="YoY" />
+              <Metric label="Gross margin" value={t.fundamentals.gross_margin != null ? `${t.fundamentals.gross_margin.toFixed(0)}%` : "—"} />
+              <Metric label="P/E" value={t.fundamentals.pe != null ? t.fundamentals.pe.toFixed(1) : "—"} hint="vs own history" />
+              <Metric label="Rev QoQ" value={pct(t.fundamentals.revenue_qoq_pct)} className={signClass(t.fundamentals.revenue_qoq_pct)} hint="sequential" />
+            </div>
+            {t.thesis_break?.any && (
+              <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-200 ring-1 ring-rose-500/20">
+                ⚠ Thesis-break flag(s):{" "}
+                {[
+                  t.thesis_break.revenue_qoq_drop ? "revenue rolling over" : null,
+                  t.thesis_break.margin_compression ? "margin compression" : null,
+                  t.thesis_break.repeated_eps_miss ? "repeated EPS misses" : null,
+                ].filter(Boolean).join(", ")}
+              </p>
+            )}
+          </section>
+        )}
+
         {/* Position + editor */}
         <section className="mt-4 rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-zinc-800">
-          <h2 className="text-sm font-medium text-zinc-200">Your position</h2>
-          <p className="mb-3 text-xs text-zinc-500">Records a trade — numbers refresh on the next run.</p>
-          {t.position.held ? (
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-medium text-zinc-200">Your position</h2>
+            <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">● live</span>
+          </div>
+          {pos.held ? (
             <div className="grid grid-cols-3 gap-3">
-              <Metric label="Shares" value={num(t.position.shares, 4)} />
-              <Metric label="Avg cost" value={usd(t.position.cost_basis)} hint="what you paid" />
-              <Metric label="Value" value={usd(t.position.market_value)} hint="worth now" />
-              <Metric label="Invested" value={usd(t.position.invested)} />
-              <Metric label="Gain/loss" value={usd(t.position.unrealized_pl)} className={signClass(t.position.unrealized_pl)} hint="unrealized" />
-              <Metric label="Since entry" value={pct(t.position.since_entry_pct)} className={signClass(t.position.since_entry_pct)} />
-              <Metric label="Weight" value={pct(t.position.weight_pct, 0)} hint="of total book" />
+              <Metric label="Shares" value={num(pos.shares, 4)} />
+              <Metric label="Avg cost" value={usd(pos.cost_basis)} hint="what you paid" />
+              <Metric label="Value" value={usd(pos.market_value)} hint="at last price" />
+              <Metric label="Invested" value={usd(pos.invested)} />
+              <Metric label="Gain/loss" value={usd(pos.unrealized_pl)} className={signClass(pos.unrealized_pl)} hint="unrealized" />
+              <Metric label="Since entry" value={pct(pos.since_entry_pct)} className={signClass(pos.since_entry_pct)} />
+              <Metric label="Weight" value={pct(pos.weight_pct, 0)} hint="of total book" />
             </div>
           ) : (
             <p className="text-sm text-zinc-500">Watch-only — add shares to start tracking P/L.</p>
           )}
+          <p className="mt-2 text-[11px] text-zinc-500">
+            Trades reflect here instantly (shares/cost/invested from your ledger; value priced at the
+            last data run). The <em>analysis</em> above re-scores at the next run.
+          </p>
           {t.price.last != null && (
             <div className="mt-3">
-              <PositionEditor ticker={t.ticker} position={t.position} lastPrice={t.price.last} minPositionUsd={minPos} />
+              <PositionEditor ticker={t.ticker} position={pos} lastPrice={t.price.last} minPositionUsd={minPos} />
             </div>
           )}
         </section>

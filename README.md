@@ -81,7 +81,10 @@ The pipeline reads watchlist/positions from Postgres and writes snapshots to it
 
 Next.js 16 + Tailwind + TypeScript, phone-first. Recap page → ticker drill-down with
 an interactive candlestick chart (lightweight-charts) → in-app **position editor**
-(quick ±$100/$200 trim/add, enforces the $200 floor, persists). Single-passcode gate
+(quick ±$100/$200 trim/add, enforces the $200 floor, persists to the ledger). The
+**position panel is live** — a trade reflects instantly (shares/cost/invested/value/
+P&L/weight recomputed from the ledger + last price via `getLivePositions`, "● live"
+badge); only the price feed and the lean re-score at the next run. Single-passcode gate
 via `proxy.ts` (set `APP_PASSCODE`; unset = open in dev). Data layer reads **Neon
 Postgres** when `DATABASE_URL` is set, else the pipeline's local JSON files.
 

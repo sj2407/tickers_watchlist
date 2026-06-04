@@ -92,6 +92,25 @@ def insert_snapshot(payload: dict[str, Any], mode: str, as_of: date, generated_a
     return row["id"]
 
 
+def get_latest_enriched() -> dict[str, Any] | None:
+    """Latest snapshot that has narrative (market_recap set by the routine) — the source
+    for carry-forward and what the app should show."""
+    with connect() as c:
+        row = c.execute(
+            "SELECT payload FROM snapshots WHERE payload->>'market_recap' IS NOT NULL "
+            "ORDER BY generated_at DESC LIMIT 1"
+        ).fetchone()
+    return row["payload"] if row else None
+
+
+def update_snapshot(snapshot_id: int, payload: dict[str, Any]) -> bool:
+    """Update a SPECIFIC snapshot row (no cross-run clobber)."""
+    with connect() as c:
+        n = c.execute("UPDATE snapshots SET payload = %s WHERE id = %s",
+                      (json.dumps(payload, default=str), snapshot_id)).rowcount
+    return n > 0
+
+
 def update_latest_snapshot(payload: dict[str, Any]) -> bool:
     """Replace the payload of the most recent snapshot (used after enrichment)."""
     with connect() as c:
@@ -130,6 +149,45 @@ def upsert_watchlist(ticker: str, **meta: Any) -> None:
             else f"INSERT INTO watchlist (ticker) VALUES (%s) ON CONFLICT (ticker) DO NOTHING",
             [ticker.upper(), *fields.values()] if set_clause else [ticker.upper()],
         )
+
+
+_FUND_COLS = (
+    "report_date", "fiscal_period", "revenue", "revenue_yoy", "revenue_qoq_pct",
+    "eps", "eps_yoy", "eps_ttm", "gross_margin", "gross_margin_qoq_pp",
+    "eps_miss_count_last3", "source",
+)
+
+
+def fetch_fundamentals(ticker: str) -> dict[str, Any] | None:
+    with connect() as c:
+        return c.execute(
+            "SELECT *, fetched_at FROM fundamentals WHERE ticker = %s", (ticker.upper(),)
+        ).fetchone()
+
+
+def upsert_fundamentals(ticker: str, d: dict[str, Any]) -> None:
+    cols = ["ticker", *_FUND_COLS, "fetched_at"]
+    placeholders = ", ".join(["%s"] * (len(_FUND_COLS) + 1)) + ", now()"
+    updates = ", ".join(f"{c} = EXCLUDED.{c}" for c in (*_FUND_COLS, "fetched_at"))
+    vals = [ticker.upper(), *[d.get(k) for k in _FUND_COLS]]
+    with connect() as c:
+        c.execute(
+            f"INSERT INTO fundamentals ({', '.join(cols)}) VALUES ({placeholders}) "
+            f"ON CONFLICT (ticker) DO UPDATE SET {updates}",
+            vals,
+        )
+
+
+def claim_alert(ticker: str, trigger: str, alert_date) -> bool:
+    """Dedup: claim (ticker, trigger) for the given ET date. Returns True only on the
+    FIRST claim that day (idempotent via the PK + ON CONFLICT DO NOTHING)."""
+    with connect() as c:
+        n = c.execute(
+            "INSERT INTO intraday_alerts (ticker, trigger, alert_date) VALUES (%s, %s, %s) "
+            "ON CONFLICT DO NOTHING",
+            (ticker.upper(), trigger, alert_date),
+        ).rowcount
+    return n > 0
 
 
 def transaction_count(ticker: str) -> int:

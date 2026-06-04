@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from . import market_data as md
-from . import sources, signals, store
+from . import sources, signals, store, thesis, api_cache, triggers, db
 from .calendar_utils import session_phase
 from .config import load_config, load_env
 
@@ -44,10 +44,16 @@ def _days_until(target: date | None, ref: date) -> int | None:
     return (target - ref).days
 
 
-def _next_earnings(ticker: str, today: date) -> dict[str, Any]:
-    """Merge Finnhub calendar + yfinance dates → next upcoming + last reported."""
+def _next_earnings(ticker: str, today: date, bypass_cache: bool = False) -> dict[str, Any]:
+    """Merge Finnhub calendar + yfinance dates → next upcoming + last reported.
+    Calendar is cached per ET day; full runs pass bypass_cache=True so the post-close
+    run re-fetches fresh actuals on a day a name reports."""
     out: dict[str, Any] = {}
-    cal = sources.earnings_calendar(ticker)
+    cal = api_cache.cached(
+        f"finnhub:earncal:{ticker}",
+        lambda: sources.earnings_calendar(ticker),
+        bypass=bypass_cache,
+    ) or []
     yf_dates = sources.earnings_dates_yf(ticker)
 
     cal_dates = []
@@ -98,6 +104,12 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     bench_hist = sources.price_history(cfg["benchmark"], cfg["history_days"])
 
     rows: list[dict[str, Any]] = []
+    intraday_triggered: list[str] = []
+    # Fetch the prior enriched snapshot up front: used both to seed each row's prior
+    # final_lean BEFORE computing intraday triggers (so a routine-marked trim/exit name
+    # can't fire an entry trigger), and to carry the full narrative forward after the loop.
+    prior = store.get_latest_enriched()
+    prior_by_ticker = {t.get("ticker"): t for t in (prior or {}).get("tickers", [])}
     book_value = 0.0
     # first pass for book value (needs last prices)
     last_prices: dict[str, float | None] = {}
@@ -136,8 +148,15 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         rs = md.relative_strength(h, bench_hist)
         rets = md.compute_returns(h)
         series = _price_series(h, sessions=180)
+        fund = store.get_fundamentals(tk)
+        # If the source didn't already supply P/E (own-fetch path), derive it from
+        # live price + trailing-4Q EPS so it stays time-stamped to today's price.
+        if not fund.get("pe"):
+            ettm = fund.get("eps_ttm")
+            fund["pe"] = round(last / ettm, 1) if (last and ettm and ettm > 0) else None
+        extras = store.get_market_extras(tk)  # earnings reaction + factor scores (cache, additive)
         pos = md.position_math(holdings.get(tk), last, book_value or None)
-        earn = _next_earnings(tk, today)
+        earn = _next_earnings(tk, today, bypass_cache=(mode in ("preopen", "postclose")))
 
         row: dict[str, Any] = {
             "ticker": tk,
@@ -152,13 +171,15 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             "returns": rets,
             "relative_strength": rs,
             "technicals": tech,
+            "fundamentals": fund,
+            "thesis_break": thesis.thesis_break_flags(fund, cfg),
+            "earnings_reaction": extras.get("earnings_reaction"),
+            "scores": extras.get("scores"),
             "series": series,
             "position": pos,
             "earnings": earn,
-            "analyst": sources.recommendation_trend(tk),
-            "news": sources.company_news(
-                tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"]
-            ),
+            "analyst": api_cache.cached(f"finnhub:reco:{tk}", lambda tk=tk: sources.recommendation_trend(tk)),
+            "news": [],  # fetched below: always on full runs, only for triggered names intraday
             # filled by the Claude routine (subscription), left empty by the pipeline:
             "takeaway": None,        # one plain-English line: what's going on + what to consider
             "sentiment": None,       # bullish | bearish | neutral | mixed
@@ -168,23 +189,76 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             "rationale": None,
         }
         row["signals"] = signals.build_signals(row, cfg)
+
+        # Intraday = light entry-watch: only fetch news for names that trip a fresh
+        # trigger (deduped once per ET day). Full runs always fetch news.
+        if mode == "intraday":
+            # Seed the routine's prior lean so triggers respect a trim/exit call (M2 fix).
+            row["final_lean"] = (prior_by_ticker.get(tk) or {}).get("final_lean")
+            trigs = triggers.compute_triggers(row, cfg)
+            fresh = [tg for tg in trigs if (not db.using_db()) or db.claim_alert(tk, tg, today)]
+            if fresh:
+                intraday_triggered.append(tk)
+                row["triggers"] = fresh
+                row["news"] = sources.company_news(tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"])
+        else:
+            row["news"] = sources.company_news(tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"])
+
         rows.append(row)
 
     portfolio = _portfolio_block(rows, book_value)
-    return {
+    snap = {
         "generated_at": datetime.now(ZoneInfo(tz)).isoformat(),
-        "mode": mode,  # "preopen" | "postclose"
+        "mode": mode,  # preopen | intraday | postclose
         "session_phase": session_phase(tz),
         "as_of_date": today.isoformat(),
         "benchmark": cfg["benchmark"],
         "min_position_usd": cfg["min_position_usd"],
         "portfolio": portfolio,
         "tickers": rows,
-        # filled by the Claude routine:
+        # filled by the Claude routine (carried forward below so it's NEVER null):
         "market_recap": None,
         "macro_context": None,
         "alerts": _mechanical_alerts(rows, cfg),
+        "intraday_triggered": intraday_triggered,
     }
+
+    # Carry forward the prior run's narrative onto this fresh quant so no run — intraday
+    # or full — ever publishes a null-narrative board. The routine then OVERWRITES it
+    # (fully on full runs; for triggered names on intraday). Cold start: flag for the
+    # routine to do a full narration instead of relying on a (nonexistent) prior.
+    merge_narrative(snap, prior)  # prior fetched before the loop
+    snap["needs_full_enrichment"] = (prior is None)
+    return snap
+
+
+# Narrative fields owned by the routine — carried forward verbatim when this run hasn't
+# (re)generated them, so they're never dropped.
+NARRATIVE_TICKER_FIELDS = (
+    "takeaway", "sentiment", "catalyst_summary", "earnings_recap",
+    "final_lean", "rationale", "entry_guidance", "invalidation",
+)
+NARRATIVE_TOP_FIELDS = ("market_recap", "macro_context")
+
+
+def merge_narrative(fresh: dict[str, Any], prior: dict[str, Any] | None) -> dict[str, Any]:
+    """Copy prior narrative onto `fresh` wherever fresh hasn't set it (pure; in place).
+    Covers ALL tickers (incl. would-be-triggered — the routine overwrites those) plus the
+    top-level market recap/macro. None prior (cold start) → fresh is returned unchanged."""
+    if not prior:
+        return fresh
+    prior_by_ticker = {t.get("ticker"): t for t in prior.get("tickers", [])}
+    for t in fresh.get("tickers", []):
+        p = prior_by_ticker.get(t.get("ticker"))
+        if not p:
+            continue
+        for f in NARRATIVE_TICKER_FIELDS:
+            if t.get(f) is None and p.get(f) is not None:
+                t[f] = p[f]
+    for f in NARRATIVE_TOP_FIELDS:
+        if fresh.get(f) is None and prior.get(f) is not None:
+            fresh[f] = prior[f]
+    return fresh
 
 
 def _portfolio_block(rows: list[dict[str, Any]], book_value: float) -> dict[str, Any]:

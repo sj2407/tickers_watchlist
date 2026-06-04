@@ -60,6 +60,13 @@ _DEFAULTS: dict[str, Any] = {
         "position_weight_cap_pct": 15.0,  # single name > this % of book → trim watch
         "earnings_soon_days": 7,
     },
+    "intraday": {
+        "near_support_pct": 2.0,    # within 2% above nearest support → entry zone
+        "rsi_buy_band": 45.0,       # RSI cooled to ≤ this → entry timing
+        "sma50_zone_low": -4.0,     # pulled back into the 50-day zone (not a falling knife)
+        "sma50_zone_high": 1.0,
+        "notable_dip_pct": -5.0,    # held name down ≥5% on the day (thesis intact) → flag
+    },
     "tickers": [],
     "sector_etf": {},  # optional ticker -> sector ETF for relative strength
 }

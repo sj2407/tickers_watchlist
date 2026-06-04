@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from . import market_data as md
-from . import sources, signals, store
+from . import sources, signals, store, thesis
 from .calendar_utils import session_phase
 from .config import load_config, load_env
 
@@ -157,6 +157,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             "relative_strength": rs,
             "technicals": tech,
             "fundamentals": fund,
+            "thesis_break": thesis.thesis_break_flags(fund, cfg),
             "series": series,
             "position": pos,
             "earnings": earn,

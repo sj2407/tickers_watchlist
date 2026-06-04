@@ -23,15 +23,25 @@ on your **subscription**, not the API). The Python pipeline has already produced
    - `earnings_recap` — **only if it just reported** (look at `earnings.last_date` within
      ~2 sessions): EPS actual vs est, revenue actual vs est, **guidance raise/cut/inline**,
      and market reaction (`price.day_change_pct` / after-hours). Use web lookup for the call.
-   - `final_lean` — `pile_on` | `trim` | `hold`. Start from `signals.provisional_lean`,
-     then adjust using the catalyst + earnings context. **Never override `hold` to a sizing
-     change within 1 day of earnings** (event risk).
-     - **Trim ONLY when the thesis breaks** — growth/quality/theme deteriorates or upside
-       is gone. This is a small satellite sleeve (>90% of the user's money is in diversified
-       ETFs), so **never trim on position weight / concentration** — size within this book
-       is not a risk. A name being a large % of the sleeve is fine if the thesis holds.
-   - `rationale` — one line citing the *specific* drivers (e.g. "Trim lean: +RSI 78,
-     position now 35% of book, no near-term catalyst").
+   - `final_lean` — `pile_on` | `hold` | `trim` | `exit` (`watch` for non-held). Start from
+     `signals.provisional_lean` (the quant truth table), then apply the **qualitative
+     judgment the quant can't see** (guidance cut, catalyst failure, management/regulatory)
+     and weigh *severity*: escalate `trim`→`exit` on a clear break, or de-escalate when the
+     deterioration looks like noise. You may override the provisional lean, but cite the driver.
+     - **Trim/exit are driven by DETERIORATION** — thesis break, confirmed downtrend, weakening
+       fundamentals, sustained negative relative strength. Confluence → `trim`; a clear break → `exit`.
+     - **NEVER trim/exit on position size / % of the sleeve** — small satellite sleeve; size isn't
+       a risk. A name being a large % of the book is fine if the thesis holds.
+     - **Never size into a print** (≤1 day to earnings → don't escalate to a sizing change).
+     - `trim` keeps ≥ the $200 floor; `exit` closes fully (only on a clear break).
+   - `rationale` — one line citing the *specific* drivers (deterioration signals / catalyst),
+     never position size.
+   - `entry_guidance` — for adds: *where/when* ("good add zone — pulled back near support ~$X /
+     RSI cooled" vs "extended at RSI 78 — wait, don't chase"). Use the support/resistance + RSI signals.
+   - `invalidation` — the trigger stated *in advance*: what flips this call ("cut if rev growth
+     <X%, guidance is cut, or it loses $Y support"; or "add becomes attractive on a pullback to $Z").
+   - If a stop is set and breached (`technicals`/`position`), surface a **review prompt**
+     ("price hit your stop — is the thesis still intact?") — never an auto-cut.
 4. Write `market_recap` (1–2 sentences on the tape + the day's relevant macro) and
    `macro_context` (only macro that actually touches these names — rates, oil, the Fed, etc.).
 5. Enrich `alerts` with narrative (earnings T-7 / T-1, big moves, weight-cap breaches are

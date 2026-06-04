@@ -112,21 +112,121 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
             badges.append({"label": "Analysts cautious", "tone": "bad"})
             trim_pts.append("analyst consensus tilts bearish")
 
-    lean = _provisional_lean(pile_pts, trim_pts, days)
+    # MACD + cross badges (from the ported technicals)
+    if tech.get("macd_state") == "bullish_cross":
+        badges.append({"label": "MACD ↑", "tone": "good"})
+    elif tech.get("macd_state") == "bearish_cross":
+        badges.append({"label": "MACD ↓", "tone": "bad"})
+    if tech.get("ma_cross") == "golden_cross":
+        badges.append({"label": "Golden cross", "tone": "good"})
+    elif tech.get("ma_cross") == "death_cross":
+        badges.append({"label": "Death cross", "tone": "bad"})
+
+    # fundamentals + thesis-break badges
+    fund = t.get("fundamentals", {}) or {}
+    if fund.get("revenue_yoy") is not None:
+        rg = fund["revenue_yoy"]
+        badges.append({"label": f"Rev {rg:+.0f}% YoY", "tone": "good" if rg >= 15 else ("bad" if rg < 0 else "info")})
+    tb = t.get("thesis_break", {}) or {}
+    if tb.get("any"):
+        badges.append({"label": "Thesis flag", "tone": "bad"})
+
+    decision = provisional_lean(t, cfg)
     return {
         "badges": badges,
-        "provisional_lean": lean,
-        "pile_points": pile_pts,
-        "trim_points": trim_pts,
+        "provisional_lean": decision["lean"],
+        "drivers": decision["drivers"],
+        # back-compat aliases for existing consumers:
+        "pile_points": decision["drivers"]["pile"],
+        "trim_points": decision["drivers"]["deterioration"],
     }
 
 
-def _provisional_lean(pile: list[str], trim: list[str], earnings_days: int | None) -> str:
-    # Don't suggest sizing changes right before a print — event risk dominates.
-    if earnings_days is not None and 0 <= earnings_days <= 1:
-        return "hold"
-    if len(trim) >= 2 and len(trim) > len(pile):
-        return "trim"
-    if len(pile) >= 2 and len(pile) > len(trim):
-        return "pile_on"
-    return "hold"
+# Metric keys this engine references — guarded against metrics.REGISTRY in tests.
+REFERENCED_KEYS = {
+    "trend", "ma_cross", "rsi14", "dist_sma20_pct", "rs_20d", "days_to_earnings",
+    "revenue_growth_yoy", "eps_growth_yoy",
+    "tb_revenue_qoq_drop", "tb_margin_compression", "tb_repeated_eps_miss",
+}
+
+
+def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
+    """The transparent rule layer (§4 truth table). Returns {lean, drivers}.
+
+    Actions: watch (not held) · exit (clear break) · trim (deterioration confluence)
+    · pile_on (strength + room) · hold (default / "don't chase").
+
+    INVARIANT: position weight / size is NEVER read here — deterioration drives
+    trim/exit, never concentration.
+    """
+    s = cfg.get("signals", {})
+    tech = t.get("technicals", {}) or {}
+    pos = t.get("position", {}) or {}
+    earn = t.get("earnings", {}) or {}
+    fund = t.get("fundamentals", {}) or {}
+    tb = t.get("thesis_break", {}) or {}
+    rs = t.get("relative_strength", {}) or {}
+
+    held = bool(pos.get("held")) and (pos.get("shares") or 0) > 0
+
+    rsi = tech.get("rsi14")
+    overbought = rsi is not None and rsi >= s.get("rsi_overbought", 70)
+    d20 = tech.get("dist_sma20_pct")
+    extended = d20 is not None and d20 >= s.get("extended_above_sma20_pct", 12.0)
+    days = earn.get("days_until_next")
+    into_earnings = days is not None and 0 <= days <= 1
+
+    trend = tech.get("trend")
+    ma_cross = tech.get("ma_cross")
+    rs20 = rs.get("rs20d")
+    rev_yoy = fund.get("revenue_yoy")
+    eps_yoy = fund.get("eps_yoy")
+
+    # deterioration signals (the only things that push toward trim/exit)
+    det = {
+        "downtrend": (trend == "downtrend") or (ma_cross == "death_cross"),
+        "weak_fundamentals": (rev_yoy is not None and rev_yoy < 0) or (eps_yoy is not None and eps_yoy < 0),
+        "negative_rel_strength": rs20 is not None and rs20 < 0,
+        "revenue_rolling_over": tb.get("revenue_qoq_drop") is True,
+        "margin_compression": tb.get("margin_compression") is True,
+        "repeated_eps_miss": tb.get("repeated_eps_miss") is True,
+    }
+    det_true = [k for k, v in det.items() if v]
+    thesis_true = sum(1 for k in ("revenue_qoq_drop", "margin_compression", "repeated_eps_miss") if tb.get(k) is True)
+
+    # strength + room
+    strong = (trend == "uptrend") or (ma_cross in ("golden_cross", "above"))
+    rs_ok = (rs20 is None) or (rs20 >= 0)
+    room = (not overbought) and (not extended) and (not into_earnings) and (len(det_true) == 0)
+
+    pile: list[str] = []
+    if trend == "uptrend":
+        pile.append("uptrend")
+    if ma_cross == "golden_cross":
+        pile.append("golden cross")
+    if rs20 is not None and rs20 > 0:
+        pile.append("leading the market (positive RS)")
+    if rev_yoy is not None and rev_yoy >= 15:
+        pile.append(f"revenue +{rev_yoy:.0f}% YoY")
+
+    blocks: list[str] = []
+    if overbought:
+        blocks.append(f"overbought (RSI {rsi:.0f})")
+    if extended:
+        blocks.append(f"extended {d20:.0f}% above 20d MA")
+    if into_earnings:
+        blocks.append("reports within a day (event risk)")
+
+    # ── truth table (order matters) ──────────────────────────────────
+    if not held:
+        lean = "watch"
+    elif thesis_true >= 2:
+        lean = "exit"          # clear fundamental break
+    elif len(det_true) >= 2:
+        lean = "trim"          # deterioration confluence
+    elif strong and rs_ok and room:
+        lean = "pile_on"
+    else:
+        lean = "hold"          # incl. overbought/extended = "don't chase", or a single mild negative
+
+    return {"lean": lean, "drivers": {"pile": pile, "deterioration": det_true, "blocks": blocks}}

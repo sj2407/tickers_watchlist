@@ -1,0 +1,8 @@
+yfinance>=0.2.40
+pandas>=2.2
+numpy>=1.26
+pandas-market-calendars>=4.4
+PyYAML>=6.0
+requests>=2.31
+psycopg[binary]>=3.2
+python-dotenv>=1.0

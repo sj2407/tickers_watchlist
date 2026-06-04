@@ -1,0 +1,30 @@
+# tickers_watchlist configuration
+# The tickers to track. Held names get full position math; watch-only names
+# (no entry in data/holdings.json) still get prices, technicals, news & earnings.
+tickers:
+  - AAPL
+  - NVDA
+  - MSFT
+
+timezone: America/New_York
+benchmark: SPY          # relative-strength benchmark
+growth_benchmark: QQQ
+min_position_usd: 200   # floor when trimming
+history_days: 400       # >200 so the 200-day MA is available
+news_lookback_days: 4
+max_news_per_ticker: 8
+
+# Optional: map a ticker to its sector ETF for sector-relative strength later.
+sector_etf:
+  AAPL: XLK
+  NVDA: XLK
+  MSFT: XLK
+
+# Thresholds for the rule-based signal layer (the routine refines the final call).
+signals:
+  rsi_overbought: 70
+  rsi_oversold: 35
+  rel_vol_spike: 2.0
+  extended_above_sma20_pct: 12.0   # far above 20d MA -> trim watch
+  position_weight_cap_pct: 15.0    # single name > this % of book -> trim watch
+  earnings_soon_days: 7

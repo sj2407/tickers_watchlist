@@ -1,0 +1,66 @@
+import { promises as fs } from "fs";
+import path from "path";
+import { sql, hasDb } from "./db";
+import type { Snapshot } from "./types";
+
+// Offline-dev fallback: the pipeline's working file (repo root is one level up).
+const REPO_ROOT = path.join(process.cwd(), "..");
+const SNAPSHOT_FILE = path.join(REPO_ROOT, "out", "snapshot.json");
+
+export interface CurrentPosition {
+  ticker: string;
+  shares: number;
+  avg_cost: number | null;
+  invested: number | null;
+  realized_pl: number | null;
+}
+
+/** Latest snapshot: from Postgres if available, else the pipeline's JSON file. */
+export async function getLatestSnapshot(): Promise<Snapshot | null> {
+  if (hasDb && sql) {
+    const rows = await sql<{ payload: Snapshot }[]>`
+      SELECT payload FROM snapshots ORDER BY generated_at DESC LIMIT 1
+    `;
+    return rows.length ? rows[0].payload : null;
+  }
+  try {
+    return JSON.parse(await fs.readFile(SNAPSHOT_FILE, "utf8")) as Snapshot;
+  } catch {
+    return null;
+  }
+}
+
+export async function getTicker(symbol: string) {
+  const snap = await getLatestSnapshot();
+  if (!snap) return null;
+  return snap.tickers.find((t) => t.ticker === symbol.toUpperCase()) ?? null;
+}
+
+/** Live derived positions from the transaction ledger (Postgres only). */
+export async function getCurrentPositions(): Promise<Record<string, CurrentPosition>> {
+  if (!(hasDb && sql)) return {};
+  const rows = await sql<CurrentPosition[]>`
+    SELECT ticker, shares, avg_cost, invested, realized_pl
+    FROM current_positions WHERE shares > 0
+  `;
+  const out: Record<string, CurrentPosition> = {};
+  for (const r of rows) out[r.ticker.toUpperCase()] = r;
+  return out;
+}
+
+/** Record a trade in the append-only ledger. side: 'buy' (size up) | 'sell' (trim). */
+export async function addTransaction(t: {
+  ticker: string;
+  side: "buy" | "sell";
+  shares: number;
+  price: number;
+  note?: string;
+}): Promise<void> {
+  if (!(hasDb && sql)) {
+    throw new Error("No database configured — transactions require DATABASE_URL.");
+  }
+  await sql`
+    INSERT INTO transactions (ticker, side, shares, price, source, note)
+    VALUES (${t.ticker.toUpperCase()}, ${t.side}, ${t.shares}, ${t.price}, 'app', ${t.note ?? ""})
+  `;
+}

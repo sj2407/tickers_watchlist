@@ -105,6 +105,11 @@ def build_snapshot(mode: str) -> dict[str, Any]:
 
     rows: list[dict[str, Any]] = []
     intraday_triggered: list[str] = []
+    # Fetch the prior enriched snapshot up front: used both to seed each row's prior
+    # final_lean BEFORE computing intraday triggers (so a routine-marked trim/exit name
+    # can't fire an entry trigger), and to carry the full narrative forward after the loop.
+    prior = store.get_latest_enriched()
+    prior_by_ticker = {t.get("ticker"): t for t in (prior or {}).get("tickers", [])}
     book_value = 0.0
     # first pass for book value (needs last prices)
     last_prices: dict[str, float | None] = {}
@@ -188,6 +193,8 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         # Intraday = light entry-watch: only fetch news for names that trip a fresh
         # trigger (deduped once per ET day). Full runs always fetch news.
         if mode == "intraday":
+            # Seed the routine's prior lean so triggers respect a trim/exit call (M2 fix).
+            row["final_lean"] = (prior_by_ticker.get(tk) or {}).get("final_lean")
             trigs = triggers.compute_triggers(row, cfg)
             fresh = [tg for tg in trigs if (not db.using_db()) or db.claim_alert(tk, tg, today)]
             if fresh:
@@ -220,8 +227,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     # or full — ever publishes a null-narrative board. The routine then OVERWRITES it
     # (fully on full runs; for triggered names on intraday). Cold start: flag for the
     # routine to do a full narration instead of relying on a (nonexistent) prior.
-    prior = store.get_latest_enriched()
-    merge_narrative(snap, prior)
+    merge_narrative(snap, prior)  # prior fetched before the loop
     snap["needs_full_enrichment"] = (prior is None)
     return snap
 

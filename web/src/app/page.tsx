@@ -55,7 +55,7 @@ export default async function Home() {
           <div className="flex items-baseline gap-3">
             <Link href="/methodology" className="text-xs text-sky-400">Methodology</Link>
             <span className="text-xs text-zinc-500">
-              {snap.mode === "preopen" ? "Pre-open brief" : "Post-close recap"} ·{" "}
+              {snap.mode === "preopen" ? "Pre-open brief" : snap.mode === "intraday" ? "Intraday update" : "Post-close recap"} ·{" "}
               {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
             </span>
           </div>

@@ -1,61 +1,54 @@
-# Routine spec — what the twice-daily Claude run does
+# Routine spec — what the scheduled watchlist run does
 
-This is the instruction set for the scheduled **routine** (a Claude Code agent run
-on your **subscription**, not the API). The Python pipeline has already produced
-`out/snapshot.json` with all the quantitative facts. The routine's job is the
-**qualitative layer** + delivery — the work that would otherwise cost API tokens.
+This is the instruction set for the **single** scheduled routine (`~/.claude/scheduled-tasks/
+watchlist/`), a Claude Code agent run on your **subscription** (not the API). It fires a few
+times a day and **adapts to the market session** — the Python pipeline is the dumb plumbing
+(it has produced `out/snapshot.json`); the routine adds the **qualitative layer** + delivery,
+the work that would otherwise cost API tokens.
 
-## When it runs
-- **Pre-open** — ~09:00 ET, weekdays. Forward-looking: *what to watch today.*
-- **Post-close** — ~16:30 ET, weekdays. Backward-looking: *what happened, does it change a position.*
+## When it runs (one routine, clock-branched)
+Cron `5 9,13,16 * * 1-5` (≈ 9:05 / 1:05 / 4:05 ET, weekdays; jitter ~9 min). The mode is
+resolved from the REAL market session via `tracker.run --mode auto` → `calendar_utils.resolve_mode`:
+- **premarket → `preopen`** (full): forward-looking brief.
+- **open → `intraday`** (light): entry-watch only.
+- **afterhours → `postclose`** (full): recap incl. earnings.
+- **closed (weekend/holiday/half-day-closed) → no-op:** logs and exits, **touching nothing** (prior snapshot stands).
 
 ## Steps each run
-1. Run the pipeline: `python -m tracker.run --mode {preopen|postclose} --pretty`
-2. Read `out/snapshot.json`.
-3. Write your qualitative read to **`out/enrichment.json`** (don't hand-edit the snapshot),
-   then merge it with `python -m tracker.enrich`. The overlay carries, per ticker:
-   - `takeaway` — ONE plain-English line: what's going on + what to consider. This is the
-     hero line on every card; make it readable to a non-quant.
-   - `sentiment` — `bullish | bearish | neutral | mixed`.
-   - `catalyst_summary` — 1–3 sentences from the `news` headlines: what's the catalyst
-     (earnings / product / M&A / guidance / analyst action / macro), and which way it cuts.
-     The Finnhub feed is noisy — **filter out headlines not actually about this name**.
-   - `earnings_recap` — **only if it just reported** (look at `earnings.last_date` within
-     ~2 sessions): EPS actual vs est, revenue actual vs est, **guidance raise/cut/inline**,
-     and market reaction (`price.day_change_pct` / after-hours). Use web lookup for the call.
-   - `final_lean` — `pile_on` | `hold` | `trim` | `exit` (`watch` for non-held). Start from
-     `signals.provisional_lean` (the quant truth table), then apply the **qualitative
-     judgment the quant can't see** (guidance cut, catalyst failure, management/regulatory)
-     and weigh *severity*: escalate `trim`→`exit` on a clear break, or de-escalate when the
-     deterioration looks like noise. You may override the provisional lean, but cite the driver.
-     - **Trim/exit are driven by DETERIORATION** — thesis break, confirmed downtrend, weakening
-       fundamentals, sustained negative relative strength. Confluence → `trim`; a clear break → `exit`.
-     - **NEVER trim/exit on position size / % of the sleeve** — small satellite sleeve; size isn't
-       a risk. A name being a large % of the book is fine if the thesis holds.
-     - **Never size into a print** (≤1 day to earnings → don't escalate to a sizing change).
-     - `trim` keeps ≥ the $200 floor; `exit` closes fully (only on a clear break).
-   - `rationale` — one line citing the *specific* drivers (deterioration signals / catalyst),
-     never position size.
-   - `entry_guidance` — for adds: *where/when* ("good add zone — pulled back near support ~$X /
-     RSI cooled" vs "extended at RSI 78 — wait, don't chase"). Use the support/resistance + RSI signals.
-   - `invalidation` — the trigger stated *in advance*: what flips this call ("cut if rev growth
-     <X%, guidance is cut, or it loses $Y support"; or "add becomes attractive on a pullback to $Z").
-   - If a stop is set and breached (`technicals`/`position`), surface a **review prompt**
-     ("price hit your stop — is the thesis still intact?") — never an auto-cut.
-4. Write `market_recap` (1–2 sentences on the tape + the day's relevant macro) and
-   `macro_context` (only macro that actually touches these names — rates, oil, the Fed, etc.).
-5. Enrich `alerts` with narrative (earnings T-7 / T-1 and big moves are seeded mechanically
-   — add anything material from the news). Do NOT add position-size / weight alerts.
-6. **Deliver:** push the enriched snapshot to the app's DB, send the HTML email digest,
-   and fire push alerts for time-sensitive items (earnings T-1, big gaps, halts).
+1. `python -m tracker.run --mode auto`. If it prints "market closed — no-op", STOP. Otherwise it
+   prints the resolved mode and writes a snapshot to Neon that **already carries the prior
+   narrative forward** (so the board is never blank), records the row id (for enrich-by-id), and
+   sets `intraday_triggered` (list) + `needs_full_enrichment` (cold start).
+2. Read `out/snapshot.json` — note `mode`, `intraday_triggered`, `needs_full_enrichment`.
+3. **Enrich, by mode**, writing `out/enrichment.json` then `python -m tracker.enrich` (which
+   publishes to the row this run inserted — no cross-run clobber):
+   - **FULL** (preopen / postclose / `needs_full_enrichment`): regenerate the WHOLE layer for all
+     tickers — `market` recap + macro, and per ticker `takeaway` (the hero line), `sentiment`,
+     `catalyst_summary` (filter Finnhub noise), `earnings_recap` (if it just reported: EPS/rev
+     beat-miss, guidance, reaction), `final_lean`, `rationale`, `entry_guidance`, `invalidation`.
+   - **INTRADAY** (light): if `intraday_triggered` is empty, STOP (carried narrative stands). Else,
+     for JUST those tickers, web-search what's moving them and write a SHORT entry note (`takeaway`
+     + `entry_guidance`) into `out/enrichment.json` for those tickers only. Don't re-narrate the rest.
+4. **Final one-line message:** preopen = pre-open watch list; intraday = the entry alerts only;
+   postclose = recap (movers, beats/misses, lean changes). (Delivery = the task-completion
+   notification; push/email is a future add.)
 
-## Earnings cadence (alerts)
-- **T-7 days:** "reports in ~1 week" + last-quarter surprise + (later) implied move.
-- **T-1 day:** confirmed date/time, Street EPS & revenue estimate, your unrealized P/L going in.
-- **Recap:** EPS/rev beat-miss, guidance, market reaction vs. expectations, 2–3 call highlights.
+## Decision rules (the lean) — see docs/PLAN-v2.md §4
+- Actions: `pile_on` · `hold` · `trim` · `exit` (`watch` for non-held). The **quant proposes
+  pile_on/hold/trim**; **YOU (the LLM) own `exit`** — escalate `trim`→`exit` only on a *confirmed*
+  break, weighing news/guidance/severity.
+- **Trim/exit are driven by thesis DETERIORATION** (growth/quality/theme/trend/fundamentals going
+  wrong) — **NEVER by position size / % of the sleeve** (small satellite sleeve).
+- A single mild negative → `hold`; overbought → "don't chase" `hold`, never trim. No sizing into a
+  print (≤1 day to earnings). `trim` keeps the $200 floor; `exit` closes fully.
 
 ## Hard rules
-- **Subscription only.** Do all reasoning in the run. Never call the Anthropic API / add an
-  `anthropic` client to the Python. Never print or commit secret values.
-- **Decision-support, not advice.** Surface signals + a lean with reasons; the user places
-  every order. $200 is the floor on any trim.
+- **Subscription only** — do reasoning in the run; never call the Anthropic API / add an API key.
+- **Never training-data facts** — prices/figures from the snapshot; news/earnings/macro via web search.
+- **Never delete/null an output** — narrative is carried forward for all names; you only OVERWRITE
+  (full: all; intraday: triggered). A failed enrich leaves the prior read intact.
+- Decision-support, not advice — the user places every order.
+
+## Earnings cadence (alerts)
+- T-7: "reports in ~1 week" + last surprise. T-1: confirmed date/time + Street est + your P/L going in.
+- Recap: EPS/rev beat-miss, guidance raise/cut/inline, reaction vs. the implied move, 2-3 call highlights.

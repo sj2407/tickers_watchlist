@@ -29,8 +29,12 @@ this watchlist = *close tracking* of names already entered. They're complementar
   Single source of truth: append-only `transactions` ledger → derived `current_positions`;
   time-series `snapshots` (JSONB); `watchlist`; `fundamentals` cache. Migrations in `migrations/`.
 - **GitHub:** github.com/sj2407/tickers_watchlist (private). Secrets gitignored.
-- **Routines (local, run while the Claude app is open):** `~/.claude/scheduled-tasks/`
-  `watchlist-preopen` (~9:08am ET) + `watchlist-postclose` (~4:39pm ET), weekdays.
+- **Routine (local, runs while the Claude app is open):** `~/.claude/scheduled-tasks/watchlist/`
+  — ONE clock-branched job, cron `5 9,13,16 * * 1-5` (~9:14/1:14/4:14 ET, jitter). `--mode auto`
+  resolves the session via `calendar_utils.resolve_mode`: premarket→preopen(full) · open→intraday
+  (light entry-watch) · afterhours→postclose(full) · closed→no-op. (Old `watchlist-preopen`/
+  `-postclose` are DISABLED but still in the scheduler registry — delete them in the Scheduled UI
+  to free the slots; `rm` of their dirs alone doesn't de-register.)
 - **Current book:** 21 tickers (18 @ $200 + NOW 8.63537sh + COHR 1.85723sh + LITE 0.63823sh).
 
 ## Data sources (tiered, efficiency-first)
@@ -73,14 +77,24 @@ the DB already holds v2 snapshots).
 - Snapshot prices are last-close; a same-day move (e.g., AVGO −15%) shows in the narrative
   immediately but in the *number* on the next post-close run.
 
-## Roadmap / what we're thinking about next
-1. **Finnhub daily-caching** → unlock **intraday refreshes** (a few times/day) within limits. (next)
-2. **Merge v2 → main + redeploy.**
-3. **Backtesting:** replay stored `snapshots` (time-series) to evaluate the decision engine —
-   did pile_on/trim/exit calls precede good/bad forward returns? Tune thresholds against history.
-4. **Portfolio-history charts** (we already store every snapshot — book value / position over time).
-5. **Push/email alerts** for genuinely time-sensitive events once intraday.
-6. **Sector-relative strength** (vs sector ETF, not just SPY); QoQ via `fundamentals_history`.
+## Intraday + caching — SHIPPED (on `v2-quant-and-glossary`, reviewed by 2 agents, remediated)
+Single clock-branched routine; `api_cache` (per-ET-day) for earnings-cal + analyst; intraday is
+a light **entry-watch** that fetches news ONLY for newly-triggered names (deduped once/ET-day) and
+**carries narrative forward for all names — never nulls an output**; enrich-by-id (no clobber);
+app reads only enriched rows. **Measured budget:** intraday Finnhub = #newly-triggered (0 on a calm
+day), full run = 42; the equity-research cache covers fundamentals/scores/earnings-reactions for
+18/21 at ~0 API cost. Equity refresh moved to **5:30 PM ET** (after close). 103 tests pass.
+Known: cache gives TTM (not QoQ) for cache-covered names; FMP v3 dead → /stable for US, yfinance
+.info for ADRs; old disabled routines need a UI delete to free slots.
+
+## Roadmap / what's next
+1. **Merge `v2-quant-and-glossary` → main + redeploy** (live site still shows v1 UI; DB has v2 data).
+2. **Backtesting** — replay stored time-series `snapshots` to evaluate the decision engine: did
+   pile_on/trim/exit calls precede good/bad forward returns? Tune thresholds against history.
+3. **Portfolio-history charts** (every snapshot is stored — book value / position over time).
+4. **Push/email alerts** for the intraday entry signals (delivery is currently the task notification).
+5. **QoQ thesis flags for cache-covered names** via the equity cache's `fundamentals_history`.
+6. **Sector-relative strength** (vs sector ETF, not just SPY).
 7. Consider a paid FMP tier OR fuller reliance on the equity cache + Finnhub basics.
 
 ## Run / resume

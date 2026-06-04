@@ -35,6 +35,8 @@ _TICKER_FIELDS = (
     "earnings_recap",
     "final_lean",
     "rationale",
+    "entry_guidance",
+    "invalidation",
 )
 
 

@@ -140,6 +140,17 @@ escalating `trim`→`exit` or de-escalating when the deterioration looks like no
 driver**. Unchanged hard rules: trims/exits are driven by deterioration, **never by size**;
 no sizing into a print; `trim` respects the $200 floor (`exit` doesn't); decision-support, not advice.
 
+**Actionability outputs (what makes it a *guide*, not a readout) — written by the LLM layer:**
+- `entry_guidance` — for `pile_on`/`hold` adds: *where/when* to add ("near support ~$X / on a
+  pullback to the 50d / RSI has cooled") vs "extended at RSI 78 — wait, don't chase." Uses the
+  ported support/resistance + RSI signals.
+- `invalidation` — the trigger, stated *in advance*: what specific development flips the call
+  ("cut if rev growth <20%, guidance is cut, or it loses $X support"; or "add becomes
+  attractive on a pullback to $Y"). How you know when to act before it happens.
+- **Price stops are a review prompt, not an auto-cut** (decision #7): a hit stop surfaces
+  "price hit your stop ($X, −N%) — is the thesis still intact?" It forces the thesis re-check
+  but never auto-trims — consistent with "don't sell a temporarily-down name whose thesis holds."
+
 > Net change vs v1: the lean is now driven by an explicit, auditable signal set (incl.
 > fundamentals + deterioration flags), adds an `exit` action for clear thesis breaks, lets a
 > *confluence* of deterioration (not just a single formal flag) justify a `trim`, and keeps the
@@ -154,7 +165,8 @@ no sizing into a print; `trim` respects the $200 floor (`exit` doesn't); decisio
 - Reuse existing `watchlist.target` / `watchlist.stop` for the trade-plan panel (optionally add `reward_multiple`).
 - **Snapshot payload** gains (additive): `technicals.{macd, ma_cross, support, resistance, breakout}`,
   `fundamentals{...}`, `signals[]` (the Signal list with provenance), `thesis_break{flags}`,
-  `trade_plan{stop, target, reward_risk}`. Old fields stay; the app degrades gracefully if absent.
+  `trade_plan{stop, target, reward_risk}`, and the LLM actionability fields `entry_guidance`
+  + `invalidation`. Old fields stay; the app degrades gracefully if absent.
 
 ---
 
@@ -176,7 +188,9 @@ no sizing into a print; `trim` respects the $200 floor (`exit` doesn't); decisio
     the $200 floor, "decision-support not advice."
   - **Data & freshness** — sources, refresh cadence, and the "never training-data facts" rule.
 - **Drill-down upgrades:** MACD chip, support/resistance lines on the chart, a fundamentals
-  mini-panel, and thesis-break flags when present — each metric label links to its glossary entry.
+  mini-panel, thesis-break flags when present, and an **"entry guidance" + "what would change
+  this call" (invalidation)** block beneath the suggested action — each metric label links to
+  its glossary entry. A breached stop shows the review-prompt banner.
 - **Nav:** add a Methodology link in the recap header.
 
 ---
@@ -282,3 +296,8 @@ manually/nightly, never block a gate. Web checks reuse `tsc --noEmit` + `next bu
    genuinely deteriorates (thesis break / downtrend / weakening fundamentals / negative RS) —
    confluence → trim, clear break → exit. **Position size / % of sleeve is never a reason.**
    Folded into §3 C1 and §4.
+7. **Price stops = review prompt, not auto-cut:** ✅ a hit stop prompts a thesis re-check, never
+   auto-trims (consistent with "don't sell a temporarily-down name whose thesis holds").
+8. **Actionability outputs:** ✅ add `entry_guidance` (where/when to add) and `invalidation`
+   (what flips the call, stated in advance) per ticker — so it guides *sizing up* and *cutting*,
+   not just describes. Surfaced in the app (§7) and added to the snapshot payload (§5).

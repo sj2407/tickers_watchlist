@@ -19,7 +19,8 @@ import requests
 
 from .config import get_key
 
-FMP_BASE = "https://financialmodelingprep.com/api/v3"
+# FMP migrated off /api/v3 (now 403 "legacy") to the /stable API.
+FMP_BASE = "https://financialmodelingprep.com/stable"
 _session = requests.Session()
 
 
@@ -46,13 +47,34 @@ def _fmp_get(path: str, params: dict[str, Any]) -> Any:
 
 
 def fmp_income(ticker: str, limit: int = 8) -> list[dict] | None:
-    data = _fmp_get(f"/income-statement/{ticker}", {"period": "quarter", "limit": limit})
+    # /stable takes the symbol as a query param (not a path segment).
+    data = _fmp_get("/income-statement", {"symbol": ticker, "period": "quarter", "limit": limit})
     return data if isinstance(data, list) and data else None
 
 
 def fmp_surprises(ticker: str) -> list[dict] | None:
-    data = _fmp_get(f"/earnings-surprises/{ticker}", {})
+    data = _fmp_get("/earnings-surprises", {"symbol": ticker})
     return data if isinstance(data, list) and data else None
+
+
+def yf_info_pe_eps(ticker: str) -> dict:
+    """Supplement P/E + trailing EPS from yfinance .info — used for ADRs (ASML/TSM)
+    that FMP gates behind premium. Provider-sourced (not computed/guessed)."""
+    try:
+        import yfinance as yf
+
+        info = yf.Ticker(ticker).info or {}
+        return {"pe": _f(info.get("trailingPE")), "eps_ttm": _f(info.get("trailingEps"))}
+    except Exception:
+        return {}
+
+
+def _eps(row: dict):
+    """/stable uses 'eps'/'epsDiluted'; tolerate either."""
+    for k in ("eps", "epsdiluted", "epsDiluted"):
+        if row.get(k) is not None:
+            return row.get(k)
+    return None
 
 
 def yf_income(ticker: str) -> list[dict] | None:
@@ -141,12 +163,12 @@ def compute(
     out["report_date"] = q0.get("date")
     out["fiscal_period"] = q0.get("period")
     out["revenue"] = _f(q0.get("revenue"))
-    out["eps"] = _f(q0.get("eps"))
+    out["eps"] = _f(_eps(q0))
 
     rev0 = _f(q0.get("revenue"))
     if len(income) > 4:
         out["revenue_yoy"] = _pct(rev0, _f(income[4].get("revenue")))
-        out["eps_yoy"] = _pct(_f(q0.get("eps")), _f(income[4].get("eps")))
+        out["eps_yoy"] = _pct(_f(_eps(q0)), _f(_eps(income[4])))
     if len(income) > 1:
         out["revenue_qoq_pct"] = _pct(rev0, _f(income[1].get("revenue")))
         gm0, gm1 = _margin(q0), _margin(income[1])
@@ -154,9 +176,18 @@ def compute(
             out["gross_margin_qoq_pp"] = round(gm0 - gm1, 2)
     out["gross_margin"] = round(_margin(q0), 2) if _margin(q0) is not None else None
 
-    eps_vals = [_f(r.get("eps")) for r in income[:4]]
+    eps_vals = [_f(_eps(r)) for r in income[:4]]
     if all(v is not None for v in eps_vals) and eps_vals:
         out["eps_ttm"] = round(sum(eps_vals), 4)
+
+    # ADR/fallback gap-fill: if EPS/P-E is missing (yfinance income lacks EPS),
+    # pull trailing EPS + P/E from yfinance .info.
+    if source == "yfinance" and out["eps_ttm"] is None:
+        sup = yf_info_pe_eps(ticker)
+        if sup.get("eps_ttm") is not None:
+            out["eps_ttm"] = sup["eps_ttm"]
+        if sup.get("pe") is not None:
+            out["pe"] = sup["pe"]
 
     # repeated EPS misses over the last 3 reported quarters
     if surprises is None and source == "fmp":

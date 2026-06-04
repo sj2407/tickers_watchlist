@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from . import db, fundamentals
+from . import db, fundamentals, cache_source
 from .config import load_config
 from .holdings import load_holdings  # JSON fallback
 
@@ -40,9 +40,26 @@ def _write_file(snap: dict[str, Any]) -> None:
     out.write_text(json.dumps(snap, default=str))
 
 
+def get_market_extras(ticker: str) -> dict[str, Any]:
+    """Slow extras from the equity-research cache (earnings reaction + factor scores).
+    Empty dict if the cache is unavailable/stale/uncovered — purely additive."""
+    return {
+        "earnings_reaction": cache_source.get_earnings_reaction(ticker),
+        "scores": cache_source.get_scores(ticker),
+    }
+
+
 def get_fundamentals(ticker: str, max_age_days: int = 7) -> dict[str, Any]:
-    """Fundamentals with DB caching: serve a cached row if fresh, else fetch +
-    cache. In file mode, fetch live (no cache). Always None-safe."""
+    """Fundamentals, cheapest source first:
+      1) equity-research cache (fresh FMP data, ~0 API cost) for covered names,
+      2) our own fetch (FMP /stable + yfinance fallback), cached in Neon.
+    Always None-safe."""
+    # 1) shared cache (covers ~18/21; freshness-checked inside)
+    cached = cache_source.get_fundamentals(ticker)
+    if cached:
+        return cached
+
+    # 2) own fetch, with Neon caching
     if db.using_db():
         row = db.fetch_fundamentals(ticker)
         if row and row.get("fetched_at"):

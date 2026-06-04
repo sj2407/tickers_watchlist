@@ -183,7 +183,7 @@ export interface Alert {
 
 export interface Snapshot {
   generated_at: string;
-  mode: "preopen" | "postclose";
+  mode: "preopen" | "intraday" | "postclose";
   session_phase: string;
   as_of_date: string;
   benchmark: string;

@@ -47,6 +47,14 @@ def session_phase(tz: str = "America/New_York", name: str = "XNYS") -> str:
     return "afterhours"
 
 
+def resolve_mode(tz: str = "America/New_York", name: str = "XNYS") -> str | None:
+    """Map the real market session to a run mode. None = market closed → no-op.
+    premarket→preopen · open→intraday · afterhours→postclose · closed→None.
+    Uses the actual XNYS schedule, so half-days and holidays route correctly."""
+    phase = session_phase(tz, name)
+    return {"premarket": "preopen", "open": "intraday", "afterhours": "postclose"}.get(phase)
+
+
 def returns_window_dates(end: date, windows=(1, 5, 20), name: str = "XNYS") -> dict[int, date]:
     """Map each window N to the session date N trading days before `end`."""
     sessions = trading_sessions(end, lookback=max(windows) + 10, name=name)

@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from . import market_data as md
-from . import sources, signals, store, thesis
+from . import sources, signals, store, thesis, api_cache
 from .calendar_utils import session_phase
 from .config import load_config, load_env
 
@@ -44,10 +44,16 @@ def _days_until(target: date | None, ref: date) -> int | None:
     return (target - ref).days
 
 
-def _next_earnings(ticker: str, today: date) -> dict[str, Any]:
-    """Merge Finnhub calendar + yfinance dates → next upcoming + last reported."""
+def _next_earnings(ticker: str, today: date, bypass_cache: bool = False) -> dict[str, Any]:
+    """Merge Finnhub calendar + yfinance dates → next upcoming + last reported.
+    Calendar is cached per ET day; full runs pass bypass_cache=True so the post-close
+    run re-fetches fresh actuals on a day a name reports."""
     out: dict[str, Any] = {}
-    cal = sources.earnings_calendar(ticker)
+    cal = api_cache.cached(
+        f"finnhub:earncal:{ticker}",
+        lambda: sources.earnings_calendar(ticker),
+        bypass=bypass_cache,
+    ) or []
     yf_dates = sources.earnings_dates_yf(ticker)
 
     cal_dates = []
@@ -144,7 +150,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             fund["pe"] = round(last / ettm, 1) if (last and ettm and ettm > 0) else None
         extras = store.get_market_extras(tk)  # earnings reaction + factor scores (cache, additive)
         pos = md.position_math(holdings.get(tk), last, book_value or None)
-        earn = _next_earnings(tk, today)
+        earn = _next_earnings(tk, today, bypass_cache=(mode in ("preopen", "postclose")))
 
         row: dict[str, Any] = {
             "ticker": tk,
@@ -166,7 +172,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             "series": series,
             "position": pos,
             "earnings": earn,
-            "analyst": sources.recommendation_trend(tk),
+            "analyst": api_cache.cached(f"finnhub:reco:{tk}", lambda tk=tk: sources.recommendation_trend(tk)),
             "news": sources.company_news(
                 tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"]
             ),

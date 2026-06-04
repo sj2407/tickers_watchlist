@@ -5,10 +5,10 @@ Downstream code (snapshot.py) calls these and never knows which backend is live.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from . import db
+from . import db, fundamentals
 from .config import load_config
 from .holdings import load_holdings  # JSON fallback
 
@@ -38,6 +38,26 @@ def _write_file(snap: dict[str, Any]) -> None:
     out = Path(__file__).resolve().parent.parent / "out" / "snapshot.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(snap, default=str))
+
+
+def get_fundamentals(ticker: str, max_age_days: int = 7) -> dict[str, Any]:
+    """Fundamentals with DB caching: serve a cached row if fresh, else fetch +
+    cache. In file mode, fetch live (no cache). Always None-safe."""
+    if db.using_db():
+        row = db.fetch_fundamentals(ticker)
+        if row and row.get("fetched_at"):
+            age = datetime.now(timezone.utc) - row["fetched_at"]
+            if age < timedelta(days=max_age_days):
+                row.pop("fetched_at", None)
+                row.pop("ticker", None)
+                return row
+        d = fundamentals.compute(ticker)
+        try:
+            db.upsert_fundamentals(ticker, d)
+        except Exception:
+            pass  # caching is best-effort; never block the run
+        return d
+    return fundamentals.compute(ticker)
 
 
 def write_snapshot(snap: dict[str, Any], mode: str) -> None:

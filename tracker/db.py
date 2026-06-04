@@ -132,6 +132,33 @@ def upsert_watchlist(ticker: str, **meta: Any) -> None:
         )
 
 
+_FUND_COLS = (
+    "report_date", "fiscal_period", "revenue", "revenue_yoy", "revenue_qoq_pct",
+    "eps", "eps_yoy", "eps_ttm", "gross_margin", "gross_margin_qoq_pp",
+    "eps_miss_count_last3", "source",
+)
+
+
+def fetch_fundamentals(ticker: str) -> dict[str, Any] | None:
+    with connect() as c:
+        return c.execute(
+            "SELECT *, fetched_at FROM fundamentals WHERE ticker = %s", (ticker.upper(),)
+        ).fetchone()
+
+
+def upsert_fundamentals(ticker: str, d: dict[str, Any]) -> None:
+    cols = ["ticker", *_FUND_COLS, "fetched_at"]
+    placeholders = ", ".join(["%s"] * (len(_FUND_COLS) + 1)) + ", now()"
+    updates = ", ".join(f"{c} = EXCLUDED.{c}" for c in (*_FUND_COLS, "fetched_at"))
+    vals = [ticker.upper(), *[d.get(k) for k in _FUND_COLS]]
+    with connect() as c:
+        c.execute(
+            f"INSERT INTO fundamentals ({', '.join(cols)}) VALUES ({placeholders}) "
+            f"ON CONFLICT (ticker) DO UPDATE SET {updates}",
+            vals,
+        )
+
+
 def transaction_count(ticker: str) -> int:
     with connect() as c:
         row = c.execute("SELECT count(*) AS n FROM transactions WHERE ticker = %s", (ticker.upper(),)).fetchone()

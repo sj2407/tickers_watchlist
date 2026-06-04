@@ -136,6 +136,10 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         rs = md.relative_strength(h, bench_hist)
         rets = md.compute_returns(h)
         series = _price_series(h, sessions=180)
+        fund = store.get_fundamentals(tk)
+        # P/E from live price + trailing-4Q EPS (computed here so it stays time-stamped)
+        ettm = fund.get("eps_ttm")
+        fund["pe"] = round(last / ettm, 1) if (last and ettm and ettm > 0) else None
         pos = md.position_math(holdings.get(tk), last, book_value or None)
         earn = _next_earnings(tk, today)
 
@@ -152,6 +156,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             "returns": rets,
             "relative_strength": rs,
             "technicals": tech,
+            "fundamentals": fund,
             "series": series,
             "position": pos,
             "earnings": earn,

@@ -6,10 +6,23 @@ Standard SQL against any Postgres (local container / Neon / Supabase). The app
 from __future__ import annotations
 
 import json
+import math
 import os
 from contextlib import contextmanager
 from datetime import date, datetime
 from typing import Any
+
+
+def _json_safe(obj: Any) -> Any:
+    """Recursively replace NaN/Inf floats with None so json.dumps never emits the
+    non-standard `NaN`/`Infinity` tokens that Postgres' JSON parser rejects."""
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
 
 import psycopg
 from psycopg.rows import dict_row
@@ -87,7 +100,7 @@ def insert_snapshot(payload: dict[str, Any], mode: str, as_of: date, generated_a
             INSERT INTO snapshots (generated_at, mode, as_of_date, payload)
             VALUES (%s, %s, %s, %s) RETURNING id
             """,
-            (generated_at, mode, as_of, json.dumps(payload, default=str)),
+            (generated_at, mode, as_of, json.dumps(_json_safe(payload), default=str)),
         ).fetchone()
     return row["id"]
 

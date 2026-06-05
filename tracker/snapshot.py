@@ -25,12 +25,17 @@ def _price_series(hist: pd.DataFrame, sessions: int = 180) -> list[dict[str, Any
     tail = hist.tail(sessions)
     out = []
     for ts, row in tail.iterrows():
+        # Skip bars with no close (e.g. a current-day partial bar in preopen): a NaN
+        # close is unchartable and, left in, serializes to invalid JSON `NaN` that
+        # Postgres rejects on insert.
+        if not pd.notna(row["Close"]):
+            continue
         out.append(
             {
                 "t": ts.date().isoformat(),
-                "o": round(float(row["Open"]), 2),
-                "h": round(float(row["High"]), 2),
-                "l": round(float(row["Low"]), 2),
+                "o": round(float(row["Open"]), 2) if pd.notna(row["Open"]) else None,
+                "h": round(float(row["High"]), 2) if pd.notna(row["High"]) else None,
+                "l": round(float(row["Low"]), 2) if pd.notna(row["Low"]) else None,
                 "c": round(float(row["Close"]), 2),
                 "v": int(row["Volume"]) if pd.notna(row["Volume"]) else None,
             }
@@ -92,6 +97,50 @@ def _next_earnings(ticker: str, today: date, bypass_cache: bool = False) -> dict
     return out
 
 
+def build_ticker_row(tk, h, q, last, cfg, today, bench_hist, book_value, holdings, mode):
+    """Build ONE ticker's full snapshot row (quant only; narrative left null). Shared by
+    build_snapshot's loop and the append-one-ticker path so there's no duplicated logic."""
+    closes = h["Close"].dropna() if not h.empty else None
+    prev_close = q.get("prev_close")
+    if prev_close is None and closes is not None and len(closes) >= 2:
+        prev_close = round(float(closes.iloc[-2]), 2)
+    if q.get("day_high") is None and not h.empty:
+        q["day_high"] = round(float(h["High"].dropna().iloc[-1]), 2)
+        q["day_low"] = round(float(h["Low"].dropna().iloc[-1]), 2)
+    q["prev_close"] = prev_close
+
+    tech = md.compute_technicals(h)
+    rs = md.relative_strength(h, bench_hist)
+    rets = md.compute_returns(h)
+    series = _price_series(h, sessions=180)
+    fund = store.get_fundamentals(tk)
+    if not fund.get("pe"):
+        ettm = fund.get("eps_ttm")
+        fund["pe"] = round(last / ettm, 1) if (last and ettm and ettm > 0) else None
+    extras = store.get_market_extras(tk)
+    pos = md.position_math(holdings.get(tk), last, book_value or None)
+    earn = _next_earnings(tk, today, bypass_cache=(mode in ("preopen", "postclose")))
+
+    row: dict[str, Any] = {
+        "ticker": tk,
+        "price": {
+            "last": last, "prev_close": q.get("prev_close"), "open": q.get("open"),
+            "day_high": q.get("day_high"), "day_low": q.get("day_low"),
+            "day_change_pct": md._pct(last, q.get("prev_close")),
+        },
+        "returns": rets, "relative_strength": rs, "technicals": tech, "fundamentals": fund,
+        "thesis_break": thesis.thesis_break_flags(fund, cfg),
+        "earnings_reaction": extras.get("earnings_reaction"), "scores": extras.get("scores"),
+        "series": series, "position": pos, "earnings": earn,
+        "analyst": api_cache.cached(f"finnhub:reco:{tk}", lambda tk=tk: sources.recommendation_trend(tk)),
+        "news": [],
+        "takeaway": None, "sentiment": None, "catalyst_summary": None, "earnings_recap": None,
+        "final_lean": None, "rationale": None,
+    }
+    row["signals"] = signals.build_signals(row, cfg)
+    return row
+
+
 def build_snapshot(mode: str) -> dict[str, Any]:
     load_env()
     cfg = load_config()
@@ -129,66 +178,8 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             book_value += float(hold.get("shares") or 0) * last
 
     for tk in tickers:
-        h = hists[tk]
-        q = quotes[tk]
-        last = last_prices[tk]
-
-        # Fill price gaps from history when the live quote is sparse.
-        closes = h["Close"].dropna() if not h.empty else None
-        prev_close = q.get("prev_close")
-        if prev_close is None and closes is not None and len(closes) >= 2:
-            # second-to-last close is the prior session's close
-            prev_close = round(float(closes.iloc[-2]), 2)
-        if q.get("day_high") is None and not h.empty:
-            q["day_high"] = round(float(h["High"].dropna().iloc[-1]), 2)
-            q["day_low"] = round(float(h["Low"].dropna().iloc[-1]), 2)
-        q["prev_close"] = prev_close
-
-        tech = md.compute_technicals(h)
-        rs = md.relative_strength(h, bench_hist)
-        rets = md.compute_returns(h)
-        series = _price_series(h, sessions=180)
-        fund = store.get_fundamentals(tk)
-        # If the source didn't already supply P/E (own-fetch path), derive it from
-        # live price + trailing-4Q EPS so it stays time-stamped to today's price.
-        if not fund.get("pe"):
-            ettm = fund.get("eps_ttm")
-            fund["pe"] = round(last / ettm, 1) if (last and ettm and ettm > 0) else None
-        extras = store.get_market_extras(tk)  # earnings reaction + factor scores (cache, additive)
-        pos = md.position_math(holdings.get(tk), last, book_value or None)
-        earn = _next_earnings(tk, today, bypass_cache=(mode in ("preopen", "postclose")))
-
-        row: dict[str, Any] = {
-            "ticker": tk,
-            "price": {
-                "last": last,
-                "prev_close": q.get("prev_close"),
-                "open": q.get("open"),
-                "day_high": q.get("day_high"),
-                "day_low": q.get("day_low"),
-                "day_change_pct": md._pct(last, q.get("prev_close")),
-            },
-            "returns": rets,
-            "relative_strength": rs,
-            "technicals": tech,
-            "fundamentals": fund,
-            "thesis_break": thesis.thesis_break_flags(fund, cfg),
-            "earnings_reaction": extras.get("earnings_reaction"),
-            "scores": extras.get("scores"),
-            "series": series,
-            "position": pos,
-            "earnings": earn,
-            "analyst": api_cache.cached(f"finnhub:reco:{tk}", lambda tk=tk: sources.recommendation_trend(tk)),
-            "news": [],  # fetched below: always on full runs, only for triggered names intraday
-            # filled by the Claude routine (subscription), left empty by the pipeline:
-            "takeaway": None,        # one plain-English line: what's going on + what to consider
-            "sentiment": None,       # bullish | bearish | neutral | mixed
-            "catalyst_summary": None,
-            "earnings_recap": None,
-            "final_lean": None,
-            "rationale": None,
-        }
-        row["signals"] = signals.build_signals(row, cfg)
+        row = build_ticker_row(tk, hists[tk], quotes[tk], last_prices[tk], cfg, today,
+                               bench_hist, book_value, holdings, mode)
 
         # Intraday = light entry-watch: only fetch news for names that trip a fresh
         # trigger (deduped once per ET day). Full runs always fetch news.

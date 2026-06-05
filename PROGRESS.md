@@ -1,8 +1,9 @@
 # PROGRESS — tickers_watchlist
 
 > Session-spanning log so a future session knows exactly what exists, why, and what's next.
-> Map docs: `README.md` (overview), `ROUTINE.md` (what the scheduled routine does),
-> `docs/PLAN-v2.md` (the v2 design + decisions + test plan). This file = status + roadmap.
+> Map docs: `README.md` (overview), `ROUTINE.md` (scheduled routine + narrative style rules),
+> `docs/PLAN-v2.md` (v2 design + test plan), `docs/PLAN-fundamentals-freshness.md` (quarterly
+> backfill + freshness gate), `docs/architecture.html` (educational walkthrough). This file = status + roadmap.
 
 ## What this is
 A twice-daily (heading toward intraday) tracker for a **small thematic satellite sleeve**
@@ -35,7 +36,7 @@ this watchlist = *close tracking* of names already entered. They're complementar
   (light entry-watch) · afterhours→postclose(full) · closed→no-op. (Old `watchlist-preopen`/
   `-postclose` are DISABLED but still in the scheduler registry — delete them in the Scheduled UI
   to free the slots; `rm` of their dirs alone doesn't de-register.)
-- **Current book:** 21 tickers (18 @ $200 + NOW 8.63537sh + COHR 1.85723sh + LITE 0.63823sh).
+- **Current book:** 22 tickers (incl. HIMS 35.22603sh added 6/5, NOW 8.63537sh, COHR, CRDO, LITE; rest ~$200 each).
 
 ## Data sources (tiered, efficiency-first)
 - **equity-research-agent cache** (`~/equity-research-agent/data/cache.db`, read-only via
@@ -67,10 +68,64 @@ verified e2e against Neon. **103 tests pass.** **Merged `v2-quant-and-glossary` 
 GitHub) and redeployed to Vercel prod** — https://tickers-watchlist.vercel.app now serves the full
 quant engine + glossary + fundamentals + intraday + live positions. Branch kept for history.
 
+## Latest session (2026-06-05) — SHIPPED & LIVE on `main`
+Merged to `main` (commits `befff5c` web + `ea9e4a3` pipeline) and **deployed to Vercel prod**
+via `vercel deploy --prod --cwd web` (deploy `dpl_J8Jgup…`). NOTE: **this project does NOT auto-deploy
+on git push** — prod deploys are manual (CLI/MCP). **136 tests pass.** The fundamentals work was
+reviewed by 2 independent agents; their findings (uncovered-path gate + EPS guard) are fixed.
+
+**Web (phone app) — new files/behaviour:**
+- **Tabbed nav** (`web/src/components/TabBar.tsx`, in `layout.tsx`): Watchlist / Tickers / Methodology.
+- **Tickers tab** (`ticker/[symbol]/page.tsx` + `TickerNav.tsx`): dropdown + ‹ › arrows + left/right
+  **swipe** to switch names; `ticker/page.tsx` index redirects to the first held name; order in
+  `lib/order.ts`. **Position-first** layout via `PositionPanel.tsx` (Trim/add button beside the header).
+- **Decision matrix** (`DecisionMatrix.tsx`, "Why this call"): each metric placed on the
+  Exit/Trim/Hold/Pile-on axis + the rule's Decision dot + a plain-English tally note. Faithful to the
+  rule engine, no invented scores. (Chosen after exploring waterfall/gauge — see `docs/decision-visual-mock.html`.)
+- **Readability:** `RichText.tsx` (signed numbers colored + ▲/▼, $ and magnitudes bold, tickers bold);
+  color-bar `SectionHeader`; deleted helper subtitles; lean-colored action word; "as of" timestamps;
+  hidden-empty fundamental tiles; methodology metric colors.
+- **Narrative style rule:** NO em-dashes, NO color words (GREEN/RED) — baked into `ROUTINE.md` + the
+  scheduled task prompt; `RichText` also strips em-dashes at render.
+
+**Pipeline — quarterly fundamentals + earnings-aware freshness gate (the big one):**
+- `tracker/quarterly.py`: pure math — Rev QoQ, gross margin, margin QoQ (pp), **guarded** YoY (None on
+  non-positive/near-zero year-ago denominator), the yfinance `quarterly_income_stmt` parser, and `is_stale`.
+- `tracker/store.get_fundamentals(ticker, earnings=…)`: freshness gate on BOTH paths. Fills ONLY
+  `revenue_qoq_pct` + `gross_margin_qoq_pp` into the cache result (never overwrites cache TTM); if a newer
+  quarter was reported (last_date > report_date + 100d) but the statement isn't in yfinance yet, returns
+  those as **None (insufficient)**, never a stale quarter; refetches only on a real quarter advance (no
+  thrash); 45-day confirm backstop. Helpers `_fresh_quarterly`, `_apply_quarterly`, `_is_behind`.
+- `tracker/fundamentals.py`: EPS YoY guarded. `tracker/cache_source.py`: EPS growth falls back to
+  `earnings_growth_ttm`. `tracker/snapshot.build_ticker_row`: computes `earn` before fundamentals, passes it.
+- `tracker/backfill_fundamentals.py`: one-time/re-runnable populate of the `fundamentals` table for
+  cache-covered names — `python -m tracker.backfill_fundamentals --verify`. **Already run once** (data in Neon).
+- Tests: `test_quarterly.py`, `test_quarterly_fetch.py`, `test_fundamentals_freshness.py`,
+  `test_fundamentals_merge.py` (incl. the "fill QoQ, preserve TTM" invariant).
+
+**IMPORTANT — what fills WHEN:** the backfill populated Neon's `fundamentals` table and the gate is live
+in code, but the **app's snapshot won't show Rev QoQ / the fully-populated matrix until the next full
+pipeline run regenerates the snapshot** (4:14 ET post-close, which also re-narrates so prices+words stay
+in sync — don't force a mid-day run). Names that reported very recently (yfinance statement lag, e.g.
+AVGO/CRDO/CRWD as of 6/5) correctly show Rev QoQ as "insufficient" until yfinance publishes.
+
+**Freshness audit (done 6/5):** all live inputs current — prices/technicals per run; cache TTM 20h (≤36h
+window) and already reflects June earnings; QoQ earnings-gated; analyst/earnings per ET-day. Residual:
+the **cache TTM growth** (revenue/EPS YoY) is NOT hard-gated — it relies on the sister daily refresh +
+36h window, so ~≤36h post-earnings lag is possible (offered to extend the gate to TTM; not yet done).
+
+**Branch state:** merged feature branches deleted LOCALLY; the 3 remote branches
+(`docs/architecture-page`, `fix/snapshot-nan-guard`, `feature/tabs-nav-and-readability`) **kept on GitHub**
+at the user's request (delete later). `.claude/launch.json` = local preview-server config (uncommitted; ignore).
+
+**Docs added:** `docs/architecture.html` (educational walkthrough, on `main`), `docs/PLAN-fundamentals-freshness.md`
+(freshness plan + test gates), `docs/decision-visual-mock.html` (decision-viz exploration).
+
 ## Known tradeoffs / open items
-- **TTM vs QoQ:** cache fundamentals are trailing-twelve-month, so QoQ sequential thesis-flags
-  only fire for own-fetched names. Deterioration still caught via TTM-growth-negative + trend +
-  RS + the LLM's earnings reads. Upgrade path: compute QoQ from the cache's `fundamentals_history`.
+- **TTM vs QoQ:** RESOLVED (6/5) — Rev QoQ + margin QoQ are now backfilled from yfinance quarterly and
+  earnings-gated, so the thesis-break flags (revenue rolling over, margin compression) can fire for all
+  names. Residual: the cache's **TTM growth** (revenue/EPS YoY) is NOT hard-gated (relies on the sister
+  daily refresh + a 36h window → ≤36h post-earnings lag possible). Extend the gate to TTM if desired.
 - **Intraday not yet limit-safe:** Finnhub (~63 calls/run: news+earnings+analyst) brushes the
   60/min free limit. **Next:** cache earnings-calendar + analyst daily (they don't change
   intraday) → only ~21 news calls/run → safe for several intraday refreshes.
@@ -97,21 +152,27 @@ Known: cache gives TTM (not QoQ) for cache-covered names; FMP v3 dead → /stabl
 .info for ADRs; old disabled routines need a UI delete to free slots.
 
 ## Roadmap / what's next
-1. **Merge `v2-quant-and-glossary` → main + redeploy** (live site still shows v1 UI; DB has v2 data).
-2. **Backtesting** — replay stored time-series `snapshots` to evaluate the decision engine: did
-   pile_on/trim/exit calls precede good/bad forward returns? Tune thresholds against history.
+- ~~Merge v2 → main + redeploy~~ DONE. ~~QoQ thesis flags for cache-covered names~~ DONE (6/5 backfill+gate).
+1. **Extend the freshness gate to the cache TTM growth** (revenue/EPS YoY) — the one residual staleness
+   window (~≤36h post-earnings); flag YoY as "updating" when last_date is newer than the cache vintage.
+2. **Backtesting** — replay stored `snapshots` to evaluate the decision engine: did pile_on/trim/exit
+   calls precede good/bad forward returns? Tune thresholds against history.
 3. **Portfolio-history charts** (every snapshot is stored — book value / position over time).
 4. **Push/email alerts** for the intraday entry signals (delivery is currently the task notification).
-5. **QoQ thesis flags for cache-covered names** via the equity cache's `fundamentals_history`.
-6. **Sector-relative strength** (vs sector ETF, not just SPY).
-7. Consider a paid FMP tier OR fuller reliance on the equity cache + Finnhub basics.
+5. **Sector-relative strength** (vs sector ETF, not just SPY).
+6. **Delete the 3 merged remote branches** + the old disabled `watchlist-preopen`/`-postclose` scheduled
+   tasks (UI delete frees slots). 7. Consider a paid FMP tier OR fuller reliance on the equity cache + Finnhub.
+8. **Deploys are manual:** `vercel deploy --prod --cwd web` (no git auto-deploy on this project).
 
 ## Run / resume
 ```bash
 cd ~/tickers_watchlist && source .venv/bin/activate
 python -m tracker.migrate && python -m tracker.seed      # one-time DB setup
-python -m tracker.run --mode postclose                   # pipeline → snapshot → Neon
+python -m tracker.backfill_fundamentals --verify         # populate quarterly QoQ/margin (free, re-runnable)
+python -m tracker.run --mode postclose                   # pipeline → snapshot → Neon (qoq + freshness gate)
 python -m tracker.enrich                                  # merge out/enrichment.json → Neon
-python -m pytest tests/ -q                                # 85 tests
+python -m tracker.append_ticker HIMS                      # add ONE ticker without a full refresh
+python -m pytest tests/ -q                                # 136 tests
 cd web && npm run dev                                     # local app (reads Neon)
+vercel deploy --prod --cwd web                            # MANUAL prod deploy (no git auto-deploy)
 ```

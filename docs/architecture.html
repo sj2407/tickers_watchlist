@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A watchlist tool: the data and the thinking</title>
+<style>
+  :root{
+    --bg:#09090b; --bg2:#0b0b0e; --card:#161619; --card2:#1c1c20; --raised:#27272a;
+    --line:#26262a; --line2:#1b1b1f;
+    --z600:#52525b; --z500:#71717a; --z400:#a1a1aa; --z300:#d4d4d8; --z200:#e4e4e7; --z100:#fafafa;
+    --indigo:#818cf8; --indigo2:#6366f1; --indigo3:#a5b4fc; --indigo-deep:#1e1b4b;
+    --emer:#6ee7b7; --emer-deep:#064e3b; --blue:#93c5fd; --blue-deep:#1e3a8a; --violet:#c4b5fd; --violet-deep:#4c1d95;
+    --rose:#fda4af; --rose-text:#fecaca; --rose-bright:#fb7185; --amber:#fcd34d;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Inter","SF Pro Display",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--z300);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--indigo3);text-decoration:none} a:hover{text-decoration:underline}
+  h1,h2,h3,h4{color:var(--z100);font-weight:600}
+  p{margin:0 0 11px} strong{color:var(--z200);font-weight:600} em{color:var(--z200);font-style:normal;font-weight:500}
+
+  .layout{display:flex;max-width:1180px;margin:0 auto}
+  .rail{width:208px;flex:none;position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--line);padding:24px 16px 24px 20px;background:var(--bg2)}
+  .rail .brand{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--indigo3);margin:0 0 4px}
+  .rail .rtitle{font-size:14px;font-weight:600;color:var(--z100);margin:0 0 18px;line-height:1.3}
+  .rail nav a{display:block;color:var(--z400);font-size:12.5px;padding:5px 9px;border-radius:6px;border-left:2px solid transparent;margin:1px 0}
+  .rail nav a:hover{color:var(--z200);text-decoration:none;background:#ffffff06}
+  .rail nav a.sec{font-weight:600;color:var(--z300);margin-top:4px}
+  .rail nav a.sec .rn{font-family:var(--mono);font-size:10px;color:var(--indigo3);margin-right:7px}
+  .rail nav a.active{color:var(--indigo3);border-left-color:var(--indigo2);background:#6366f124;font-weight:600}
+  .rail .rfoot{margin-top:20px;font-family:var(--mono);font-size:10px;color:var(--z600);line-height:1.6}
+  .content{flex:1;min-width:0;max-width:850px;margin:0 auto;padding:0 30px}
+
+  .masthead{padding:30px 0 6px}
+  .masthead h1{font-size:27px;margin:0 0 8px;letter-spacing:-.02em}
+  .masthead p{margin:8px 0 0;color:var(--z400);font-size:14.5px;max-width:660px}
+
+  section{padding:30px 0 32px;border-top:1px solid var(--line)}
+  .sec-head{margin:0 0 18px;display:flex;align-items:baseline;gap:13px}
+  .sec-head .sn{font-family:var(--mono);font-size:22px;color:var(--indigo3);font-weight:700;line-height:1}
+  .sech{font-size:30px;margin:0;letter-spacing:-.02em;font-weight:700;line-height:1}
+  h3.sub{display:flex;align-items:center;gap:9px;font-size:15.5px;color:var(--z100);margin:24px 0 9px;font-weight:700}
+  h3.sub .tick{width:14px;height:4px;border-radius:2px;background:var(--indigo2)}
+  .lead{color:var(--z200);font-size:15px;max-width:700px;margin-bottom:13px}
+  .cap{font-size:12px;color:var(--z500);margin:6px 0 0}
+
+  /* from-data-to-decision flow */
+  .flow4{display:flex;align-items:stretch;margin:14px 0 4px}
+  .flowcol{flex:1;background:var(--card2);border:1px solid var(--line);border-top:3px solid var(--z600);border-radius:11px;padding:11px 12px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+  .flowcol.c1{border-top-color:var(--blue)} .flowcol.c2{border-top-color:var(--emer)} .flowcol.c3{border-top-color:var(--amber)} .flowcol.c4{border-top-color:var(--indigo2)}
+  .flowcol .ct{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin-bottom:7px}
+  .flowcol.c1 .ct{color:var(--blue)} .flowcol.c2 .ct{color:var(--emer)} .flowcol.c3 .ct{color:var(--amber)} .flowcol.c4 .ct{color:var(--indigo3)}
+  .flowcol ul{list-style:none;margin:0;padding:0}
+  .flowcol li{font-size:11.5px;color:var(--z300);padding:4px 0;line-height:1.3;border-top:1px solid var(--line2)}
+  .flowcol li:first-child{border-top:none}
+  .flowarrow{display:flex;align-items:center;justify-content:center;width:24px;flex:none;color:var(--z600);font-size:15px}
+
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .card{background:var(--card2);border:1px solid var(--line);border-top:3px solid var(--z600);border-radius:11px;padding:13px 15px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+  .card.blue{border-top-color:var(--blue)} .card.emer{border-top-color:var(--emer)} .card.amber{border-top-color:var(--amber)}
+  .card.viol{border-top-color:var(--violet)} .card.indigo{border-top-color:var(--indigo2)} .card.rose{border-top-color:var(--rose-bright)}
+  .card h4{margin:0 0 6px;font-size:13.5px}
+  .card p{margin:0;font-size:12px;color:var(--z400);line-height:1.5}
+  .card ul.mlist{list-style:none;margin:0;padding:0}
+  .card ul.mlist li{font-size:12px;color:var(--z400);padding:8px 0;line-height:1.5;border-top:1px solid var(--line2)}
+  .card ul.mlist li:first-child{border-top:none;padding-top:2px}
+  .card ul.mlist li b{color:var(--z100);font-weight:600}
+  .mrows{display:flex;flex-direction:column;gap:11px}
+  .mrow2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .mrow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+  .card.wide ul.mlist{column-count:2;column-gap:30px}
+  .card.wide ul.mlist li{break-inside:avoid;border-top:none;padding:6px 0}
+
+  .srct{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}
+  .srct th{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--z500);text-align:left;padding:6px 12px;border-bottom:1px solid var(--line)}
+  .srct td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--z300);vertical-align:top}
+  .srct td.s{font-family:var(--mono);font-size:11.5px;color:var(--indigo3);white-space:nowrap}
+  .srct tr:last-child td{border-bottom:none}
+
+  .chiprow{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--z200)}
+  .chip .d{width:7px;height:7px;border-radius:50%;background:var(--rose-bright);flex:none}
+  .chip.key{background:var(--violet-deep);border-color:#5b3aa6;color:#e9d5ff;font-weight:600}
+  .chip.key .d{background:var(--violet)}
+
+  /* definition list (signals, safeguards) */
+  .deflist{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+  .deflist .r{display:flex;gap:13px;background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--rose-bright);border-radius:9px;padding:10px 14px}
+  .deflist.safe .r{border-left-color:var(--emer)}
+  .deflist .r .n{font-weight:600;color:var(--z100);font-size:12.5px;width:168px;flex:none}
+  .deflist .r .n .num{font-family:var(--mono);color:var(--rose-bright);font-weight:700;margin-right:6px}
+  .deflist.safe .r .n .num{color:var(--emer)}
+  .deflist .r .d{font-size:12.5px;color:var(--z400);line-height:1.45}
+  .deflist .r .d b{color:var(--z200)}
+
+  .note{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 15px;margin:9px 0;font-size:12.5px;color:var(--z400);line-height:1.5}
+  .note b{color:var(--z200)}
+
+  /* decision tree */
+  .tree{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 10px}
+  svg.dt{width:100%;height:auto;display:block}
+  .dt-q{height:100%;border:1.5px solid #3730a3;background:#161a2e;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;padding:5px 10px;font-size:13px;font-weight:600;color:var(--z100);line-height:1.2}
+  .dt-leaf{height:100%;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px 8px}
+  .dt-leaf .lt{font-size:14px;font-weight:700;line-height:1.1}
+  .dt-leaf .ls{font-size:10px;font-family:var(--mono);margin-top:2px;color:var(--z500)}
+  .dt-leaf.watch{background:#141416;border:1.5px solid var(--z600);color:var(--z300)}
+  .dt-leaf.trim{background:#1a0d10;border:1.5px solid var(--rose-bright);color:var(--rose-text)}
+  .dt-leaf.add{background:#0d1411;border:1.5px solid #0c5a42;color:var(--emer)}
+  .dt-leaf.hold{background:#0f1a2e;border:1.5px solid var(--blue-deep);color:var(--blue)}
+  .dt-edge path{fill:none;stroke:#3f3f46;stroke-width:1.7}
+  .dt-edge text{fill:var(--z400);font-family:var(--mono);font-size:11px;paint-order:stroke;stroke:var(--bg2);stroke-width:3px}
+
+  footer{padding:18px 0 44px;color:var(--z500);font-size:11.5px}
+  @media(max-width:1080px){.rail{display:none}.content{max-width:850px;margin:0 auto;padding:0 22px}}
+  @media(max-width:720px){
+    .grid2,.mrow2,.mrow3{grid-template-columns:1fr}
+    .card.wide ul.mlist{column-count:1}
+    .flow4{flex-direction:column}
+    .flowarrow{width:auto;height:20px;transform:rotate(90deg)}
+    .deflist .r{flex-direction:column;gap:3px}.deflist .r .n{width:auto}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <aside class="rail">
+    <p class="brand">Watchlist tool</p>
+    <p class="rtitle">The data and the thinking</p>
+    <nav id="nav">
+      <a class="sec" href="#overview"><span class="rn">01</span>Overview</a>
+      <a class="sec" href="#inputs"><span class="rn">02</span>Inputs</a>
+      <a class="sec" href="#metrics"><span class="rn">03</span>Metrics</a>
+      <a class="sec" href="#reasoning"><span class="rn">04</span>Reasoning</a>
+      <a class="sec" href="#safeguards"><span class="rn">05</span>Safeguards</a>
+    </nav>
+    <p class="rfoot">v2 · 2026-06-04</p>
+  </aside>
+
+  <main class="content">
+    <div class="masthead">
+      <h1>A watchlist tool: the data and the thinking</h1>
+    </div>
+
+    <!-- 01 OVERVIEW -->
+    <section id="overview">
+      <div class="sec-head"><span class="sn">01</span><h2 class="sech">Overview</h2></div>
+      <p class="lead">The tool tracks a watchlist and gives one recommendation per name: add, hold, trim, or
+        exit. Fixed rules compute that recommendation from market and fundamental data; a model writes the
+        reasoning and makes the final exit call. The path from data to a recommendation runs in four stages.</p>
+      <div class="flow4">
+        <div class="flowcol c1"><div class="ct">1 · Raw inputs</div><ul>
+          <li>Prices, highs, lows, volume</li>
+          <li>Revenue, EPS, gross margin</li>
+          <li>News and earnings dates</li>
+          <li>Analyst buy / hold / sell counts</li></ul></div>
+        <div class="flowarrow">▸</div>
+        <div class="flowcol c2"><div class="ct">2 · Metrics</div><ul>
+          <li>RSI, MACD, trend, moving averages</li>
+          <li>Returns and relative strength</li>
+          <li>Revenue and EPS growth, margins</li>
+          <li>Support, resistance, volume</li></ul></div>
+        <div class="flowarrow">▸</div>
+        <div class="flowcol c3"><div class="ct">3 · Signals</div><ul>
+          <li>Uptrend / downtrend</li>
+          <li>Overbought / extended</li>
+          <li>Revenue weakening</li>
+          <li>Leading or lagging the market</li></ul></div>
+        <div class="flowarrow">▸</div>
+        <div class="flowcol c4"><div class="ct">4 · Recommendation</div><ul>
+          <li>Watch, add, hold, or trim</li>
+          <li>Trim can become exit</li>
+          <li>The reasons behind the recommendation</li></ul></div>
+      </div>
+      <p class="cap">Only the last stage uses the model, and only to write the read and to judge an exit.
+        Everything before it is computed from data, the same way every time.</p>
+    </section>
+
+    <!-- 02 INPUTS -->
+    <section id="inputs">
+      <div class="sec-head"><span class="sn">02</span><h2 class="sech">Inputs</h2></div>
+      <p class="lead">Every figure starts as raw data from a financial source. Nothing is supplied from a
+        model's memory. Each source is used only for the fields it is authoritative for.</p>
+      <table class="srct">
+        <thead><tr><th>Source</th><th>Raw data</th><th>Feeds</th></tr></thead>
+        <tbody>
+          <tr><td class="s">yfinance</td><td>Daily open, high, low, close, and volume, with full history</td><td>All technicals, returns, relative strength, support and resistance</td></tr>
+          <tr><td class="s">Finnhub</td><td>Company news, the earnings calendar with EPS and revenue estimates, analyst recommendation counts</td><td>Catalysts, earnings timing, the analyst tilt</td></tr>
+          <tr><td class="s">financial-data API</td><td>Income-statement items: revenue, EPS, gross profit and margin (US listings)</td><td>The fundamental metrics</td></tr>
+          <tr><td class="s">yfinance profile</td><td>Trailing EPS and P/E for the foreign ADRs the API gates</td><td>Fundamentals for those names</td></tr>
+          <tr><td class="s">Postgres</td><td>The watchlist, the snapshots over time, a per-day cache</td><td>Storage and reuse, not a data source</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 03 METRICS -->
+    <section id="metrics">
+      <div class="sec-head"><span class="sn">03</span><h2 class="sech">Metrics</h2></div>
+      <p class="lead">From the raw inputs the pipeline computes a fixed set of metrics, in six groups.</p>
+      <div class="mrows">
+        <div class="card blue wide"><h4>Trend &amp; momentum</h4><ul class="mlist">
+          <li><b>RSI (14)</b> compares the average size of up moves to down moves over the last 14 trading days on a scale from 0 to 100, so it captures whether a stock has run too hot after a rally (above 70, overbought) or been sold off too hard (below 30, oversold).</li>
+          <li><b>MACD</b> tracks the gap between a stock's 12-day and 26-day moving averages against a 9-day average of that gap, so when the lines cross it signals that short-term momentum is turning up or down relative to the recent trend.</li>
+          <li><b>The 50 / 200-day cross</b> compares the 50-day moving average with the 200-day; the faster line rising above the slower one is a golden cross that marks a shift into a longer-term uptrend, and falling below it is a death cross that marks the opposite.</li>
+          <li><b>Trend</b> reads where the price sits relative to its own averages: an uptrend means the price is above its 50-day average and the 50-day is above the 200-day, so the medium and long-term directions agree.</li>
+          <li><b>Distance to the averages</b> measures how far above or below its 20, 50, and 200-day averages the price is trading, which shows whether the stock is stretched far from its recent base or sitting close to it.</li>
+          <li><b>Distance from the 52-week high</b> is how far below its highest close of the past year the stock is trading, a quick read on whether it is near its peak or well off it.</li></ul></div>
+        <div class="mrow2">
+          <div class="card amber"><h4>Price levels &amp; conviction</h4><ul class="mlist">
+            <li><b>Support and resistance</b> are recent price levels where the stock has repeatedly stopped falling or stopped rising; we read them from local lows and highs on the chart, and they mark the levels a move needs to hold or break.</li>
+            <li><b>Relative volume</b> divides the day's trading volume by the 20-day average, so a value well above one shows unusually heavy trading and stronger conviction behind the move.</li>
+            <li><b>ATR%</b>, the average true range as a percent of price, measures how much the stock typically moves in a single day, which puts any given swing in context for that particular name.</li>
+            <li><b>A breakout</b> flags when the price closes above its highest level of the prior 20 days, and we count it as confirmed only when volume runs at least twice its recent average.</li></ul></div>
+          <div class="card viol"><h4>Fundamentals</h4><ul class="mlist">
+            <li><b>Revenue growth</b> compares the latest quarter's revenue to the same quarter a year earlier, showing whether the business is still expanding its sales and how quickly.</li>
+            <li><b>EPS growth</b> compares the latest quarter's earnings per share to the same quarter a year earlier, showing whether profit per share is keeping pace with revenue.</li>
+            <li><b>Gross margin</b> is the share of each sales dollar left after the direct cost of making the product, a basic read on pricing power and efficiency.</li>
+            <li><b>P/E against its own history</b> compares the stock's current price-to-earnings ratio with its range over recent years, showing whether it is expensive or cheap relative to how the market has usually valued it.</li></ul></div>
+        </div>
+        <div class="mrow3">
+          <div class="card emer"><h4>Returns &amp; relative strength</h4><ul class="mlist">
+            <li><b>Returns over 1, 5, and 20 days</b> are the stock's percentage price changes over the last day, week, and roughly month, showing performance across three time frames.</li>
+            <li><b>Relative strength</b> subtracts the S&amp;P 500's return from the stock's own return over the same window, so a positive value means it is leading the market and a sustained negative value means it is lagging.</li></ul></div>
+          <div class="card rose"><h4>Thesis-break flags</h4><ul class="mlist">
+            <li><b>Revenue rolling over</b> flags when revenue falls 5 percent or more from the prior quarter, an early sign that growth is stalling rather than simply slowing.</li>
+            <li><b>Margin compression</b> flags when gross margin falls 2 percentage points or more from the prior quarter, which can point to rising costs or weakening pricing power.</li>
+            <li><b>Repeated EPS misses</b> flags when the company has come in below estimates in at least two of the last three quarters, a sign of recurring execution problems.</li></ul></div>
+          <div class="card indigo"><h4>Event &amp; analyst</h4><ul class="mlist">
+            <li><b>Days to earnings</b> counts the days until the next scheduled earnings report, the single biggest event risk on a stock's calendar.</li>
+            <li><b>Analyst consensus</b> tallies how many Wall Street analysts rate the stock a buy, a hold, or a sell, a quick gauge of professional sentiment.</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 REASONING -->
+    <section id="reasoning">
+      <div class="sec-head"><span class="sn">04</span><h2 class="sech">Reasoning</h2></div>
+      <p class="lead">A recommendation comes from fixed rules over those metrics, plus one judgment the model is
+        allowed to make. The rules are transparent and the model's authority is bounded on purpose.</p>
+      <div class="grid2">
+        <div class="card indigo"><h4>The rules propose</h4><p>Fixed, traceable rules read the metrics and output <strong>watch</strong>, <strong>add</strong>, <strong>hold</strong>, or <strong>trim</strong>. The rules never read position size, and trim is the strongest they go.</p></div>
+        <div class="card rose"><h4>The model judges the exit</h4><p>Only the model can turn a trim into a full <strong>exit</strong>, weighing the news, the guidance, and how severe and persistent the break is. It writes the read; it never changes a number. This keeps a couple of noisy quarters from mechanically forcing an exit.</p></div>
+      </div>
+
+      <h3 class="sub"><span class="tick"></span>The decision tree</h3>
+      <p>The order matters: deterioration is checked before strength, so a name that is both strong and
+        breaking down is never read as a buy.</p>
+      <div class="tree">
+        <svg class="dt" viewBox="0 0 600 384" xmlns="http://www.w3.org/2000/svg">
+          <defs><marker id="dah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="#3f3f46"/></marker></defs>
+          <g class="dt-edge"><path d="M216,42 L398,42" marker-end="url(#dah)"/><text x="288" y="34">no</text></g>
+          <g class="dt-edge"><path d="M116,66 L116,114" marker-end="url(#dah)"/><text x="124" y="94">yes</text></g>
+          <g class="dt-edge"><path d="M236,146 L398,146" marker-end="url(#dah)"/><text x="300" y="138">yes</text></g>
+          <g class="dt-edge"><path d="M116,174 L116,230" marker-end="url(#dah)"/><text x="124" y="206">no</text></g>
+          <g class="dt-edge"><path d="M236,262 L398,262" marker-end="url(#dah)"/><text x="300" y="254">yes</text></g>
+          <g class="dt-edge"><path d="M116,290 L116,336 L398,336" marker-end="url(#dah)"/><text x="124" y="318">no</text></g>
+
+          <foreignObject x="16" y="16" width="200" height="50"><div class="dt-q" xmlns="http://www.w3.org/1999/xhtml">Is the name held?</div></foreignObject>
+          <foreignObject x="398" y="20" width="186" height="44"><div class="dt-leaf watch" xmlns="http://www.w3.org/1999/xhtml"><div class="lt">Watch</div><div class="ls">on the list, not held</div></div></foreignObject>
+
+          <foreignObject x="16" y="114" width="220" height="60"><div class="dt-q" xmlns="http://www.w3.org/1999/xhtml">Two or more deterioration signals?</div></foreignObject>
+          <foreignObject x="398" y="120" width="186" height="52"><div class="dt-leaf trim" xmlns="http://www.w3.org/1999/xhtml"><div class="lt">Trim</div><div class="ls">model may raise to exit</div></div></foreignObject>
+
+          <foreignObject x="16" y="230" width="220" height="60"><div class="dt-q" xmlns="http://www.w3.org/1999/xhtml">Strong, leading, and room to add?</div></foreignObject>
+          <foreignObject x="398" y="236" width="186" height="44"><div class="dt-leaf add" xmlns="http://www.w3.org/1999/xhtml"><div class="lt">Add</div><div class="ls">add to the position</div></div></foreignObject>
+
+          <foreignObject x="398" y="314" width="186" height="46"><div class="dt-leaf hold" xmlns="http://www.w3.org/1999/xhtml"><div class="lt">Hold</div><div class="ls">the default outcome</div></div></foreignObject>
+        </svg>
+      </div>
+
+      <h3 class="sub"><span class="tick"></span>The five deterioration signals</h3>
+      <p>This is the part the recommendation hinges on. A trim requires <strong>at least two</strong> of these
+        five, each counted once so correlated readings do not stack. A single signal keeps the name at hold.</p>
+      <div class="deflist">
+        <div class="r"><div class="n"><span class="num">1</span>Downtrend</div><div class="d">Price is below the 50-day average with the 50-day below the 200-day, or the 50-day has crossed below the 200-day (a death cross).</div></div>
+        <div class="r"><div class="n"><span class="num">2</span>Lagging the market</div><div class="d">The name's 20-day return minus the S&amp;P 500's 20-day return is negative.</div></div>
+        <div class="r"><div class="n"><span class="num">3</span>Revenue weakening</div><div class="d">Year-over-year revenue growth has turned negative, <b>or</b> revenue fell 5% or more versus the prior quarter.</div></div>
+        <div class="r"><div class="n"><span class="num">4</span>Margin compression</div><div class="d">Gross margin fell 2 percentage points or more versus the prior quarter. Ignored for fast growers (revenue up 30%+ year over year) unless the drop is 5 points or more.</div></div>
+        <div class="r"><div class="n"><span class="num">5</span>Earnings quality slipping</div><div class="d">Year-over-year EPS growth has turned negative, <b>or</b> the company missed estimates in 2 of the last 3 quarters.</div></div>
+      </div>
+      <div class="chiprow"><span class="chip key"><span class="d"></span>Two or more of the five, then trim</span></div>
+
+      <div class="note"><b>The other two gates.</b> To propose <em>add</em>, a name needs an uptrend or a golden
+        cross, positive relative strength, and room: not overbought (RSI below 70), not extended (under 12%
+        above the 20-day average), not within a day of earnings, and no deterioration signal. When a held name
+        is strong but overbought, extended, or reporting within a day, the recommendation stays at <em>hold</em>
+        rather than add, so the tool never chases a stretched price.</div>
+    </section>
+
+    <!-- 05 SAFEGUARDS -->
+    <section id="safeguards">
+      <div class="sec-head"><span class="sn">05</span><h2 class="sech">Safeguards</h2></div>
+      <p class="lead">The point of the design is control over what gets ingested. Several rules decide what is
+        allowed in, and they are enforced in code rather than left to good intentions.</p>
+      <div class="deflist safe">
+        <div class="r"><div class="n"><span class="num">✓</span>No facts from memory</div><div class="d">Every number comes from a dataset or a live source. The model is never allowed to supply a figure itself.</div></div>
+        <div class="r"><div class="n"><span class="num">✓</span>The read is grounded</div><div class="d">The model's written view must be backed by the fetched data and current, cited news or filings, not general knowledge.</div></div>
+        <div class="r"><div class="n"><span class="num">✓</span>Freshness is checked</div><div class="d">Cached data carries a timestamp. Past its window it is bypassed and refetched, so a stale figure never reaches the board.</div></div>
+        <div class="r"><div class="n"><span class="num">✓</span>Every figure is dated</div><div class="d">Each number is tagged with the date it is true as of, so nothing reads as fresher than it is.</div></div>
+        <div class="r"><div class="n"><span class="num">✓</span>One source of truth for meaning</div><div class="d">Every metric maps to a single registry entry with its definition, formula, and source. The glossary is generated from that same registry, and a test fails if the two ever drift.</div></div>
+        <div class="r"><div class="n"><span class="num">✓</span>The model cannot touch numbers</div><div class="d">It writes prose and may escalate one recommendation to exit. It cannot change a computed value or invent a metric.</div></div>
+        <div class="r"><div class="n"><span class="num">✓</span>Reproducible by construction</div><div class="d">The same inputs always produce the same metrics, so a run can be re-run and checked. The build is tested first, and the design and code were each reviewed by two independent agents.</div></div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Generated 2026-06-04 from the running system.</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+const navLinks=[...document.querySelectorAll('#nav a')];
+const spy=new IntersectionObserver((ents)=>{
+  ents.forEach(en=>{ if(en.isIntersecting){ const id=en.target.id;
+    navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+id)); }});
+},{rootMargin:'-45% 0px -50% 0px'});
+['overview','inputs','metrics','reasoning','safeguards'].forEach(id=>{
+  const el=document.getElementById(id); if(el) spy.observe(el);
+});
+</script>
+</body>
+</html>

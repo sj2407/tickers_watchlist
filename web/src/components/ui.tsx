@@ -12,11 +12,30 @@ export function SentimentChip({ sentiment }: { sentiment: Sentiment | null }) {
   );
 }
 
-export function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+type Accent = "sky" | "emerald" | "violet" | "amber" | "rose" | "zinc";
+const accentBar: Record<Accent, string> = {
+  sky: "bg-sky-500/70",
+  emerald: "bg-emerald-500/70",
+  violet: "bg-violet-500/70",
+  amber: "bg-amber-500/70",
+  rose: "bg-rose-500/70",
+  zinc: "bg-zinc-600",
+};
+
+export function SectionHeader({
+  title,
+  accent = "zinc",
+  children,
+}: {
+  title: string;
+  accent?: Accent;
+  children?: React.ReactNode;
+}) {
   return (
-    <div className="mb-3">
-      <h2 className="text-sm font-medium text-zinc-200">{title}</h2>
-      {hint && <p className="text-xs text-zinc-500">{hint}</p>}
+    <div className="mb-3 flex items-center gap-2">
+      <span className={`h-4 w-1 rounded-full ${accentBar[accent]}`} />
+      <h2 className="text-sm font-semibold text-zinc-100">{title}</h2>
+      {children}
     </div>
   );
 }
@@ -35,9 +54,9 @@ export function Metric({
 }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</span>
+      <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-300">{label}</span>
       <span className={`text-sm tabular-nums ${className}`}>{value}</span>
-      {hint && <span className="text-[11px] text-zinc-500">{hint}</span>}
+      {hint && <span className="text-[11px] text-zinc-400">{hint}</span>}
     </div>
   );
 }

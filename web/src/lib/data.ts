@@ -107,7 +107,7 @@ export async function addTransaction(t: {
   note?: string;
 }): Promise<void> {
   if (!(hasDb && sql)) {
-    throw new Error("No database configured — transactions require DATABASE_URL.");
+    throw new Error("No database configured. Transactions require DATABASE_URL.");
   }
   await sql`
     INSERT INTO transactions (ticker, side, shares, price, source, note)

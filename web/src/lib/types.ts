@@ -77,6 +77,7 @@ export interface Fundamentals {
   gross_margin_qoq_pp?: number | null;
   eps_miss_count_last3?: number | null;
   pe?: number | null;
+  fundamentals_stale?: boolean;
 }
 
 export interface ThesisBreak {

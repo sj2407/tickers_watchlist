@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision matrix</title>
+<style>
+  :root{
+    --bg:#09090b; --card2:#1c1c20; --line:#26262a; --line2:#222226; --z500:#71717a; --z400:#a1a1aa; --z300:#d4d4d8; --z200:#e4e4e7; --z100:#fafafa;
+    --exit:#9f1239; --trim:#fb7185; --hold:#93c5fd; --pile:#34d399;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace; --sans:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--z300);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 22px 70px}
+  h1{font-size:24px;color:var(--z100);margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--z400);font-size:14px;margin:0 0 16px;max-width:700px}
+  .card{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:14px 16px 12px;margin:16px 0;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+  .ch{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+  .tk{font-size:17px;font-weight:700;color:var(--z100)}
+  .tk .px{font-family:var(--mono);font-size:11px;color:var(--z400);font-weight:400;margin-left:7px}
+
+  /* shared label header */
+  .head{display:flex;align-items:center;margin-bottom:4px}
+  .head .lspace{flex:0 0 132px}
+  .head .zones{flex:1;display:grid;grid-template-columns:repeat(4,1fr);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;text-align:center}
+  .head .zones .z-exit{color:var(--trim)} .head .zones .z-trim{color:var(--trim)} .head .zones .z-hold{color:#7ea8e0} .head .zones .z-pile{color:var(--pile)}
+
+  .grow{display:flex;align-items:center;height:30px}
+  .grow .name{flex:0 0 132px;font-size:12.5px;color:var(--z300);padding-right:8px}
+  .grow .name .v{color:var(--z500);font-family:var(--mono);font-size:10.5px}
+  .track{position:relative;flex:1;height:24px;border-radius:6px;overflow:hidden;
+    background:linear-gradient(90deg,
+      rgba(159,18,57,.16) 0 25%, rgba(251,113,133,.13) 25% 50%, rgba(147,197,253,.10) 50% 75%, rgba(52,211,153,.12) 75% 100%);
+    border:1px solid var(--line2)}
+  .track .sep{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.06)}
+  .dot{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #0d0d0f;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+  .dot.exit{background:var(--exit)} .dot.trim{background:var(--trim)} .dot.hold{background:var(--hold)} .dot.pile{background:var(--pile)}
+
+  .grow.decision{height:38px;margin-top:6px;border-top:1px solid var(--line);padding-top:8px}
+  .grow.decision .name{font-weight:700;color:var(--z100);font-size:13px}
+  .grow.decision .track{height:26px;background:linear-gradient(90deg,
+      rgba(159,18,57,.22) 0 25%, rgba(251,113,133,.18) 25% 50%, rgba(147,197,253,.14) 50% 75%, rgba(52,211,153,.18) 75% 100%)}
+  .dot.big{width:20px;height:20px;border-width:3px;box-shadow:0 0 0 3px rgba(250,250,250,.5)}
+
+  .why{font-size:12px;color:var(--z400);margin-top:9px;line-height:1.45}
+  .why b{color:var(--z200)}
+  footer{margin-top:30px;color:var(--z500);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Decision matrix</h1>
+  <p class="sub">Every metric is a row, placed on the same Exit / Trim / Hold / Pile-on axis at the point it
+    falls. You can see at a glance which metrics pull which way and how far. The bold row at the bottom is the
+    overall call, with a one-line note on how it was tallied.</p>
+  <div id="cards"></div>
+  <footer>Real signals and outcomes from the latest run. Each dot is where that metric falls on the action axis; the decision row is the engine's call.</footer>
+</div>
+
+<script>
+// zone index: 0 exit, 1 trim, 2 hold, 3 pile.  pos = within-zone 0..1 (0.5 = center)
+function leftPct(zone, pos=0.5){ return (zone*25 + pos*25); }
+const ZONE=["exit","trim","hold","pile"];
+
+const TICKERS=[
+  { tk:"NVDA", px:"RSI 54 · rev +65%", call:[3,0.55], callLabel:"Pile on",
+    why:"Every driver points up and there are no deterioration signals, so the strong + leading + room rule fires: <b>Pile on</b>.",
+    rows:[
+      ["Trend","uptrend",3,0.5],
+      ["Rel. strength","+ leading",3,0.6],
+      ["Revenue YoY","+65%",3,0.9],
+      ["EPS growth","+",3,0.55],
+      ["RSI","54, neutral",2,0.5],
+      ["vs 20-day avg","+, normal",2,0.6],
+    ]},
+  { tk:"AMAT", px:"RSI 74 · rev +11%", call:[2,0.5], callLabel:"Hold",
+    why:"Trend and leadership point to Add, but <b>overbought (RSI 74)</b> and <b>extended (+13%)</b> remove the room to add, so it caps at <b>Hold</b> (do not chase). No deterioration.",
+    rows:[
+      ["Trend","uptrend",3,0.5],
+      ["Rel. strength","+ leading",3,0.55],
+      ["Revenue YoY","+11%",2,0.85],
+      ["RSI","74, overbought",2,0.92],
+      ["vs 20-day avg","+13%, extended",2,0.9],
+    ]},
+  { tk:"AVGO", px:"RSI 48 · rev +30%", call:[2,0.4], callLabel:"Hold",
+    why:"Trend and revenue point to Add, but it is <b>lagging the market</b> (so the Add gate fails) and that is only 1 deterioration signal (Trim needs 2), so it lands on <b>Hold</b>.",
+    rows:[
+      ["Trend","uptrend",3,0.5],
+      ["Rel. strength","− lagging",1,0.4],
+      ["Revenue YoY","+30%",3,0.65],
+      ["RSI","48, neutral",2,0.45],
+    ]},
+];
+
+function rowHTML(name,val,zone,pos){
+  return `<div class="grow"><div class="name">${name} <span class="v">${val}</span></div>
+    <div class="track"><div class="sep" style="left:25%"></div><div class="sep" style="left:50%"></div><div class="sep" style="left:75%"></div>
+      <div class="dot ${ZONE[zone]}" style="left:${leftPct(zone,pos).toFixed(1)}%"></div></div></div>`;
+}
+const head = `<div class="head"><div class="lspace"></div><div class="zones"><span class="z-exit">Exit</span><span class="z-trim">Trim</span><span class="z-hold">Hold</span><span class="z-pile">Pile on</span></div></div>`;
+document.getElementById("cards").innerHTML = TICKERS.map(t=>`
+  <div class="card">
+    <div class="ch"><div class="tk">${t.tk}<span class="px">${t.px}</span></div></div>
+    ${head}
+    ${t.rows.map(r=>rowHTML(r[0],r[1],r[2],r[3])).join("")}
+    <div class="grow decision"><div class="name">Decision</div>
+      <div class="track"><div class="sep" style="left:25%"></div><div class="sep" style="left:50%"></div><div class="sep" style="left:75%"></div>
+        <div class="dot big ${ZONE[t.call[0]]}" style="left:${leftPct(t.call[0],t.call[1]).toFixed(1)}%"></div></div></div>
+    <p class="why">${t.why}</p>
+  </div>`).join("");
+</script>
+</body>
+</html>

@@ -19,6 +19,14 @@ export const leanLabel = (l: Lean | null): string =>
         : l === "watch" ? "Watch"
           : l === "hold" ? "Hold" : "—";
 
+// Text-only color for the action word (no background pill).
+export const leanTextClass = (l: Lean | null): string =>
+  l === "pile_on" ? "text-emerald-300"
+    : l === "trim" ? "text-amber-300"
+      : l === "exit" ? "text-rose-300"
+        : l === "watch" ? "text-sky-300"
+          : "text-zinc-100"; // hold: neutral but bright
+
 export const leanClass = (l: Lean | null): string =>
   l === "pile_on"
     ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"

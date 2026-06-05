@@ -19,14 +19,22 @@ export default function PositionEditor({
   position,
   lastPrice,
   minPositionUsd,
+  open: openProp,
+  onOpenChange,
+  showTrigger = true,
 }: {
   ticker: string;
   position: EditablePosition;
   lastPrice: number | null;
   minPositionUsd: number;
+  open?: boolean;
+  onOpenChange?: (b: boolean) => void;
+  showTrigger?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp !== undefined ? openProp : internalOpen;
+  const setOpen = (b: boolean) => (onOpenChange ? onOpenChange(b) : setInternalOpen(b));
   const [amount, setAmount] = useState(200);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -43,7 +51,7 @@ export default function PositionEditor({
   async function trade(side: "buy" | "sell") {
     if (!canTrade) return;
     if (side === "sell" && sellLeavesBelowFloor) {
-      setMsg(`A $${amount} trim would leave ${usd(projAfterSell)} — below the $${minPositionUsd} floor. Trim less, or exit fully.`);
+      setMsg(`A $${amount} trim would leave ${usd(projAfterSell)}, below the $${minPositionUsd} floor. Trim less, or exit fully.`);
       return;
     }
     let dShares = amount / lastPrice!;
@@ -57,7 +65,7 @@ export default function PositionEditor({
     });
     setBusy(false);
     if (res.ok) {
-      setMsg(`${side === "buy" ? "Added" : "Trimmed"} ${usd(amount, 0)}. Numbers refresh on the next data run.`);
+      setMsg(`${side === "buy" ? "Added" : "Trimmed"} ${usd(amount, 0)}. Your position updated.`);
       router.refresh();
     } else {
       setMsg("Save failed.");
@@ -65,6 +73,7 @@ export default function PositionEditor({
   }
 
   if (!open) {
+    if (!showTrigger) return null;
     return (
       <button onClick={() => setOpen(true)}
         className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-200 ring-1 ring-zinc-700 hover:bg-zinc-700">
@@ -77,7 +86,7 @@ export default function PositionEditor({
     <div className="mt-3 space-y-3 rounded-xl bg-zinc-950/60 p-4 ring-1 ring-zinc-800">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-zinc-200">Trade {ticker}</span>
-        <button onClick={() => setOpen(false)} className="text-xs text-zinc-500">close</button>
+        <button onClick={() => setOpen(false)} className="text-xs text-zinc-400">close</button>
       </div>
 
       <div className="flex items-center gap-2">

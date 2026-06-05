@@ -51,7 +51,7 @@ export default function EarningsCalendar({ events, today }: { events: EarningsEv
   return (
     <section className="mb-5 rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-zinc-800">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-zinc-200">📅 Earnings calendar</h2>
+        <h2 className="text-sm font-semibold text-zinc-100">📅 Earnings calendar</h2>
         <div className="flex items-center gap-1">
           <button onClick={() => shift(-1)} className="rounded-md px-2 py-1 text-zinc-400 hover:bg-zinc-800">‹</button>
           <span className="w-28 text-center text-sm text-zinc-300">{MONTHS[cursor.m]} {cursor.y}</span>
@@ -61,7 +61,7 @@ export default function EarningsCalendar({ events, today }: { events: EarningsEv
 
       <div className="grid grid-cols-7 gap-1 text-center">
         {WEEKDAYS.map((d, i) => (
-          <div key={i} className="pb-1 text-[10px] font-medium uppercase text-zinc-600">{d}</div>
+          <div key={i} className="pb-1 text-[10px] font-medium uppercase text-zinc-400">{d}</div>
         ))}
         {cells.map((day, i) => {
           if (day === null) return <div key={i} />;
@@ -119,7 +119,7 @@ export default function EarningsCalendar({ events, today }: { events: EarningsEv
             </div>
           </>
         ) : (
-          <p className="text-xs text-zinc-500">Tap a highlighted day to see which names report. Red = reports today/tomorrow.</p>
+          <p className="text-xs text-zinc-400">Tap a highlighted day to see which names report. Red = reports today/tomorrow.</p>
         )}
       </div>
     </section>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getLatestSnapshot, getLivePositions } from "@/lib/data";
 import { usd, pct, signClass } from "@/lib/format";
 import { BadgeRow, LeanPill, SentimentChip, Metric } from "@/components/ui";
+import RichText from "@/components/RichText";
 import EarningsCalendar, { type EarningsEvent } from "@/components/EarningsCalendar";
 import type { Lean } from "@/lib/types";
 
@@ -21,6 +22,7 @@ export default async function Home() {
   }
 
   const pf = snap.portfolio;
+  const symbols = snap.tickers.map((t) => t.ticker);
   // Live position math from the ledger (reflects trades instantly). Falls back to the
   // snapshot's figures in file mode (no ledger).
   const { book, byTicker } = await getLivePositions(snap);
@@ -50,25 +52,19 @@ export default async function Home() {
   return (
     <main className="min-h-dvh bg-zinc-950 pb-16 text-zinc-100">
       <div className="mx-auto max-w-2xl px-4 pt-6">
-        <header className="mb-4 flex items-baseline justify-between">
-          <h1 className="text-xl font-semibold">Watchlist</h1>
-          <div className="flex items-baseline gap-3">
-            <Link href="/methodology" className="text-xs text-sky-400">Methodology</Link>
-            <span className="text-xs text-zinc-500">
-              {snap.mode === "preopen" ? "Pre-open brief" : snap.mode === "intraday" ? "Intraday update" : "Post-close recap"} ·{" "}
-              {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-            </span>
-          </div>
-        </header>
+        <p className="mb-4 text-xs text-zinc-400">
+          {snap.mode === "preopen" ? "Pre-open brief" : snap.mode === "intraday" ? "Intraday update" : "Post-close recap"}{" · as of "}
+          {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+        </p>
 
         {/* Market recap — words first */}
         {(snap.market_recap || snap.macro_context) && (
           <section className="mb-5 rounded-2xl bg-gradient-to-b from-sky-950/40 to-zinc-900/60 p-5 ring-1 ring-zinc-800">
             <h2 className="mb-2 text-sm font-medium text-sky-300">Today&apos;s market</h2>
-            {snap.market_recap && <p className="text-sm leading-relaxed text-zinc-200">{snap.market_recap}</p>}
+            {snap.market_recap && <p className="text-sm leading-relaxed text-zinc-200"><RichText text={snap.market_recap} symbols={symbols} /></p>}
             {snap.macro_context && (
               <p className="mt-2 border-t border-zinc-800 pt-2 text-xs leading-relaxed text-zinc-400">
-                <span className="font-medium text-zinc-300">Macro: </span>{snap.macro_context}
+                <span className="font-medium text-zinc-300">Macro: </span><RichText text={snap.macro_context} symbols={symbols} />
               </p>
             )}
           </section>
@@ -76,7 +72,7 @@ export default async function Home() {
 
         {/* Portfolio snapshot */}
         <section className="mb-5 rounded-2xl bg-zinc-900/70 p-5 ring-1 ring-zinc-800">
-          <h2 className="mb-3 text-sm font-medium text-zinc-300">Your book</h2>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-100">Your book</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Metric label="Book value" value={usd(bookValue)} hint="total market value" />
             <Metric label="Unrealized P/L" value={usd(unrealized)} className={signClass(unrealized)} hint="vs what you paid" />
@@ -106,7 +102,7 @@ export default async function Home() {
         <EarningsCalendar events={earningsEvents} today={snap.as_of_date} />
 
         {/* Ticker cards — takeaway first */}
-        <h2 className="mb-2 text-sm font-medium text-zinc-300">Your names <span className="text-xs font-normal text-zinc-500">· sorted by what needs attention</span></h2>
+        <h2 className="mb-2 text-sm font-semibold text-zinc-100">Your names</h2>
         <section className="space-y-3">
           {tickers.map((t) => {
             const lean = (t.final_lean ?? t.signals.provisional_lean) as Lean;
@@ -127,12 +123,12 @@ export default async function Home() {
 
                 {/* the plain-English takeaway is the hero line */}
                 {t.takeaway ? (
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t.takeaway}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-200"><RichText text={t.takeaway} symbols={symbols} /></p>
                 ) : (
                   <p className="mt-2 text-sm italic text-zinc-500">Awaiting the routine&apos;s read…</p>
                 )}
 
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
                   {(byTicker[t.ticker]?.held ?? t.position.held) ? (
                     <>
                       <span>Value <span className="text-zinc-300">{usd((byTicker[t.ticker] ?? t.position).market_value)}</span></span>

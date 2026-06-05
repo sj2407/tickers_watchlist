@@ -70,6 +70,21 @@ quant engine + glossary + fundamentals + intraday + live positions. Branch kept 
 
 ## Latest session (2026-06-05) — SHIPPED & LIVE on `main`
 
+**New features (commit `2aaf7f9`, deployed to prod):**
+- **Analyst price-target range strip** (`web/src/components/TargetRange.tsx`, on the ticker page under
+  "What analysts think") — horizontal low→high bar with median + mean ticks, a current-price marker, and
+  upside-to-consensus % + skew. Data: `tracker/price_targets.py` (yfinance low/median/mean/high + #analysts,
+  US + ADRs), wired into `snapshot.build_ticker_row` as `price_target` (cached per ET day), typed in
+  `types.ts`. **Deliberately NOT a true boxplot:** per-analyst raw targets (needed for real quartiles/outliers)
+  are 402/404 on our FMP tier, so we draw only real numbers — no invented percentiles. `tracker/backfill_targets.py`
+  patches the field into the current snapshot so it shows now; every future run populates it natively.
+- **Live-priced book value** (money only) — `web/src/lib/quotes.ts` fetches Finnhub `/quote` (one cached-60s
+  call per name, US+ADR; FMP quote is rate-limited/402). `getLivePositions(snap, livePrices)` now prices
+  book/P&L/position values with the live quote when present, else snapshot (never a broken number on failure).
+  Home page shows a green **"live · HH:MM ET"** tag; the per-ticker quote and ALL narrative stay at the
+  snapshot timestamp so words never contradict the price. Needs **`FINNHUB_API_KEY`** (added to Vercel
+  prod/preview/dev). Verified live: $22,235 live vs $22,337 snapshot, all 22 names priced.
+
 **Follow-up fixes (commit `000da89`, deployed `dpl_8ViSBUbabj8…`):**
 - **Returns in narrative prose now color** — `RichText.tsx` colored only signed (+/−) numbers, but the
   routine writes returns as words ("down 11.3%", "up 7%"), which fell through to plain bold. Added a

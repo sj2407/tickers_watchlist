@@ -4,6 +4,7 @@ import { getLiveQuotes } from "@/lib/quotes";
 import { usd, pct, signClass } from "@/lib/format";
 import { BadgeRow, LeanPill, SentimentChip, Metric } from "@/components/ui";
 import RichText from "@/components/RichText";
+import MoversChart, { type Mover } from "@/components/MoversChart";
 import EarningsCalendar, { type EarningsEvent } from "@/components/EarningsCalendar";
 import type { Lean } from "@/lib/types";
 
@@ -40,6 +41,14 @@ export default async function Home() {
   const unrealized = liveOn ? liveUnrealized : pf.unrealized_pl;
   const returnPct = liveOn ? (liveInvested ? (liveUnrealized / liveInvested) * 100 : null) : pf.unrealized_pl_pct;
   const positionsCount = liveOn ? Object.values(byTicker).filter((p) => p.held).length : pf.positions_count;
+  // Big-move alerts → a comparable bar chart; other alerts (earnings) stay as pills.
+  const dayChg: Record<string, number | null> = {};
+  for (const t of snap.tickers) dayChg[t.ticker] = t.price.day_change_pct ?? null;
+  const movers: Mover[] = snap.alerts
+    .filter((a) => a.type === "big_move")
+    .map((a) => ({ ticker: a.ticker, chg: dayChg[a.ticker] ?? NaN }))
+    .filter((m) => Number.isFinite(m.chg));
+  const otherAlerts = snap.alerts.filter((a) => a.type !== "big_move");
   const earningsEvents: EarningsEvent[] = snap.tickers
     .filter((t) => t.earnings?.next_date)
     .map((t) => ({
@@ -103,10 +112,13 @@ export default async function Home() {
           )}
         </section>
 
-        {/* Alerts */}
-        {snap.alerts.length > 0 && (
+        {/* Big movers — labeled bar chart */}
+        <MoversChart movers={movers} />
+
+        {/* Other alerts (earnings) stay as pills */}
+        {otherAlerts.length > 0 && (
           <section className="mb-5 space-y-1.5">
-            {snap.alerts.map((a, i) => (
+            {otherAlerts.map((a, i) => (
               <div key={i} className="flex items-center gap-2 rounded-lg bg-amber-500/5 px-3 py-2 text-sm text-amber-200 ring-1 ring-amber-500/15">
                 <span className="text-amber-400">●</span>{a.msg}
               </div>

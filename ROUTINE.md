@@ -49,6 +49,13 @@ resolved from the REAL market session via `tracker.run --mode auto` → `calenda
   (full: all; intraday: triggered). A failed enrich leaves the prior read intact.
 - Decision-support, not advice — the user places every order.
 
+## Narrative writing style (takeaway / catalyst / recap / rationale)
+- **Never use em-dashes (—).** Use commas, semicolons, or periods. (En-dash ranges like `19-28%` are fine.)
+- **Never describe direction with color words** ("GREEN", "RED", "in the green"). The app color-codes
+  numbers and adds up/down arrows, so the word is redundant. Say "up 6%" / "down 6%" or just the signed
+  number; the UI handles the color.
+- Lead with the plain read; keep numbers in the prose (the app highlights them automatically).
+
 ## Earnings cadence (alerts)
 - T-7: "reports in ~1 week" + last surprise. T-1: confirmed date/time + Street est + your P/L going in.
 - Recap: EPS/rev beat-miss, guidance raise/cut/inline, reaction vs. the implied move, 2-3 call highlights.

@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from . import db, fundamentals, cache_source
+from . import db, fundamentals, cache_source, quarterly
 from .config import load_config
 from .holdings import load_holdings  # JSON fallback
 
@@ -49,22 +49,105 @@ def get_market_extras(ticker: str) -> dict[str, Any]:
     }
 
 
-def get_fundamentals(ticker: str, max_age_days: int = 7) -> dict[str, Any]:
-    """Fundamentals, cheapest source first:
-      1) equity-research cache (fresh FMP data, ~0 API cost) for covered names,
-      2) our own fetch (FMP /stable + yfinance fallback), cached in Neon.
+QUARTERLY_MAX_AGE_DAYS = 45  # routine confirm/refresh cadence for quarterly fundamentals
+
+
+def _parse_date(s):
+    if not s:
+        return None
+    try:
+        return date.fromisoformat(str(s)[:10])
+    except Exception:
+        return None
+
+
+def _fresh_quarterly(ticker: str, earnings: dict | None) -> dict[str, Any] | None:
+    """Our quarterly-derived fundamentals, refreshed if a newer quarter has been
+    reported. The returned dict carries a 'stale' flag: stale=True means a newer
+    quarter exists but its statement isn't available from the feed yet, so QoQ/margin
+    must be treated as insufficient (no signal) rather than served as current.
+    None if we have nothing and can't fetch."""
+    row = db.fetch_fundamentals(ticker)
+    last_date = _parse_date(earnings.get("last_date")) if earnings else None
+    now = datetime.now(timezone.utc)
+    report_date = row.get("report_date") if row else None
+    fetched_at = row.get("fetched_at") if row else None
+
+    if not quarterly.is_stale(report_date, fetched_at, last_date, now, QUARTERLY_MAX_AGE_DAYS):
+        return {**row, "stale": False}
+
+    # A newer quarter has actually been REPORTED than we hold (announcement is a full
+    # cycle past our period end) — vs just an old cache that needs a confirming refresh.
+    behind = (
+        last_date is not None
+        and report_date is not None
+        and (last_date - report_date).days > quarterly.QUARTER_GAP_MAX_DAYS
+    )
+    rec = quarterly.record_from_quarters(quarterly.fetch_quarters(ticker))
+    if rec is None:
+        # fetch failed: keep old values; flag insufficient only if we KNOW a newer quarter exists
+        return ({**row, "stale": behind} if row else None)
+    advanced = report_date is None or (rec["report_date"] is not None and rec["report_date"] > report_date)
+    if advanced or not behind:
+        # advanced to a new quarter, or a routine refresh confirming the current one
+        rec["source"] = "yfinance-quarterly"
+        try:
+            # upsert always bumps fetched_at; we call it only on advance / confirming
+            # refresh, which is what resets the backstop clock (and avoids re-stale thrash).
+            db.upsert_fundamentals(ticker, rec)
+        except Exception:
+            pass
+        return {**rec, "stale": False}
+    # behind, but the new statement isn't in the feed yet (lag): insufficient; retry next run
+    return {**row, "stale": True}
+
+
+def _apply_quarterly(d: dict[str, Any], q: dict[str, Any]) -> None:
+    """Overlay the freshness-gated QoQ/margin onto a fundamentals dict (fill-null), or
+    degrade them to None when the quarterly data is stale. Never touches TTM growth."""
+    if q.get("stale"):
+        d["revenue_qoq_pct"] = None
+        d["gross_margin_qoq_pp"] = None
+        d["fundamentals_stale"] = True
+    else:
+        for k in ("revenue_qoq_pct", "gross_margin_qoq_pp"):
+            if d.get(k) is None and q.get(k) is not None:
+                d[k] = q[k]
+    if q.get("report_date") is not None:
+        d["report_date"] = q["report_date"]
+
+
+def _is_behind(report_date, earnings: dict | None) -> bool:
+    """True if the latest earnings announcement is a full cycle past our period end
+    (a newer quarter was reported than this data reflects)."""
+    rd = _parse_date(report_date)
+    last = _parse_date(earnings.get("last_date")) if earnings else None
+    return bool(rd and last and (last - rd).days > quarterly.QUARTER_GAP_MAX_DAYS)
+
+
+def get_fundamentals(ticker: str, earnings: dict | None = None, max_age_days: int = 7) -> dict[str, Any]:
+    """Fundamentals, cheapest source first, with an earnings-aware freshness gate so the
+    decision never runs on a stale quarter (applied to BOTH paths):
+      1) equity-research cache (TTM growth, ~0 API cost) for covered names — QoQ/margin
+         filled from our quarterly fetch, which refreshes when a new quarter is reported,
+      2) our own fetch for the rest, cached in Neon, with the same staleness degrade.
+    Pass `earnings` (the per-ticker dict with last_date) to enable the freshness gate.
     Always None-safe."""
-    # 1) shared cache (covers ~18/21; freshness-checked inside)
     cached = cache_source.get_fundamentals(ticker)
     if cached:
+        if db.using_db():
+            q = _fresh_quarterly(ticker, earnings)
+            if q is not None:
+                _apply_quarterly(cached, q)
         return cached
 
-    # 2) own fetch, with Neon caching
+    # 2) own fetch, with Neon caching — recompute when the cached row is behind a new
+    #    report, and degrade QoQ/margin to insufficient if we're still behind (feed lag).
     if db.using_db():
         row = db.fetch_fundamentals(ticker)
         if row and row.get("fetched_at"):
-            age = datetime.now(timezone.utc) - row["fetched_at"]
-            if age < timedelta(days=max_age_days):
+            fresh = (datetime.now(timezone.utc) - row["fetched_at"]) < timedelta(days=max_age_days)
+            if fresh and not _is_behind(row.get("report_date"), earnings):
                 row.pop("fetched_at", None)
                 row.pop("ticker", None)
                 return row
@@ -73,6 +156,10 @@ def get_fundamentals(ticker: str, max_age_days: int = 7) -> dict[str, Any]:
             db.upsert_fundamentals(ticker, d)
         except Exception:
             pass  # caching is best-effort; never block the run
+        if _is_behind(d.get("report_date"), earnings):
+            d["revenue_qoq_pct"] = None
+            d["gross_margin_qoq_pp"] = None
+            d["fundamentals_stale"] = True
         return d
     return fundamentals.compute(ticker)
 

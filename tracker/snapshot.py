@@ -113,13 +113,14 @@ def build_ticker_row(tk, h, q, last, cfg, today, bench_hist, book_value, holding
     rs = md.relative_strength(h, bench_hist)
     rets = md.compute_returns(h)
     series = _price_series(h, sessions=180)
-    fund = store.get_fundamentals(tk)
+    # Earnings first, so fundamentals can be freshness-gated against the latest report.
+    earn = _next_earnings(tk, today, bypass_cache=(mode in ("preopen", "postclose")))
+    fund = store.get_fundamentals(tk, earnings=earn)
     if not fund.get("pe"):
         ettm = fund.get("eps_ttm")
         fund["pe"] = round(last / ettm, 1) if (last and ettm and ettm > 0) else None
     extras = store.get_market_extras(tk)
     pos = md.position_math(holdings.get(tk), last, book_value or None)
-    earn = _next_earnings(tk, today, bypass_cache=(mode in ("preopen", "postclose")))
 
     row: dict[str, Any] = {
         "ticker": tk,

@@ -168,7 +168,13 @@ def compute(
     rev0 = _f(q0.get("revenue"))
     if len(income) > 4:
         out["revenue_yoy"] = _pct(rev0, _f(income[4].get("revenue")))
-        out["eps_yoy"] = _pct(_f(_eps(q0)), _f(_eps(income[4])))
+        # Guard EPS YoY: a non-positive / near-zero year-ago EPS makes the ratio
+        # meaningless and can flip the sign (a recovery reading as deterioration),
+        # which would wrongly count toward a trim. Emit None instead.
+        prior_eps = _f(_eps(income[4]))
+        out["eps_yoy"] = (
+            _pct(_f(_eps(q0)), prior_eps) if (prior_eps is not None and prior_eps > 0.02) else None
+        )
     if len(income) > 1:
         out["revenue_qoq_pct"] = _pct(rev0, _f(income[1].get("revenue")))
         gm0, gm1 = _margin(q0), _margin(income[1])

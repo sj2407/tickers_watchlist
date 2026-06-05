@@ -174,7 +174,7 @@ _FUND_COLS = (
 def fetch_fundamentals(ticker: str) -> dict[str, Any] | None:
     with connect() as c:
         return c.execute(
-            "SELECT *, fetched_at FROM fundamentals WHERE ticker = %s", (ticker.upper(),)
+            "SELECT * FROM fundamentals WHERE ticker = %s", (ticker.upper(),)
         ).fetchone()
 
 

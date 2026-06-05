@@ -98,6 +98,10 @@ def get_fundamentals(ticker: str, max_age_hours: int = DEFAULT_MAX_AGE_HOURS) ->
         for ck, (field, scale) in _FUND_MAP.items():
             v = raw.get(ck)
             out[field] = round(v * scale, 4) if isinstance(v, (int, float)) else None
+        # The cache rarely stores eps_growth_ttm but usually has earnings_growth_ttm
+        # (net-income growth, a close proxy). Use it as a fallback so EPS growth isn't blank.
+        if out.get("eps_yoy") is None and isinstance(raw.get("earnings_growth_ttm"), (int, float)):
+            out["eps_yoy"] = round(raw["earnings_growth_ttm"] * 100.0, 4)
         # thesis inputs the cache can support (QoQ margin isn't in this table → None)
         out["revenue_qoq_pct"] = None
         out["gross_margin_qoq_pp"] = None

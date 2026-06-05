@@ -54,7 +54,7 @@ export default async function Home() {
       <div className="mx-auto max-w-2xl px-4 pt-6">
         <p className="mb-4 text-xs text-zinc-400">
           {snap.mode === "preopen" ? "Pre-open brief" : snap.mode === "intraday" ? "Intraday update" : "Post-close recap"}{" · as of "}
-          {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+          {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York", timeZoneName: "short" })}
         </p>
 
         {/* Market recap — words first */}

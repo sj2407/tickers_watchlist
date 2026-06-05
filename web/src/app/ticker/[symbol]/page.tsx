@@ -40,7 +40,7 @@ export default async function TickerPage({
 
   const lean = (t.final_lean ?? t.signals.provisional_lean) as Lean;
   const asOf = snap?.generated_at
-    ? new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    ? new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York", timeZoneName: "short" })
     : null;
   const symbols = (snap?.tickers ?? []).map((x) => x.ticker);
   const tech = t.technicals;

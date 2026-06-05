@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usd } from "@/lib/format";
+import { recordTrade } from "@/app/actions";
 
 // Only the fields the editor reads — satisfied by both Position and LivePos.
 type EditablePosition = {
@@ -58,17 +59,13 @@ export default function PositionEditor({
     if (side === "sell") dShares = Math.min(dShares, shares); // can't sell more than held
     setBusy(true);
     setMsg(null);
-    const res = await fetch("/api/transactions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ticker, side, shares: +dShares.toFixed(6), price: lastPrice, note: `${side} $${amount} via app` }),
-    });
+    const res = await recordTrade({ ticker, side, shares: +dShares.toFixed(6), price: lastPrice, note: `${side} $${amount} via app` });
     setBusy(false);
     if (res.ok) {
-      setMsg(`${side === "buy" ? "Added" : "Trimmed"} ${usd(amount, 0)}. Your position updated.`);
+      setMsg(`${side === "buy" ? "Added" : "Trimmed"} ${usd(amount, 0)}. Your position and book value updated.`);
       router.refresh();
     } else {
-      setMsg("Save failed.");
+      setMsg(res.error ? `Save failed: ${res.error}` : "Save failed.");
     }
   }
 

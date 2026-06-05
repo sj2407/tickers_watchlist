@@ -69,6 +69,24 @@ GitHub) and redeployed to Vercel prod** — https://tickers-watchlist.vercel.app
 quant engine + glossary + fundamentals + intraday + live positions. Branch kept for history.
 
 ## Latest session (2026-06-05) — SHIPPED & LIVE on `main`
+
+**Follow-up fixes (commit `000da89`, deployed `dpl_8ViSBUbabj8…`):**
+- **Returns in narrative prose now color** — `RichText.tsx` colored only signed (+/−) numbers, but the
+  routine writes returns as words ("down 11.3%", "up 7%"), which fell through to plain bold. Added a
+  `directionBefore()` check that colors a figure red ▼ / green ▲ when the preceding word is directional;
+  neutral levels (172k, $464, "near 10%") stay bold.
+- **"as of" timestamp was UTC** — server-rendered on Vercel (UTC clock) with no `timeZone`, so a 1:15 PM ET
+  snapshot printed "5:15 PM" and looked stale/future-dated. Pinned to `America/New_York` + `timeZoneName`
+  on `page.tsx` and `ticker/[symbol]/page.tsx`.
+- **Book-value total now updates after a trade** — trades posted via a Route Handler (`fetch /api/transactions`)
+  only revalidated the current route, so the board's "Your book" total lagged the per-ticker share count
+  (ticker page updated, board didn't). Replaced with a **Server Action** `recordTrade()` in
+  `web/src/app/actions.ts` that calls `revalidatePath("/","layout")`, so every page refreshes on next nav.
+  `PositionEditor.tsx` now calls the action. (The `/api/transactions` Route Handler still exists for GET.)
+  Book value is otherwise priced at the **last snapshot price** (not a live quote on load) — math verified
+  correct ($22,337 = ledger shares × 1:15 PM prices vs $23,763 invested). Live-on-load pricing was offered
+  and **not** taken (user's issue was shares, not price).
+
 Merged to `main` (commits `befff5c` web + `ea9e4a3` pipeline) and **deployed to Vercel prod**
 via `vercel deploy --prod --cwd web` (deploy `dpl_J8Jgup…`). NOTE: **this project does NOT auto-deploy
 on git push** — prod deploys are manual (CLI/MCP). **136 tests pass.** The fundamentals work was

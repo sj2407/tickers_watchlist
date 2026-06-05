@@ -68,20 +68,28 @@ export interface LivePos {
   weight_pct: number | null;
 }
 
-/** Live position math straight from the transaction ledger + latest snapshot prices.
- * Shares/avg-cost/invested reflect your trades INSTANTLY (no pipeline run needed);
- * value/P&L/weight are priced at the snapshot's last price. Empty in file mode (no ledger). */
+/** Live position math straight from the transaction ledger + prices.
+ * Shares/avg-cost/invested reflect your trades INSTANTLY (no pipeline run needed).
+ * Prices: a live quote from `livePrices` when present (per symbol), otherwise the
+ * snapshot's last price. `livePriced` is true if at least one live price was used.
+ * Pass no `livePrices` (the default) to keep everything at snapshot prices. Empty in
+ * file mode (no ledger). */
 export async function getLivePositions(
   snap: Snapshot | null,
-): Promise<{ book: number; byTicker: Record<string, LivePos> }> {
+  livePrices: Record<string, number> = {},
+): Promise<{ book: number; byTicker: Record<string, LivePos>; livePriced: boolean }> {
   const positions = await getCurrentPositions();
-  const priceOf: Record<string, number | null> = {};
-  for (const t of snap?.tickers ?? []) priceOf[t.ticker] = t.price?.last ?? null;
+  const snapPrice: Record<string, number | null> = {};
+  for (const t of snap?.tickers ?? []) snapPrice[t.ticker] = t.price?.last ?? null;
 
   let book = 0;
+  let livePriced = false;
   const byTicker: Record<string, LivePos> = {};
   for (const [sym, p] of Object.entries(positions)) {
-    const last = priceOf[sym] ?? null;
+    const live = livePrices[sym];
+    const hasLive = typeof live === "number" && Number.isFinite(live) && live > 0;
+    if (hasLive) livePriced = true;
+    const last = hasLive ? live : (snapPrice[sym] ?? null);
     const mv = last != null ? p.shares * last : null;
     if (mv != null) book += mv;
     byTicker[sym] = {
@@ -95,7 +103,7 @@ export async function getLivePositions(
   for (const v of Object.values(byTicker)) {
     v.weight_pct = v.market_value != null && book ? (v.market_value / book) * 100 : null;
   }
-  return { book, byTicker };
+  return { book, byTicker, livePriced };
 }
 
 /** Record a trade in the append-only ledger. side: 'buy' (size up) | 'sell' (trim). */

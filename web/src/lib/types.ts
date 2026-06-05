@@ -124,6 +124,15 @@ export interface Analyst {
   strongSell?: number;
 }
 
+export interface PriceTarget {
+  low: number;
+  median: number | null;
+  mean: number | null;
+  high: number;
+  num_analysts: number | null;
+  source?: string | null;
+}
+
 export interface NewsItem {
   datetime: string | null;
   headline: string | null;
@@ -153,6 +162,7 @@ export interface Ticker {
   position: Position;
   earnings: Earnings;
   analyst: Analyst | null;
+  price_target?: PriceTarget | null;
   news: NewsItem[];
   signals: Signals;
   // filled by the Claude routine (subscription):

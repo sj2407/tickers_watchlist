@@ -8,6 +8,7 @@ import PositionPanel from "@/components/PositionPanel";
 import TickerNav from "@/components/TickerNav";
 import RichText from "@/components/RichText";
 import DecisionMatrix from "@/components/DecisionMatrix";
+import TargetRange from "@/components/TargetRange";
 import { tickerOrder } from "@/lib/order";
 import type { Lean } from "@/lib/types";
 
@@ -205,6 +206,13 @@ export default async function TickerPage({
                 {(a.strongSell ?? 0) > 0 && <span className="rounded bg-rose-500/15 px-2 py-1 text-rose-300">Strong sell {a.strongSell}</span>}
               </div>
             </section>
+          )}
+
+          {/* Analyst price targets — faithful range strip (low/median/mean/high vs price) */}
+          {t.price_target && (
+            <div className="mt-4">
+              <TargetRange target={t.price_target} current={t.price.last} />
+            </div>
           )}
 
           {/* Headlines */}

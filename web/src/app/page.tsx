@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getLatestSnapshot, getLivePositions } from "@/lib/data";
+import { getLiveQuotes } from "@/lib/quotes";
 import { usd, pct, signClass } from "@/lib/format";
 import { BadgeRow, LeanPill, SentimentChip, Metric } from "@/components/ui";
 import RichText from "@/components/RichText";
@@ -23,9 +24,15 @@ export default async function Home() {
 
   const pf = snap.portfolio;
   const symbols = snap.tickers.map((t) => t.ticker);
-  // Live position math from the ledger (reflects trades instantly). Falls back to the
-  // snapshot's figures in file mode (no ledger).
-  const { book, byTicker } = await getLivePositions(snap);
+  // Live quotes price the MONEY (book value + P&L + position values) to the current
+  // market; the per-ticker quote and all commentary stay at the snapshot timestamp,
+  // so the words never contradict the price. Falls back to snapshot prices with no key.
+  const { quotes, asOf: liveAsOf } = await getLiveQuotes(symbols);
+  const livePrices = Object.fromEntries(Object.entries(quotes).map(([s, q]) => [s, q.price]));
+  const { book, byTicker, livePriced } = await getLivePositions(snap, livePrices);
+  const liveTime = livePriced && liveAsOf
+    ? new Date(liveAsOf * 1000).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET"
+    : null;
   const liveOn = Object.keys(byTicker).length > 0;
   const liveInvested = Object.values(byTicker).reduce((s, p) => s + (p.invested ?? 0), 0);
   const liveUnrealized = Object.values(byTicker).reduce((s, p) => s + (p.unrealized_pl ?? 0), 0);
@@ -72,7 +79,16 @@ export default async function Home() {
 
         {/* Portfolio snapshot */}
         <section className="mb-5 rounded-2xl bg-zinc-900/70 p-5 ring-1 ring-zinc-800">
-          <h2 className="mb-3 text-sm font-semibold text-zinc-100">Your book</h2>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-zinc-100">Your book</h2>
+            {liveTime ? (
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-300">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />live · {liveTime}
+              </span>
+            ) : (
+              <span className="text-[10px] text-zinc-500">priced at last update</span>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Metric label="Book value" value={usd(bookValue)} hint="total market value" />
             <Metric label="Unrealized P/L" value={usd(unrealized)} className={signClass(unrealized)} hint="vs what you paid" />

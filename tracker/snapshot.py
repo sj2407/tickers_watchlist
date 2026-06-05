@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from . import market_data as md
-from . import sources, signals, store, thesis, api_cache, triggers, db
+from . import sources, signals, store, thesis, api_cache, triggers, db, price_targets
 from .calendar_utils import session_phase
 from .config import load_config, load_env
 
@@ -134,6 +134,7 @@ def build_ticker_row(tk, h, q, last, cfg, today, bench_hist, book_value, holding
         "earnings_reaction": extras.get("earnings_reaction"), "scores": extras.get("scores"),
         "series": series, "position": pos, "earnings": earn,
         "analyst": api_cache.cached(f"finnhub:reco:{tk}", lambda tk=tk: sources.recommendation_trend(tk)),
+        "price_target": api_cache.cached(f"yf:target:{tk}", lambda tk=tk: price_targets.fetch_target(tk)),
         "news": [],
         "takeaway": None, "sentiment": None, "catalyst_summary": None, "earnings_recap": None,
         "final_lean": None, "rationale": None,

@@ -34,7 +34,11 @@ resolved from the REAL market session via `tracker.run --mode auto` → `calenda
    notification; push/email is a future add.)
 
 ## Decision rules (the lean) — see docs/PLAN-v2.md §4
-- Actions: `pile_on` · `hold` · `trim` · `exit` (`watch` for non-held). The **quant proposes
+- Actions: `pile_on` · `hold` · `trim` · `exit`. **Every tracked name is held** (the user keeps
+  ~$200 in anything worth watching) — `watch` is NOT a valid lean for a held name and the
+  pipeline will coerce it to `hold` with a visible `lean_coerced_from` flag. Never demote a
+  quant `trim` proposal to a non-action label: if you disagree with the trim, write `hold`
+  and address the deterioration drivers explicitly in the rationale. The **quant proposes
   pile_on/hold/trim**; **YOU (the LLM) own `exit`** — escalate `trim`→`exit` only on a *confirmed*
   break, weighing news/guidance/severity.
 - **Trim/exit are driven by thesis DETERIORATION** (growth/quality/theme/trend/fundamentals going

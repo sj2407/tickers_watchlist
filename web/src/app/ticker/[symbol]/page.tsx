@@ -77,6 +77,14 @@ export default async function TickerPage({
 
           {/* The call, in plain English */}
           <section className="mt-4 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-900/50 p-4 ring-1 ring-zinc-800">
+            {(t.narrative_freshness === "carried" || t.narrative_freshness === "stale") && t.narrative_as_of && (
+              <p className={`mb-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                t.narrative_freshness === "stale" ? "bg-amber-500/15 text-amber-300" : "bg-zinc-800 text-zinc-400"
+              }`}>
+                analysis from {new Date(t.narrative_as_of).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET
+                {t.narrative_freshness === "stale" ? " — older than the numbers below" : ""}
+              </p>
+            )}
             {t.takeaway && <p className="text-sm leading-relaxed text-zinc-200"><RichText text={t.takeaway} symbols={symbols} /></p>}
             <div className="mt-3 rounded-xl bg-zinc-950/60 p-3">
               <p className="text-xs uppercase tracking-wide text-zinc-300">Suggested action</p>
@@ -149,8 +157,20 @@ export default async function TickerPage({
                 )}
               </SectionHeader>
               <div className="grid grid-cols-3 gap-3">
-                {t.fundamentals.revenue_yoy != null && <Metric label="Revenue growth" value={pct(t.fundamentals.revenue_yoy)} className={signClass(t.fundamentals.revenue_yoy)} hint="YoY" />}
-                {t.fundamentals.eps_yoy != null && <Metric label="EPS growth" value={pct(t.fundamentals.eps_yoy)} className={signClass(t.fundamentals.eps_yoy)} hint="YoY" />}
+                {(() => {
+                  // TTM honesty (P7): prefer our single-quarter YoY; when the value
+                  // is the cache's trailing-12-month growth, SAY so.
+                  const f = t.fundamentals!;
+                  const isTtm = (f.source ?? "").startsWith("equity-cache");
+                  const rev = f.revenue_yoy_q ?? f.revenue_yoy;
+                  const eps = f.eps_yoy_q ?? f.eps_yoy;
+                  return (
+                    <>
+                      {rev != null && <Metric label="Revenue growth" value={pct(rev)} className={signClass(rev)} hint={f.revenue_yoy_q != null ? "YoY" : isTtm ? "TTM" : "YoY"} />}
+                      {eps != null && <Metric label="EPS growth" value={pct(eps)} className={signClass(eps)} hint={f.eps_yoy_q != null ? "YoY" : isTtm ? "TTM" : "YoY"} />}
+                    </>
+                  );
+                })()}
                 {t.fundamentals.gross_margin != null && <Metric label="Gross margin" value={`${t.fundamentals.gross_margin.toFixed(0)}%`} />}
                 {t.fundamentals.pe != null && <Metric label="P/E" value={t.fundamentals.pe.toFixed(1)} hint="vs own history" />}
                 {t.fundamentals.revenue_qoq_pct != null && <Metric label="Rev QoQ" value={pct(t.fundamentals.revenue_qoq_pct)} className={signClass(t.fundamentals.revenue_qoq_pct)} />}
@@ -175,6 +195,7 @@ export default async function TickerPage({
               {e.next_date && (
                 <p className="text-sm text-zinc-200">
                   <span className="font-medium">Next report:</span> {new Date(e.next_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                  {e.next_date_estimated && <span className="text-amber-300"> (estimated, unconfirmed)</span>}
                   {e.next_hour && <span className="text-zinc-400"> ({e.next_hour === "amc" ? "after close" : e.next_hour === "bmo" ? "before open" : e.next_hour})</span>}
                   {e.days_until_next != null && <span className="text-zinc-400">, {earningsWhen(e.days_until_next)}</span>}
                 </p>

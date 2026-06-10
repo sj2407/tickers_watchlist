@@ -114,16 +114,22 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     elif tech.get("ma_cross") == "death_cross":
         badges.append({"label": "Death cross", "tone": "bad"})
 
-    # fundamentals + thesis-break badges
+    # fundamentals + thesis-break badges. The badge shows the value the RULES use:
+    # our single-quarter YoY when available, else the source's growth — labelled
+    # TTM when that's what it actually is (cache-covered names), never "YoY".
     fund = t.get("fundamentals", {}) or {}
-    if fund.get("revenue_yoy") is not None:
-        rg = fund["revenue_yoy"]
-        badges.append({"label": f"Rev {rg:+.0f}% YoY", "tone": "good" if rg >= 15 else ("bad" if rg < 0 else "info")})
+    rg, rg_label = preferred_growth(fund, "revenue")
+    if rg is not None:
+        badges.append({"label": f"Rev {rg:+.0f}% {rg_label}",
+                       "tone": "good" if rg >= 15 else ("bad" if rg < 0 else "info")})
     tb = t.get("thesis_break", {}) or {}
     if tb.get("any"):
         badges.append({"label": "Thesis flag", "tone": "bad"})
 
     decision = provisional_lean(t, cfg)
+    if decision["drivers"].get("review"):
+        # Soft-only deterioration confluence: worth eyes, not an auto-trim (P4b).
+        badges.append({"label": "Review", "tone": "warn"})
     return {
         "badges": badges,
         "provisional_lean": decision["lean"],
@@ -134,10 +140,62 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def preferred_growth(fund: dict[str, Any], field: str) -> tuple[float | None, str]:
+    """(value, label) for revenue/EPS growth — TTM honesty (P7/D1).
+
+    Prefer our own single-quarter YoY (`{field}_yoy_q`, guarded, earnings-gated)
+    over the source growth; label is "YoY" when the value is a true year-over-year
+    quarter comparison, "TTM" when it's the cache's trailing-12-month growth
+    (smoother, ~2 quarters late on a rollover — honest labelling, not a rename).
+    """
+    q = fund.get(f"{field}_yoy_q")
+    if q is not None:
+        return q, "YoY"
+    v = fund.get(f"{field}_yoy")
+    src = fund.get("source") or ""
+    return v, ("TTM" if src.startswith("equity-cache") else "YoY")
+
+
+VALID_HELD_LEANS = {"pile_on", "hold", "trim", "exit"}
+VALID_NOT_HELD_LEANS = {"watch", "hold"}
+
+
+def validate_leans(snap: dict[str, Any]) -> dict[str, Any]:
+    """Enforce the action vocabulary on every ticker row (in place; returns snap).
+
+    Every tracked name is held (the user keeps ~$200 in anything worth watching), so
+    `watch` is never a valid call on a held name — the routine once used it to demote
+    a quant trim into a non-action label, silently. Coercions are VISIBLE
+    (`lean_coerced_from` / `lean_rejected`), never silent; a None lean (pre-narrative)
+    is left alone (the board falls back to the provisional lean).
+    Runs post-merge in both the pipeline and the enrich step, so carried-forward bad
+    leans heal without waiting on the LLM.
+    """
+    for row in snap.get("tickers", []):
+        pos = row.get("position") or {}
+        # A failed price fetch yields {"held": True} with NO shares key
+        # (position_math) — that's still a held name; never rewrite its stored
+        # lean to 'watch' on a degraded run (review R1-3).
+        held = bool(pos.get("held")) and (pos.get("shares") is None or (pos.get("shares") or 0) > 0)
+        lean = row.get("final_lean")
+        if lean is None:
+            continue
+        if held and lean == "watch":
+            row["final_lean"] = "hold"
+            row["lean_coerced_from"] = "watch"
+        elif held and lean not in VALID_HELD_LEANS:
+            row["final_lean"] = (row.get("signals") or {}).get("provisional_lean") or "hold"
+            row["lean_rejected"] = lean
+        elif not held and lean not in VALID_NOT_HELD_LEANS:
+            row["final_lean"] = "watch"
+            row["lean_coerced_from"] = lean
+    return snap
+
+
 # Metric keys this engine references — guarded against metrics.REGISTRY in tests.
 REFERENCED_KEYS = {
-    "trend", "ma_cross", "rsi14", "dist_sma20_pct", "rs_20d", "days_to_earnings",
-    "revenue_growth_yoy", "eps_growth_yoy",
+    "trend", "ma_cross", "rsi14", "dist_sma20_pct", "rs_20d", "rs_trend",
+    "days_to_earnings", "revenue_growth_yoy", "eps_growth_yoy",
     "tb_revenue_qoq_drop", "tb_margin_compression", "tb_repeated_eps_miss",
 }
 
@@ -178,21 +236,44 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     trend = tech.get("trend")
     ma_cross = tech.get("ma_cross")
     rs20 = rs.get("rs20d")
-    rev_yoy = fund.get("revenue_yoy")
-    eps_yoy = fund.get("eps_yoy")
+    # Growth the rules run on: single-quarter YoY when we hold the statements
+    # (catches a rollover ~2 quarters before TTM), else the source growth (P7/D1).
+    rev_yoy, _ = preferred_growth(fund, "revenue")
+    eps_yoy, _ = preferred_growth(fund, "eps")
 
     # Deterioration as DISTINCT dimensions (each counted once — correlated revenue
     # signals don't double-count, per review). These are the only things that trim.
+    # RS deterioration is the Mansfield/Weinstein REGIME (RS line below its own
+    # 50-session MA), not a one-period rs20d sign — a name slightly behind SPY for
+    # a couple of weeks inside a strong regime is noise, not deterioration.
     revenue_weakening = (rev_yoy is not None and rev_yoy < 0) or (tb.get("revenue_qoq_drop") is True)
     earnings_quality = (eps_yoy is not None and eps_yoy < 0) or (tb.get("repeated_eps_miss") is True)
     det = {
         "downtrend": (trend == "downtrend") or (ma_cross == "death_cross"),
-        "negative_rel_strength": rs20 is not None and rs20 < 0,
+        "negative_rel_strength": rs.get("rs_trend") == "underperforming",
         "revenue_weakening": revenue_weakening,
         "margin_compression": tb.get("margin_compression") is True,
         "earnings_quality_deteriorating": earnings_quality,
     }
     det_true = [k for k, v in det.items() if v]
+
+    # Hard vs soft dimensions (P4b, provisional pending backtest evidence — D2).
+    # Hard = the thesis is demonstrably going wrong (confirmed downtrend, revenue
+    # weakening, severe margin collapse). Soft = suggestive but noisy (lagging RS
+    # regime, mild margin dip, earnings-quality reads). A trim needs >=1 hard;
+    # a soft-only confluence is surfaced for review, never auto-trimmed.
+    # 'margin_severe' in the config list means: margin_compression counts hard
+    # only when thesis flagged the collapse severe (never re-derived here).
+    hard_cfg = set(s.get("hard_dimensions",
+                         ["downtrend", "revenue_weakening", "margin_severe"]))
+
+    def _is_hard(dim: str) -> bool:
+        if dim == "margin_compression":
+            return ("margin_compression" in hard_cfg
+                    or ("margin_severe" in hard_cfg and tb.get("margin_severe") is True))
+        return dim in hard_cfg
+
+    hard_true = [d for d in det_true if _is_hard(d)]
 
     # strength + room
     strong = (trend == "uptrend") or (ma_cross in ("golden_cross", "above"))
@@ -218,13 +299,20 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
         blocks.append("reports within a day (event risk)")
 
     # ── truth table (order matters; quant caps at trim — LLM owns exit) ──
+    review: str | None = None
     if not held:
         lean = "watch"
+    elif len(det_true) >= 2 and hard_true:
+        lean = "trim"          # deterioration confluence w/ >=1 hard (LLM may escalate to exit)
     elif len(det_true) >= 2:
-        lean = "trim"          # deterioration confluence (LLM may escalate to exit)
+        lean = "hold"          # soft-only confluence: review, don't auto-trim
+        review = "soft deterioration confluence (a trim needs at least one hard signal)"
     elif strong and rs_ok and room:
         lean = "pile_on"
     else:
         lean = "hold"          # incl. overbought/extended = "don't chase", or a single mild negative
 
-    return {"lean": lean, "drivers": {"pile": pile, "deterioration": det_true, "blocks": blocks}}
+    drivers: dict[str, Any] = {"pile": pile, "deterioration": det_true, "blocks": blocks}
+    if review:
+        drivers["review"] = review
+    return {"lean": lean, "drivers": drivers}

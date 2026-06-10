@@ -6,7 +6,7 @@ Claude routine fills those in during its run, on the subscription.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -50,27 +50,36 @@ def _days_until(target: date | None, ref: date) -> int | None:
 
 
 def _next_earnings(ticker: str, today: date, bypass_cache: bool = False) -> dict[str, Any]:
-    """Merge Finnhub calendar + yfinance dates → next upcoming + last reported.
-    Calendar is cached per ET day; full runs pass bypass_cache=True so the post-close
-    run re-fetches fresh actuals on a day a name reports."""
+    """Next upcoming + last reported earnings. UPCOMING dates trust Finnhub's
+    CONFIRMED calendar first — yfinance's future dates are often estimates that can
+    be days off, so they're used only when Finnhub has nothing (and flagged
+    `next_date_estimated` when Finnhub outright FAILED rather than answered empty).
+    Past dates keep the union (actuals come from Finnhub rows). Calendar cached per
+    ET day; full runs bypass so post-close re-fetches a reporting day's actuals."""
     out: dict[str, Any] = {}
     cal = api_cache.cached(
         f"finnhub:earncal:{ticker}",
         lambda: sources.earnings_calendar(ticker),
         bypass=bypass_cache,
-    ) or []
+    )  # None = transport failure (uncached); [] = confirmed empty
     yf_dates = sources.earnings_dates_yf(ticker)
 
     cal_dates = []
-    for row in cal:
+    for row in (cal or []):
         try:
             cal_dates.append((date.fromisoformat(row["date"]), row))
         except (TypeError, ValueError):
             continue
 
-    all_dates = sorted({d for d, _ in cal_dates} | set(yf_dates))
-    upcoming = [d for d in all_dates if d >= today]
-    past = [d for d in all_dates if d < today]
+    fh_upcoming = sorted(d for d, _ in cal_dates if d >= today)
+    if fh_upcoming:
+        upcoming = fh_upcoming
+    else:
+        upcoming = sorted(d for d in set(yf_dates) if d >= today)
+        if cal is None and upcoming:
+            out["next_date_estimated"] = True  # yf estimate, Finnhub didn't answer
+
+    past = sorted(d for d in ({d for d, _ in cal_dates} | set(yf_dates)) if d < today)
 
     if upcoming:
         nxt = upcoming[0]
@@ -145,6 +154,7 @@ def build_ticker_row(tk, h, q, last, cfg, today, bench_hist, book_value, holding
 
 def build_snapshot(mode: str) -> dict[str, Any]:
     load_env()
+    sources.reset_finnhub_calls()  # per-run call + failure counters (data_health)
     cfg = load_config()
     tz = cfg["timezone"]
     today = datetime.now(ZoneInfo(tz)).date()
@@ -212,8 +222,9 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         # filled by the Claude routine (carried forward below so it's NEVER null):
         "market_recap": None,
         "macro_context": None,
-        "alerts": _mechanical_alerts(rows, cfg),
+        "alerts": _mechanical_alerts(rows, cfg, mode),
         "intraday_triggered": intraday_triggered,
+        "thresholds": {"big_move_pct": BIG_MOVE_PCT},
     }
 
     # Carry forward the prior run's narrative onto this fresh quant so no run — intraday
@@ -221,8 +232,63 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     # (fully on full runs; for triggered names on intraday). Cold start: flag for the
     # routine to do a full narration instead of relying on a (nonexistent) prior.
     merge_narrative(snap, prior)  # prior fetched before the loop
+    signals.validate_leans(snap)  # carried-forward leans must obey the vocabulary too
+    grade_narrative_freshness(snap)
     snap["needs_full_enrichment"] = (prior is None)
+    snap["data_health"] = _data_health(snap, mode)
+    snap["performance"] = _performance_block(bench_hist, cfg, portfolio.get("unrealized_pl"))
     return snap
+
+
+def _performance_block(bench_hist: pd.DataFrame, cfg: dict[str, Any],
+                       unrealized_pl: float | None = None) -> dict[str, Any] | None:
+    """Sleeve TWR vs SPY/QQQ from the stored snapshot history (P10). None in file
+    mode or on any failure — never blocks a run."""
+    if not db.using_db():
+        return None
+    from . import performance
+
+    try:
+        history = [{"as_of_date": str(r["as_of_date"]), "book_value": r["book_value"],
+                    "invested": r["invested"]} for r in db.fetch_book_history()]
+        # Exact ledger flows (proceeds for sells, cost for buys) — never the
+        # invested-delta approximation in production (review R1-1).
+        flows = {r["d"]: {"buys": float(r["buys"]), "sells": float(r["sells"])}
+                 for r in db.fetch_daily_flows()}
+        spy = {ts.date(): float(v) for ts, v in md._return_closes(bench_hist).items()} \
+            if not bench_hist.empty else None
+        qqq_hist = sources.price_history("QQQ", cfg["history_days"])
+        qqq = {ts.date(): float(v) for ts, v in md._return_closes(qqq_hist).items()} \
+            if not qqq_hist.empty else None
+        return performance.compute_performance(
+            history, spy=spy, qqq=qqq, flows=flows,
+            realized_pl=round(db.fetch_total_realized_pl(), 2),
+            unrealized_pl=unrealized_pl,
+        )
+    except Exception:
+        return None
+
+
+def _data_health(snap: dict[str, Any], mode: str) -> dict[str, Any]:
+    """Fetch-quality summary (P8): degraded data must never render like quiet data."""
+    from . import cache_source
+
+    rows = snap.get("tickers", [])
+    cache_ts = cache_source.get_fmp_refreshed_at()
+    age_h = None
+    if cache_ts is not None:
+        age_h = round((datetime.now(timezone.utc) - cache_ts).total_seconds() / 3600, 1)
+    return {
+        "finnhub_calls": sources.finnhub_call_count(),
+        "finnhub_failures": sources.finnhub_failure_count(),
+        # news is only fetched for every name on FULL runs; intraday fetches
+        # triggered names only, so "missing" is meaningless there.
+        "tickers_missing_news": ([r["ticker"] for r in rows if not r.get("news")]
+                                 if mode in ("preopen", "postclose") else []),
+        "tickers_missing_analyst": [r["ticker"] for r in rows if not r.get("analyst")],
+        "equity_cache_used": cache_source.available(),
+        "equity_cache_age_hours": age_h,
+    }
 
 
 # Narrative fields owned by the routine — carried forward verbatim when this run hasn't
@@ -230,8 +296,43 @@ def build_snapshot(mode: str) -> dict[str, Any]:
 NARRATIVE_TICKER_FIELDS = (
     "takeaway", "sentiment", "catalyst_summary", "earnings_recap",
     "final_lean", "rationale", "entry_guidance", "invalidation",
+    # validation provenance travels WITH the lean it explains (cleared when the
+    # routine writes a fresh valid lean — see enrich.apply_enrichment):
+    "lean_coerced_from", "lean_rejected",
+    # when the routine last wrote this ticker's words — carried WITH them so a
+    # stale narrative is always datable (P8):
+    "narrative_as_of",
 )
-NARRATIVE_TOP_FIELDS = ("market_recap", "macro_context")
+
+NARRATIVE_STALE_HOURS = 24
+BIG_MOVE_PCT = 7.0  # single source for the alert AND the web movers chart (review R1-7)
+
+
+def narrative_freshness(narrative_as_of: str | None, generated_at: str | None) -> str | None:
+    """Tri-state narrative age vs the snapshot's numbers (P8) — computed in Python
+    so it's unit-tested; the web renders it purely presentationally.
+    fresh = written this run · carried = older but <24h · stale = >24h behind the
+    numbers · None = never stamped (legacy snapshots)."""
+    if not narrative_as_of or not generated_at:
+        return None
+    try:
+        na = datetime.fromisoformat(str(narrative_as_of))
+        ga = datetime.fromisoformat(str(generated_at))
+    except ValueError:
+        return None
+    if na >= ga:
+        return "fresh"
+    if (ga - na).total_seconds() > NARRATIVE_STALE_HOURS * 3600:
+        return "stale"
+    return "carried"
+
+
+def grade_narrative_freshness(snap: dict[str, Any]) -> None:
+    """Stamp narrative_freshness on every row (in place)."""
+    gen = snap.get("generated_at")
+    for t in snap.get("tickers", []):
+        t["narrative_freshness"] = narrative_freshness(t.get("narrative_as_of"), gen)
+NARRATIVE_TOP_FIELDS = ("market_recap", "macro_context", "market_narrative_as_of")
 
 
 def merge_narrative(fresh: dict[str, Any], prior: dict[str, Any] | None) -> dict[str, Any]:
@@ -275,18 +376,26 @@ def _portfolio_block(rows: list[dict[str, Any]], book_value: float) -> dict[str,
     }
 
 
-def _mechanical_alerts(rows: list[dict[str, Any]], cfg: dict[str, Any]) -> list[dict[str, Any]]:
-    """Time-sensitive flags worth a push. Narrative alerts are added by the routine."""
+def _mechanical_alerts(rows: list[dict[str, Any]], cfg: dict[str, Any],
+                       mode: str = "postclose") -> list[dict[str, Any]]:
+    """Time-sensitive flags. IN-WINDOW, not exact-day (a skipped run used to mean a
+    missed alert): the board is recomputed state, so the pill stays present on every
+    run while relevant. big_move is suppressed at preopen — there, day_change is
+    YESTERDAY's move, already alerted post-close. Narrative alerts come from the routine."""
     alerts = []
     for r in rows:
         tk = r["ticker"]
         days = r["earnings"].get("days_until_next")
-        if days == 7:
-            alerts.append({"ticker": tk, "type": "earnings_t7", "msg": f"{tk} reports in ~1 week ({r['earnings'].get('next_date')})"})
-        if days == 1:
-            alerts.append({"ticker": tk, "type": "earnings_t1", "msg": f"{tk} reports tomorrow ({r['earnings'].get('next_hour') or 'time TBD'})"})
+        if days is not None and 1 < days <= 7:
+            est = " (date unconfirmed)" if r["earnings"].get("next_date_estimated") else ""
+            alerts.append({"ticker": tk, "type": "earnings_t7",
+                           "msg": f"{tk} reports in {days}d ({r['earnings'].get('next_date')}){est}"})
+        if days is not None and 0 <= days <= 1:
+            when = "today" if days == 0 else "tomorrow"
+            alerts.append({"ticker": tk, "type": "earnings_t1",
+                           "msg": f"{tk} reports {when} ({r['earnings'].get('next_hour') or 'time TBD'})"})
         chg = r["price"].get("day_change_pct")
-        if chg is not None and abs(chg) >= 7:
+        if mode != "preopen" and chg is not None and abs(chg) >= BIG_MOVE_PCT:
             alerts.append({"ticker": tk, "type": "big_move", "msg": f"{tk} moved {chg:+.1f}% today"})
         # NOTE: no position-weight alert — this is a small satellite sleeve; size isn't a risk here.
     return alerts

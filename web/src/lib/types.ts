@@ -75,6 +75,14 @@ export interface Fundamentals {
   eps_ttm?: number | null;
   gross_margin?: number | null;
   gross_margin_qoq_pp?: number | null;
+  // P4: margin vs the same quarter last year (pp) — seasonality corroboration.
+  gross_margin_yoy_pp?: number | null;
+  // P7: single-quarter YoY from our own statements (the rules prefer these over
+  // the cache's TTM growth, which revenue_yoy/eps_yoy hold for cache names).
+  revenue_yoy_q?: number | null;
+  eps_yoy_q?: number | null;
+  // P7: cache TTM growth gated to null right after an earnings report.
+  ttm_stale?: boolean;
   eps_miss_count_last3?: number | null;
   pe?: number | null;
   fundamentals_stale?: boolean;
@@ -103,6 +111,9 @@ export interface Position {
 
 export interface Earnings {
   next_date?: string;
+  // P5: true when the date is a yfinance ESTIMATE (Finnhub didn't answer) —
+  // treat as unconfirmed in any display.
+  next_date_estimated?: boolean;
   days_until_next?: number | null;
   next_hour?: string | null;
   next_eps_estimate?: number | null;
@@ -147,14 +158,22 @@ export interface Signals {
   provisional_lean: Lean;
   pile_points: string[];
   trim_points: string[];
-  drivers?: { pile: string[]; deterioration: string[]; blocks: string[] };
+  drivers?: { pile: string[]; deterioration: string[]; blocks: string[]; review?: string | null };
+}
+
+export interface RelativeStrength {
+  rs5d?: number | null;
+  rs20d?: number | null;
+  // P3: Mansfield/Weinstein regime — RS line (price ÷ SPY) vs its 50-session MA.
+  rs_trend?: "outperforming" | "underperforming" | null;
+  rs_line_ma50_dist_pct?: number | null;
 }
 
 export interface Ticker {
   ticker: string;
   price: TickerPrice;
   returns: Returns;
-  relative_strength: Record<string, number | null>;
+  relative_strength: RelativeStrength;
   technicals: Technicals;
   fundamentals?: Fundamentals | null;
   thesis_break?: ThesisBreak | null;
@@ -174,6 +193,13 @@ export interface Ticker {
   rationale: string | null;
   entry_guidance?: string | null;
   invalidation?: string | null;
+  // validation provenance (P2): set when the pipeline coerced/rejected a
+  // routine-written lean that broke the action vocabulary.
+  lean_coerced_from?: string | null;
+  lean_rejected?: string | null;
+  // P8: when the routine last wrote this name's words + its age vs the numbers.
+  narrative_as_of?: string | null;
+  narrative_freshness?: "fresh" | "carried" | "stale" | null;
 }
 
 export interface Portfolio {
@@ -192,6 +218,28 @@ export interface Alert {
   msg: string;
 }
 
+export interface DataHealth {
+  finnhub_calls?: number;
+  finnhub_failures?: number;
+  tickers_missing_news?: string[];
+  tickers_missing_analyst?: string[];
+  equity_cache_used?: boolean;
+  equity_cache_age_hours?: number | null;
+}
+
+export interface Performance {
+  since: string;
+  twr_pct: number;
+  spy_pct?: number | null;
+  qqq_pct?: number | null;
+  excess_vs_spy_pp?: number | null;
+  max_drawdown_pct?: number | null;
+  realized_pl?: number | null;
+  unrealized_pl?: number | null;
+  n_sessions?: number;
+  note?: string;
+}
+
 export interface Snapshot {
   generated_at: string;
   mode: "preopen" | "intraday" | "postclose";
@@ -203,7 +251,12 @@ export interface Snapshot {
   tickers: Ticker[];
   market_recap: string | null;
   macro_context: string | null;
+  market_narrative_as_of?: string | null;
   alerts: Alert[];
+  data_health?: DataHealth | null;
+  performance?: Performance | null;
+  // shared display thresholds emitted by the pipeline (single source — R1-7)
+  thresholds?: { big_move_pct?: number } | null;
 }
 
 export interface PositionUpdate {

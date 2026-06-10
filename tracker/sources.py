@@ -21,17 +21,25 @@ from .config import get_key
 FINNHUB_BASE = "https://finnhub.io/api/v1"
 _session = requests.Session()
 
-# Per-run Finnhub call counter (lets us prove light intraday runs make ~0 metered calls).
+# Per-run Finnhub call counter (lets us prove light intraday runs make ~0 metered calls)
+# + failure counter (surfaced in the snapshot's data_health so degraded fetches are
+# never indistinguishable from "no news").
 _finnhub_calls = 0
+_finnhub_failures = 0
 
 
 def finnhub_call_count() -> int:
     return _finnhub_calls
 
 
+def finnhub_failure_count() -> int:
+    return _finnhub_failures
+
+
 def reset_finnhub_calls() -> None:
-    global _finnhub_calls
+    global _finnhub_calls, _finnhub_failures
     _finnhub_calls = 0
+    _finnhub_failures = 0
 
 
 # --------------------------------------------------------------------------- #
@@ -47,7 +55,12 @@ def price_history(ticker: str, days: int = 400) -> pd.DataFrame:
         return pd.DataFrame()
     df = df.rename(columns=str.title)
     df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
-    return df[["Open", "High", "Low", "Close", "Volume"]]
+    cols = ["Open", "High", "Low", "Close", "Volume"]
+    if "Adj Close" in df.columns:
+        # Dividend-adjusted closes (total return) — used ONLY by returns/relative
+        # strength; technicals, charts and position math stay on raw Close.
+        cols.append("Adj Close")
+    return df[cols]
 
 
 def fast_quote(ticker: str) -> dict[str, Any]:
@@ -83,7 +96,7 @@ def earnings_dates_yf(ticker: str) -> list[date]:
 # Finnhub
 # --------------------------------------------------------------------------- #
 def _finnhub_get(path: str, params: dict[str, Any]) -> Any:
-    global _finnhub_calls
+    global _finnhub_calls, _finnhub_failures
     key = get_key("FINNHUB_API_KEY")
     if not key:
         return None
@@ -99,8 +112,10 @@ def _finnhub_get(path: str, params: dict[str, Any]) -> Any:
             return r.json()
         except Exception:
             if attempt == 2:
+                _finnhub_failures += 1
                 return None
             time.sleep(1.0)
+    _finnhub_failures += 1  # rate-limited through all retries
     return None
 
 
@@ -143,7 +158,9 @@ def recommendation_trend(ticker: str) -> dict[str, Any] | None:
     }
 
 
-def earnings_calendar(ticker: str, ahead_days: int = 120) -> list[dict[str, Any]]:
+def earnings_calendar(ticker: str, ahead_days: int = 120) -> list[dict[str, Any]] | None:
+    """None = transport failure (DON'T cache — retry next call); [] = Finnhub
+    answered and genuinely has no events in the window (cacheable for the day)."""
     today = date.today()
     data = _finnhub_get(
         "/calendar/earnings",
@@ -154,7 +171,7 @@ def earnings_calendar(ticker: str, ahead_days: int = 120) -> list[dict[str, Any]
         },
     )
     if not isinstance(data, dict):
-        return []
+        return None  # failed/rate-limited/no key — never "no earnings"
     rows = data.get("earningsCalendar") or []
     out = []
     for r in rows:

@@ -34,11 +34,24 @@ def thesis_break_flags(fund: dict[str, Any] | None, cfg: dict[str, Any] | None =
 
     rev = flag_lte(fund.get("revenue_qoq_pct"), t["revenue_qoq_drop_pct"])
     margin = flag_lte(fund.get("gross_margin_qoq_pp"), t["margin_qoq_drop_pp"])
-    # Suppress only MILD margin compression for strong-growth names (noise). A severe
-    # collapse (≤ margin_severe_pp) always flags, regardless of growth.
-    rev_yoy = fund.get("revenue_yoy")
     gm_qoq = fund.get("gross_margin_qoq_pp")
-    if (margin is True and gm_qoq is not None and gm_qoq > t["margin_severe_pp"]
+    severe = None if gm_qoq is None else (gm_qoq <= t["margin_severe_pp"])
+
+    # Seasonality guard (P4): a MILD sequential dip only flags when the margin is
+    # also down vs the SAME QUARTER LAST YEAR (gross_margin_yoy_pp ≤ 0) — many of
+    # these names have seasonal mix swings that a naive QoQ misreads. No YoY
+    # history → insufficient corroboration → None, never a flag. A SEVERE collapse
+    # (≤ margin_severe_pp) flags regardless of seasonality.
+    if margin is True and severe is not True:
+        gm_yoy = fund.get("gross_margin_yoy_pp")
+        if gm_yoy is None:
+            margin = None
+        elif gm_yoy > 0:
+            margin = False
+    # Suppress only MILD margin compression for strong-growth names (noise). A severe
+    # collapse always flags, regardless of growth.
+    rev_yoy = fund.get("revenue_yoy")
+    if (margin is True and severe is not True
             and rev_yoy is not None and rev_yoy >= t["margin_suppress_if_rev_yoy_above"]):
         margin = False
     misses = fund.get("eps_miss_count_last3")
@@ -50,4 +63,8 @@ def thesis_break_flags(fund: dict[str, Any] | None, cfg: dict[str, Any] | None =
         "repeated_eps_miss": eps,
     }
     flags["any"] = any(v is True for v in flags.values())
+    # Severity qualifier for the decision engine (hard vs soft dimension, P4b).
+    # Deliberately OUTSIDE 'any' — it qualifies margin_compression, it doesn't
+    # independently assert a break.
+    flags["margin_severe"] = severe
     return flags

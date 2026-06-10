@@ -16,11 +16,20 @@ def _pct(a: float | None, b: float | None) -> float | None:
     return round((a / b - 1.0) * 100.0, 2)
 
 
+def _return_closes(hist: pd.DataFrame) -> pd.Series:
+    """Closes for RETURN math: dividend-adjusted ('Adj Close', total return) when
+    the feed provides it, else raw Close. Technicals deliberately do NOT use this —
+    indicator levels follow the chart, returns follow the money."""
+    col = "Adj Close" if "Adj Close" in hist.columns else "Close"
+    return hist[col].dropna()
+
+
 def compute_returns(hist: pd.DataFrame, windows=(1, 5, 20)) -> dict[str, float | None]:
-    """Trailing returns over N *trading* days, anchored to the last session."""
+    """Trailing TOTAL returns over N *trading* days, anchored to the last session
+    (dividend-adjusted when 'Adj Close' is present)."""
     if hist.empty:
         return {f"r{n}d": None for n in windows}
-    closes = hist["Close"].dropna()
+    closes = _return_closes(hist)
     if closes.empty:
         return {f"r{n}d": None for n in windows}
     last = float(closes.iloc[-1])
@@ -45,12 +54,15 @@ def compute_returns(hist: pd.DataFrame, windows=(1, 5, 20)) -> dict[str, float |
 
 
 def _atr(hist: pd.DataFrame, period: int = 14) -> float | None:
+    """Wilder-smoothed ATR (same smoothing convention as the RSI), not a plain
+    rolling mean — reacts to a volatility spike then decays, as standard."""
     if len(hist) < period + 1:
         return None
     h, l, c = hist["High"], hist["Low"], hist["Close"]
     prev_c = c.shift(1)
     tr = pd.concat([(h - l), (h - prev_c).abs(), (l - prev_c).abs()], axis=1).max(axis=1)
-    return round(float(tr.rolling(period).mean().iloc[-1]), 2)
+    atr = tr.ewm(alpha=1.0 / period, adjust=False).mean().iloc[-1]
+    return round(float(atr), 2)
 
 
 def compute_technicals(hist: pd.DataFrame) -> dict[str, Any]:
@@ -128,16 +140,42 @@ def _trend_label(t: dict[str, Any]) -> str:
     return "mixed"
 
 
+RS_MA_WINDOW = 50  # sessions; the daily adaptation of Mansfield's zero line
+
+
+def _rs_regime(ticker_hist: pd.DataFrame, bench_hist: pd.DataFrame) -> tuple[str | None, float | None]:
+    """Mansfield/Weinstein RS regime: the RS line (price ÷ benchmark) vs its own
+    50-session MA. Below = 'underperforming' (a persistent lag, the standard
+    deterioration read); at/above = 'outperforming'. (None, None) on <51 aligned
+    sessions — insufficient history never flags."""
+    if ticker_hist.empty or bench_hist.empty:
+        return None, None
+    t = _return_closes(ticker_hist)
+    b = _return_closes(bench_hist)
+    ratio = (t / b).dropna()  # index-aligned; non-overlapping dates drop out
+    if len(ratio) < RS_MA_WINDOW + 1:
+        return None, None
+    ma = float(ratio.tail(RS_MA_WINDOW).mean())
+    if ma == 0:
+        return None, None
+    dist = (float(ratio.iloc[-1]) / ma - 1.0) * 100.0
+    return ("underperforming" if dist < 0 else "outperforming"), round(dist, 2)
+
+
 def relative_strength(
     ticker_hist: pd.DataFrame, bench_hist: pd.DataFrame, windows=(5, 20)
-) -> dict[str, float | None]:
-    """Excess return of the ticker over the benchmark across windows."""
+) -> dict[str, Any]:
+    """Excess return over the benchmark across windows, plus the Mansfield-style
+    RS regime (`rs_trend`) the decision engine uses for deterioration."""
     tr = compute_returns(ticker_hist, windows)
     br = compute_returns(bench_hist, windows)
-    out: dict[str, float | None] = {}
+    out: dict[str, Any] = {}
     for n in windows:
         a, b = tr.get(f"r{n}d"), br.get(f"r{n}d")
         out[f"rs{n}d"] = round(a - b, 2) if (a is not None and b is not None) else None
+    trend, dist = _rs_regime(ticker_hist, bench_hist)
+    out["rs_trend"] = trend
+    out["rs_line_ma50_dist_pct"] = dist
     return out
 
 

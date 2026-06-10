@@ -34,18 +34,34 @@ function buildRows(t: Ticker): Row[] {
 
   const r20 = rs.rs20d;
   if (r20 != null) {
-    const zone = r20 >= 0 ? 3 : 1;
-    const pos = r20 >= 0 ? clamp(0.3 + r20 / 20, 0.3, 0.95) : clamp(0.6 + r20 / 20, 0.05, 0.6);
-    rows.push({ name: "Rel. strength", value: `${r20 >= 0 ? "+" : ""}${r20.toFixed(1)}% vs SPY`, zone, pos });
+    // Zone follows the engine: only an UNDERPERFORMING REGIME (RS line below its
+    // 50-session MA) reads as deterioration; a small negative month inside a good
+    // regime sits in the hold zone — never trim fuel.
+    const under = rs.rs_trend === "underperforming";
+    const zone = under ? 1 : r20 >= 0 ? 3 : 2;
+    const pos = under
+      ? clamp(0.6 + r20 / 20, 0.05, 0.6)
+      : r20 >= 0
+        ? clamp(0.3 + r20 / 20, 0.3, 0.95)
+        : clamp(0.5 + r20 / 20, 0.15, 0.5);
+    const label = `${r20 >= 0 ? "+" : ""}${r20.toFixed(1)}% vs SPY${under ? ", lagging regime" : ""}`;
+    rows.push({ name: "Rel. strength", value: label, zone, pos });
   }
 
-  if (f?.revenue_yoy != null) {
-    const [zone, pos] = growthZone(f.revenue_yoy);
-    rows.push({ name: "Revenue YoY", value: `${f.revenue_yoy >= 0 ? "+" : ""}${f.revenue_yoy.toFixed(0)}%`, zone, pos });
+  // TTM honesty (P7): the matrix shows the value the ENGINE uses — single-quarter
+  // YoY when our statements have it, else the source growth labelled for what it is.
+  const isTtm = (f?.source ?? "").startsWith("equity-cache");
+  const rev = f?.revenue_yoy_q ?? f?.revenue_yoy;
+  if (rev != null) {
+    const [zone, pos] = growthZone(rev);
+    const name = f?.revenue_yoy_q != null ? "Revenue YoY" : isTtm ? "Revenue TTM" : "Revenue YoY";
+    rows.push({ name, value: `${rev >= 0 ? "+" : ""}${rev.toFixed(0)}%`, zone, pos });
   }
-  if (f?.eps_yoy != null) {
-    const [zone, pos] = growthZone(f.eps_yoy);
-    rows.push({ name: "EPS growth", value: `${f.eps_yoy >= 0 ? "+" : ""}${f.eps_yoy.toFixed(0)}%`, zone, pos });
+  const eps = f?.eps_yoy_q ?? f?.eps_yoy;
+  if (eps != null) {
+    const [zone, pos] = growthZone(eps);
+    const name = f?.eps_yoy_q != null ? "EPS YoY" : isTtm ? "EPS TTM" : "EPS growth";
+    rows.push({ name, value: `${eps >= 0 ? "+" : ""}${eps.toFixed(0)}%`, zone, pos });
   }
 
   if (t.thesis_break?.margin_compression === true) {
@@ -80,8 +96,15 @@ function buildNote(t: Ticker, lean: Lean): string {
   const det = (d?.deterioration ?? []).map((k) => DET_PHRASE[k] ?? k);
   const blocks = d?.blocks ?? [];
   if (lean === "exit") return `Confirmed thesis break: ${det.join(", ") || "escalated by the read"}. Exit closes the position.`;
-  if (lean === "trim") return `${det.length} deterioration signals (${det.join(", ")}); two or more triggers a trim.`;
+  if (lean === "trim") {
+    // An LLM-escalated trim (quant didn't propose it) must not be narrated as a
+    // rule firing (review R1-8).
+    if (t.signals?.provisional_lean !== "trim")
+      return `Escalated to a trim by the qualitative read${det.length ? ` (signals: ${det.join(", ")})` : ""} — see the rationale above.`;
+    return `${det.length} deterioration signals (${det.join(", ")}); two or more, at least one of them hard (downtrend, revenue decline, severe margin collapse), triggers a trim.`;
+  }
   if (lean === "pile_on") return "Strong and leading the market with room to add, and no deterioration signals.";
+  if (d?.review) return `Several soft signals (${det.join(", ")}) are worth a review, but a trim needs at least one hard signal (downtrend, revenue decline, or a severe margin collapse), so hold.`;
   if (blocks.length) return `Strong, but ${blocks.join(" and ")}, which removes the room to add (do not chase).`;
   if (det.length === 1) return `Only 1 deterioration signal (${det[0]}); a trim needs two, and it is not clear enough to add, so hold.`;
   return "Not strong enough to add and nothing deteriorating to trim, so hold.";

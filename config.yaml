@@ -8,7 +8,6 @@ tickers:
 
 timezone: America/New_York
 benchmark: SPY          # relative-strength benchmark
-growth_benchmark: QQQ
 min_position_usd: 200   # floor when trimming
 history_days: 400       # >200 so the 200-day MA is available
 news_lookback_days: 4
@@ -23,8 +22,10 @@ sector_etf:
 # Thresholds for the rule-based signal layer (the routine refines the final call).
 signals:
   rsi_overbought: 70
-  rsi_oversold: 35
+  rsi_oversold: 30                 # PLAN-v2 decision #1 (30/70 Wilder bands)
   rel_vol_spike: 2.0
   extended_above_sma20_pct: 12.0   # far above 20d MA -> trim watch
-  position_weight_cap_pct: 15.0    # single name > this % of book -> trim watch
   earnings_soon_days: 7
+  # PROVISIONAL (P4b): a trim needs >=2 deterioration dimensions incl >=1 hard;
+  # soft-only confluence -> hold + Review badge. Tune with backtest evidence.
+  hard_dimensions: [downtrend, revenue_weakening, margin_severe]

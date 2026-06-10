@@ -73,6 +73,19 @@ def is_fresh(conn: sqlite3.Connection, meta_key: str, max_age_hours: int = DEFAU
     return (datetime.now(timezone.utc) - ts) <= timedelta(hours=max_age_hours)
 
 
+def get_fmp_refreshed_at() -> datetime | None:
+    """When the cache's FMP fundamentals batch last refreshed (READ-ONLY meta).
+    Used by the post-earnings TTM gate: a batch that predates a fresh report
+    can't contain that quarter's TTM growth."""
+    conn = _connect()
+    if conn is None:
+        return None
+    try:
+        return _meta_time(conn, "fmp_refreshed_at")
+    finally:
+        conn.close()
+
+
 def get_fundamentals(ticker: str, max_age_hours: int = DEFAULT_MAX_AGE_HOURS) -> dict[str, Any] | None:
     """Map the cache's latest FMP fundamentals to our schema. None if absent/stale.
     Note: growth here is TTM (more stable than single-quarter YoY); flagged in source."""
@@ -102,9 +115,10 @@ def get_fundamentals(ticker: str, max_age_hours: int = DEFAULT_MAX_AGE_HOURS) ->
         # (net-income growth, a close proxy). Use it as a fallback so EPS growth isn't blank.
         if out.get("eps_yoy") is None and isinstance(raw.get("earnings_growth_ttm"), (int, float)):
             out["eps_yoy"] = round(raw["earnings_growth_ttm"] * 100.0, 4)
-        # thesis inputs the cache can support (QoQ margin isn't in this table → None)
+        # thesis inputs the cache can't supply (filled by our quarterly overlay → None)
         out["revenue_qoq_pct"] = None
         out["gross_margin_qoq_pp"] = None
+        out["gross_margin_yoy_pp"] = None
         return out
     finally:
         conn.close()

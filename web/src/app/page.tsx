@@ -41,13 +41,13 @@ export default async function Home() {
   const unrealized = liveOn ? liveUnrealized : pf.unrealized_pl;
   const returnPct = liveOn ? (liveInvested ? (liveUnrealized / liveInvested) * 100 : null) : pf.unrealized_pl_pct;
   const positionsCount = liveOn ? Object.values(byTicker).filter((p) => p.held).length : pf.positions_count;
-  // Big-move alerts → a comparable bar chart; other alerts (earnings) stay as pills.
-  const dayChg: Record<string, number | null> = {};
-  for (const t of snap.tickers) dayChg[t.ticker] = t.price.day_change_pct ?? null;
-  const movers: Mover[] = snap.alerts
-    .filter((a) => a.type === "big_move")
-    .map((a) => ({ ticker: a.ticker, chg: dayChg[a.ticker] ?? NaN }))
-    .filter((m) => Number.isFinite(m.chg));
+  // Movers chart derives straight from day_change_pct (display), decoupled from the
+  // big_move ALERT (which is mode-gated — suppressed at preopen where the change is
+  // yesterday's move). The chart still shows on a preopen board; the alert doesn't.
+  const bigMovePct = snap.thresholds?.big_move_pct ?? 7;
+  const movers: Mover[] = snap.tickers
+    .map((t) => ({ ticker: t.ticker, chg: t.price.day_change_pct ?? NaN }))
+    .filter((m) => Number.isFinite(m.chg) && Math.abs(m.chg) >= bigMovePct);
   const otherAlerts = snap.alerts.filter((a) => a.type !== "big_move");
   const earningsEvents: EarningsEvent[] = snap.tickers
     .filter((t) => t.earnings?.next_date)
@@ -57,6 +57,7 @@ export default async function Home() {
       hour: t.earnings.next_hour ?? null,
       days: t.earnings.days_until_next ?? 999,
       held: t.position.held,
+      est: t.earnings.next_date_estimated ?? false,
     }));
   const tickers = [...snap.tickers].sort((a, b) => {
     const la = (a.final_lean ?? a.signals.provisional_lean) as Lean;
@@ -72,6 +73,14 @@ export default async function Home() {
           {snap.mode === "preopen" ? "Pre-open brief" : snap.mode === "intraday" ? "Intraday update" : "Post-close recap"}{" · as of "}
           {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York", timeZoneName: "short" })}
         </p>
+
+        {/* Data-health banner (P8): degraded fetches must never look like quiet news */}
+        {(snap.data_health?.finnhub_failures ?? 0) > 0 && (
+          <p className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/20">
+            ⚠ {snap.data_health!.finnhub_failures} data {snap.data_health!.finnhub_failures === 1 ? "fetch" : "fetches"} failed
+            on this run — some news, earnings or analyst data may be missing rather than quiet.
+          </p>
+        )}
 
         {/* Market recap — words first */}
         {(snap.market_recap || snap.macro_context) && (
@@ -108,6 +117,26 @@ export default async function Home() {
             <div className="mt-3 flex gap-4 border-t border-zinc-800 pt-3 text-xs text-zinc-400">
               <span>Best today: {pf.top_gainer[0]} <span className={signClass(pf.top_gainer[1])}>{pct(pf.top_gainer[1])}</span></span>
               <span>Worst: {pf.top_loser[0]} <span className={signClass(pf.top_loser[1])}>{pct(pf.top_loser[1])}</span></span>
+            </div>
+          )}
+          {/* Sleeve scoreboard (P10): time-weighted, so trades/contributions are not "returns" */}
+          {snap.performance && (
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-800 pt-3 text-xs text-zinc-400">
+              <span>Sleeve since {new Date(snap.performance.since + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}:{" "}
+                <span className={signClass(snap.performance.twr_pct)}>{pct(snap.performance.twr_pct)}</span>
+              </span>
+              {snap.performance.spy_pct != null && (
+                <span>SPY <span className={signClass(snap.performance.spy_pct)}>{pct(snap.performance.spy_pct)}</span></span>
+              )}
+              {snap.performance.qqq_pct != null && (
+                <span>QQQ <span className={signClass(snap.performance.qqq_pct)}>{pct(snap.performance.qqq_pct)}</span></span>
+              )}
+              {snap.performance.excess_vs_spy_pp != null && (
+                <span>vs SPY <span className={signClass(snap.performance.excess_vs_spy_pp)}>{pct(snap.performance.excess_vs_spy_pp)}</span></span>
+              )}
+              {snap.performance.max_drawdown_pct != null && (
+                <span>max drawdown <span className="text-zinc-300">{pct(snap.performance.max_drawdown_pct)}</span></span>
+              )}
             </div>
           )}
         </section>
@@ -151,7 +180,14 @@ export default async function Home() {
 
                 {/* the plain-English takeaway is the hero line */}
                 {t.takeaway ? (
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-200"><RichText text={t.takeaway} symbols={symbols} /></p>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-200">
+                    <RichText text={t.takeaway} symbols={symbols} />
+                    {t.narrative_freshness === "stale" && t.narrative_as_of && (
+                      <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+                        read from {new Date(t.narrative_as_of).toLocaleString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" })}
+                      </span>
+                    )}
+                  </p>
                 ) : (
                   <p className="mt-2 text-sm italic text-zinc-500">Awaiting the routine&apos;s read…</p>
                 )}

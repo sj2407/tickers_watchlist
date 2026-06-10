@@ -103,7 +103,7 @@
     "label": "Daily swing (ATR%)",
     "category": "technical",
     "definition": "How much the stock typically moves in a day.",
-    "how_computed": "ATR(14) \u00f7 price \u00d7 100.",
+    "how_computed": "Wilder-smoothed ATR(14) \u00f7 price \u00d7 100 (same smoothing as the RSI).",
     "good_when": "Context: a 4% move is normal for a high-ATR name, alarming for a low one.",
     "source_type": "chart_data"
   },
@@ -120,8 +120,8 @@
     "key": "ret_1d",
     "label": "1-day return",
     "category": "momentum",
-    "definition": "Price change today.",
-    "how_computed": "(close/prev_close \u2212 1) \u00d7 100.",
+    "definition": "Total return today.",
+    "how_computed": "(close/prev_close \u2212 1) \u00d7 100, dividend-adjusted \u2014 on an ex-dividend day this can differ from the quoted day-change by the dividend.",
     "good_when": "Context, not a signal alone.",
     "source_type": "market_data"
   },
@@ -158,24 +158,33 @@
     "category": "momentum",
     "definition": "Is it beating the market this month?",
     "how_computed": "Ticker 20-day return \u2212 SPY 20-day return.",
-    "good_when": "Positive = leading; sustained negative = a deterioration signal.",
+    "good_when": "Positive = leading the market. (Deterioration is judged by the RS trend regime below, not by a single month's wiggle.)",
+    "source_type": "market_data"
+  },
+  {
+    "key": "rs_trend",
+    "label": "RS trend vs SPY (regime)",
+    "category": "momentum",
+    "definition": "Is the stock in a persistently outperforming or underperforming regime vs the market \u2014 not just a slow week?",
+    "how_computed": "Mansfield/Weinstein relative strength: the RS line (price \u00f7 SPY) compared with its own 50-session average. Below the average = underperforming.",
+    "good_when": "Outperforming. An underperforming regime is a deterioration signal (the standard Stage Analysis sell-side read); needs 50+ sessions of history.",
     "source_type": "market_data"
   },
   {
     "key": "revenue_growth_yoy",
-    "label": "Revenue growth (YoY)",
+    "label": "Revenue growth",
     "category": "fundamental",
     "definition": "Is the top line still growing?",
-    "how_computed": "(latest-quarter revenue / same quarter a year ago \u2212 1) \u00d7 100.",
+    "how_computed": "Single-quarter YoY when our statements have it: (latest quarter / same quarter a year ago \u2212 1) \u00d7 100, labelled YoY. Otherwise the cache's trailing-12-month growth, labelled TTM \u2014 smoother but ~2 quarters late on a rollover; gated to 'updating' right after a fresh report.",
     "good_when": "Stable or accelerating; 15%+ for growth names. Deceleration is a warning.",
     "source_type": "filing_data"
   },
   {
     "key": "eps_growth_yoy",
-    "label": "EPS growth (YoY)",
+    "label": "EPS growth",
     "category": "fundamental",
     "definition": "Is profit per share growing?",
-    "how_computed": "(latest-quarter EPS / a year ago \u2212 1) \u00d7 100.",
+    "how_computed": "Single-quarter YoY when available (guarded against near-zero year-ago EPS), else the cache's TTM growth \u2014 the label always says which.",
     "good_when": "Stable/accelerating, roughly tracking revenue. Deterioration is a warning.",
     "source_type": "filing_data"
   },
@@ -255,8 +264,8 @@
     "key": "tb_margin_compression",
     "label": "Margin compression",
     "category": "thesis",
-    "definition": "Gross margin falling quarter-over-quarter.",
-    "how_computed": "Gross margin drops vs the prior quarter by \u2265 threshold (pp).",
+    "definition": "Gross margin genuinely deteriorating \u2014 not a seasonal mix swing.",
+    "how_computed": "A mild sequential drop (\u22652pp) flags only when the margin is ALSO down vs the same quarter last year; a severe collapse (\u22655pp) flags unconditionally. Mild dips are suppressed for hypergrowth names (capacity ramp/mix noise).",
     "good_when": "False is good. True contributes to a trim/exit case.",
     "source_type": "filing_data"
   },

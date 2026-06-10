@@ -95,7 +95,7 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
        "market_data"),
     _m("atr14_pct", "Daily swing (ATR%)", "technical",
        "How much the stock typically moves in a day.",
-       "ATR(14) ÷ price × 100.",
+       "Wilder-smoothed ATR(14) ÷ price × 100 (same smoothing as the RSI).",
        "Context: a 4% move is normal for a high-ATR name, alarming for a low one.",
        "chart_data"),
     _m("breakout", "Breakout", "technical",
@@ -104,7 +104,10 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
        "A volume-confirmed breakout is a momentum signal.",
        "chart_data"),
     # ── momentum / relative strength ─────────────────────────────────
-    _m("ret_1d", "1-day return", "momentum", "Price change today.", "(close/prev_close − 1) × 100.", "Context, not a signal alone.", "market_data"),
+    _m("ret_1d", "1-day return", "momentum", "Total return today.",
+       "(close/prev_close − 1) × 100, dividend-adjusted — on an ex-dividend day this "
+       "can differ from the quoted day-change by the dividend.",
+       "Context, not a signal alone.", "market_data"),
     _m("ret_5d", "1-week return", "momentum", "Move over 5 trading days.", "Trailing 5-session return.", "Sustained strength is favorable.", "market_data"),
     _m("ret_20d", "1-month return", "momentum", "Move over ~20 trading days.", "Trailing 20-session return.", "Sustained strength is favorable.", "market_data"),
     _m("rs_5d", "Rel. strength vs SPY (1wk)", "momentum",
@@ -114,16 +117,29 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
     _m("rs_20d", "Rel. strength vs SPY (1mo)", "momentum",
        "Is it beating the market this month?",
        "Ticker 20-day return − SPY 20-day return.",
-       "Positive = leading; sustained negative = a deterioration signal.", "market_data"),
+       "Positive = leading the market. (Deterioration is judged by the RS trend "
+       "regime below, not by a single month's wiggle.)", "market_data"),
+    _m("rs_trend", "RS trend vs SPY (regime)", "momentum",
+       "Is the stock in a persistently outperforming or underperforming regime "
+       "vs the market — not just a slow week?",
+       "Mansfield/Weinstein relative strength: the RS line (price ÷ SPY) compared "
+       "with its own 50-session average. Below the average = underperforming.",
+       "Outperforming. An underperforming regime is a deterioration signal "
+       "(the standard Stage Analysis sell-side read); needs 50+ sessions of history.",
+       "market_data"),
     # ── fundamental ──────────────────────────────────────────────────
-    _m("revenue_growth_yoy", "Revenue growth (YoY)", "fundamental",
+    _m("revenue_growth_yoy", "Revenue growth", "fundamental",
        "Is the top line still growing?",
-       "(latest-quarter revenue / same quarter a year ago − 1) × 100.",
+       "Single-quarter YoY when our statements have it: (latest quarter / same quarter "
+       "a year ago − 1) × 100, labelled YoY. Otherwise the cache's trailing-12-month "
+       "growth, labelled TTM — smoother but ~2 quarters late on a rollover; gated to "
+       "'updating' right after a fresh report.",
        "Stable or accelerating; 15%+ for growth names. Deceleration is a warning.",
        "filing_data"),
-    _m("eps_growth_yoy", "EPS growth (YoY)", "fundamental",
+    _m("eps_growth_yoy", "EPS growth", "fundamental",
        "Is profit per share growing?",
-       "(latest-quarter EPS / a year ago − 1) × 100.",
+       "Single-quarter YoY when available (guarded against near-zero year-ago EPS), "
+       "else the cache's TTM growth — the label always says which.",
        "Stable/accelerating, roughly tracking revenue. Deterioration is a warning.",
        "filing_data"),
     _m("gross_margin", "Gross margin", "fundamental",
@@ -164,8 +180,10 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
        "Latest-quarter revenue falls vs the prior quarter by ≥ threshold.",
        "False is good. True contributes to a trim/exit case.", "filing_data"),
     _m("tb_margin_compression", "Margin compression", "thesis",
-       "Gross margin falling quarter-over-quarter.",
-       "Gross margin drops vs the prior quarter by ≥ threshold (pp).",
+       "Gross margin genuinely deteriorating — not a seasonal mix swing.",
+       "A mild sequential drop (≥2pp) flags only when the margin is ALSO down vs the "
+       "same quarter last year; a severe collapse (≥5pp) flags unconditionally. Mild "
+       "dips are suppressed for hypergrowth names (capacity ramp/mix noise).",
        "False is good. True contributes to a trim/exit case.", "filing_data"),
     _m("tb_repeated_eps_miss", "Repeated EPS misses", "thesis",
        "Consistently missing estimates — execution concern.",

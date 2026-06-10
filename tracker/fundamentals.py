@@ -153,7 +153,7 @@ def compute(
         "source": source, "report_date": None, "fiscal_period": None,
         "revenue": None, "revenue_yoy": None, "revenue_qoq_pct": None,
         "eps": None, "eps_yoy": None, "eps_ttm": None,
-        "gross_margin": None, "gross_margin_qoq_pp": None,
+        "gross_margin": None, "gross_margin_qoq_pp": None, "gross_margin_yoy_pp": None,
         "eps_miss_count_last3": None,
     }
     if not income:
@@ -168,6 +168,11 @@ def compute(
     rev0 = _f(q0.get("revenue"))
     if len(income) > 4:
         out["revenue_yoy"] = _pct(rev0, _f(income[4].get("revenue")))
+        # Margin vs the same quarter last year (pp) — the seasonality corroboration
+        # the mild margin-compression flag requires (covers own-fetch names too).
+        gm_now, gm_yr = _margin(q0), _margin(income[4])
+        if gm_now is not None and gm_yr is not None:
+            out["gross_margin_yoy_pp"] = round(gm_now - gm_yr, 2)
         # Guard EPS YoY: a non-positive / near-zero year-ago EPS makes the ratio
         # meaningless and can flip the sign (a recovery reading as deterioration),
         # which would wrongly count toward a trim. Emit None instead.

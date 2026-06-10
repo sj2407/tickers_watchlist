@@ -89,8 +89,9 @@ function buildNote(t: Ticker, lean: Lean): string {
   const det = (d?.deterioration ?? []).map((k) => DET_PHRASE[k] ?? k);
   const blocks = d?.blocks ?? [];
   if (lean === "exit") return `Confirmed thesis break: ${det.join(", ") || "escalated by the read"}. Exit closes the position.`;
-  if (lean === "trim") return `${det.length} deterioration signals (${det.join(", ")}); two or more triggers a trim.`;
+  if (lean === "trim") return `${det.length} deterioration signals (${det.join(", ")}); two or more, at least one of them hard (downtrend, revenue decline, severe margin collapse), triggers a trim.`;
   if (lean === "pile_on") return "Strong and leading the market with room to add, and no deterioration signals.";
+  if (d?.review) return `Several soft signals (${det.join(", ")}) are worth a review, but a trim needs at least one hard signal (downtrend, revenue decline, or a severe margin collapse), so hold.`;
   if (blocks.length) return `Strong, but ${blocks.join(" and ")}, which removes the room to add (do not chase).`;
   if (det.length === 1) return `Only 1 deterioration signal (${det[0]}); a trim needs two, and it is not clear enough to add, so hold.`;
   return "Not strong enough to add and nothing deteriorating to trim, so hold.";

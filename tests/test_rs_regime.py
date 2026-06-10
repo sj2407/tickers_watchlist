@@ -92,7 +92,9 @@ def test_small_negative_rs20d_in_good_regime_plus_flag_is_hold():
 
 
 def test_underperforming_regime_plus_flag_is_trim():
-    tb = {"margin_compression": True, "any": True}
+    # P4b declared edit: a trim needs >=1 HARD dimension, so the margin flag here
+    # is severe; the soft+soft original lives on as hold+review in test_confluence.
+    tb = {"margin_compression": True, "margin_severe": True, "any": True}
     out = signals.provisional_lean(_row(rs20=-0.77, rs_trend="underperforming", tb=tb), CFG)
     assert out["lean"] == "trim"
     assert "negative_rel_strength" in out["drivers"]["deterioration"]

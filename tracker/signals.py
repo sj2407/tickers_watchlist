@@ -124,6 +124,9 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
         badges.append({"label": "Thesis flag", "tone": "bad"})
 
     decision = provisional_lean(t, cfg)
+    if decision["drivers"].get("review"):
+        # Soft-only deterioration confluence: worth eyes, not an auto-trim (P4b).
+        badges.append({"label": "Review", "tone": "warn"})
     return {
         "badges": badges,
         "provisional_lean": decision["lean"],
@@ -230,6 +233,24 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     }
     det_true = [k for k, v in det.items() if v]
 
+    # Hard vs soft dimensions (P4b, provisional pending backtest evidence — D2).
+    # Hard = the thesis is demonstrably going wrong (confirmed downtrend, revenue
+    # weakening, severe margin collapse). Soft = suggestive but noisy (lagging RS
+    # regime, mild margin dip, earnings-quality reads). A trim needs >=1 hard;
+    # a soft-only confluence is surfaced for review, never auto-trimmed.
+    # 'margin_severe' in the config list means: margin_compression counts hard
+    # only when thesis flagged the collapse severe (never re-derived here).
+    hard_cfg = set(s.get("hard_dimensions",
+                         ["downtrend", "revenue_weakening", "margin_severe"]))
+
+    def _is_hard(dim: str) -> bool:
+        if dim == "margin_compression":
+            return ("margin_compression" in hard_cfg
+                    or ("margin_severe" in hard_cfg and tb.get("margin_severe") is True))
+        return dim in hard_cfg
+
+    hard_true = [d for d in det_true if _is_hard(d)]
+
     # strength + room
     strong = (trend == "uptrend") or (ma_cross in ("golden_cross", "above"))
     rs_ok = (rs20 is None) or (rs20 >= 0)
@@ -254,13 +275,20 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
         blocks.append("reports within a day (event risk)")
 
     # ── truth table (order matters; quant caps at trim — LLM owns exit) ──
+    review: str | None = None
     if not held:
         lean = "watch"
+    elif len(det_true) >= 2 and hard_true:
+        lean = "trim"          # deterioration confluence w/ >=1 hard (LLM may escalate to exit)
     elif len(det_true) >= 2:
-        lean = "trim"          # deterioration confluence (LLM may escalate to exit)
+        lean = "hold"          # soft-only confluence: review, don't auto-trim
+        review = "soft deterioration confluence (a trim needs at least one hard signal)"
     elif strong and rs_ok and room:
         lean = "pile_on"
     else:
         lean = "hold"          # incl. overbought/extended = "don't chase", or a single mild negative
 
-    return {"lean": lean, "drivers": {"pile": pile, "deterioration": det_true, "blocks": blocks}}
+    drivers: dict[str, Any] = {"pile": pile, "deterioration": det_true, "blocks": blocks}
+    if review:
+        drivers["review"] = review
+    return {"lean": lean, "drivers": drivers}

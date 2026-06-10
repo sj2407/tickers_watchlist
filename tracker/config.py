@@ -59,6 +59,11 @@ _DEFAULTS: dict[str, Any] = {
         "extended_above_sma20_pct": 12.0,  # far above 20d MA → trim watch
         "position_weight_cap_pct": 15.0,  # single name > this % of book → trim watch
         "earnings_soon_days": 7,
+        # P4b (provisional, tunable — revisit with backtest evidence): dimensions
+        # that count as HARD deterioration. A trim needs ≥2 dimensions incl. ≥1
+        # hard; soft-only confluence → hold + Review badge. "margin_severe" means
+        # margin_compression is hard only when the collapse is severe (≤ −5pp).
+        "hard_dimensions": ["downtrend", "revenue_weakening", "margin_severe"],
     },
     "intraday": {
         "near_support_pct": 2.0,    # within 2% above nearest support → entry zone

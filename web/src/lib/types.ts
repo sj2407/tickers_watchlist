@@ -147,7 +147,7 @@ export interface Signals {
   provisional_lean: Lean;
   pile_points: string[];
   trim_points: string[];
-  drivers?: { pile: string[]; deterioration: string[]; blocks: string[] };
+  drivers?: { pile: string[]; deterioration: string[]; blocks: string[]; review?: string | null };
 }
 
 export interface RelativeStrength {

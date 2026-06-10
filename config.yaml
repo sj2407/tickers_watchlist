@@ -28,3 +28,6 @@ signals:
   extended_above_sma20_pct: 12.0   # far above 20d MA -> trim watch
   position_weight_cap_pct: 15.0    # single name > this % of book -> trim watch
   earnings_soon_days: 7
+  # PROVISIONAL (P4b): a trim needs >=2 deterioration dimensions incl >=1 hard;
+  # soft-only confluence -> hold + Review badge. Tune with backtest evidence.
+  hard_dimensions: [downtrend, revenue_weakening, margin_severe]

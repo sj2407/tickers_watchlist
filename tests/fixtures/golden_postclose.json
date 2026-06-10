@@ -120,7 +120,9 @@
    "rationale": "Prior rationale",
    "relative_strength": {
     "rs20d": 0.23,
-    "rs5d": 1.0
+    "rs5d": 1.0,
+    "rs_line_ma50_dist_pct": 1.45,
+    "rs_trend": "outperforming"
    },
    "returns": {
     "r1d": 0.46,
@@ -1727,7 +1729,9 @@
    "rationale": null,
    "relative_strength": {
     "rs20d": 0.0,
-    "rs5d": 0.0
+    "rs5d": 0.0,
+    "rs_line_ma50_dist_pct": 0.0,
+    "rs_trend": "outperforming"
    },
    "returns": {
     "r1d": 0.21,

@@ -128,16 +128,42 @@ def _trend_label(t: dict[str, Any]) -> str:
     return "mixed"
 
 
+RS_MA_WINDOW = 50  # sessions; the daily adaptation of Mansfield's zero line
+
+
+def _rs_regime(ticker_hist: pd.DataFrame, bench_hist: pd.DataFrame) -> tuple[str | None, float | None]:
+    """Mansfield/Weinstein RS regime: the RS line (price ÷ benchmark) vs its own
+    50-session MA. Below = 'underperforming' (a persistent lag, the standard
+    deterioration read); at/above = 'outperforming'. (None, None) on <51 aligned
+    sessions — insufficient history never flags."""
+    if ticker_hist.empty or bench_hist.empty:
+        return None, None
+    t = ticker_hist["Close"].dropna()
+    b = bench_hist["Close"].dropna()
+    ratio = (t / b).dropna()  # index-aligned; non-overlapping dates drop out
+    if len(ratio) < RS_MA_WINDOW + 1:
+        return None, None
+    ma = float(ratio.tail(RS_MA_WINDOW).mean())
+    if ma == 0:
+        return None, None
+    dist = (float(ratio.iloc[-1]) / ma - 1.0) * 100.0
+    return ("underperforming" if dist < 0 else "outperforming"), round(dist, 2)
+
+
 def relative_strength(
     ticker_hist: pd.DataFrame, bench_hist: pd.DataFrame, windows=(5, 20)
-) -> dict[str, float | None]:
-    """Excess return of the ticker over the benchmark across windows."""
+) -> dict[str, Any]:
+    """Excess return over the benchmark across windows, plus the Mansfield-style
+    RS regime (`rs_trend`) the decision engine uses for deterioration."""
     tr = compute_returns(ticker_hist, windows)
     br = compute_returns(bench_hist, windows)
-    out: dict[str, float | None] = {}
+    out: dict[str, Any] = {}
     for n in windows:
         a, b = tr.get(f"r{n}d"), br.get(f"r{n}d")
         out[f"rs{n}d"] = round(a - b, 2) if (a is not None and b is not None) else None
+    trend, dist = _rs_regime(ticker_hist, bench_hist)
+    out["rs_trend"] = trend
+    out["rs_line_ma50_dist_pct"] = dist
     return out
 
 

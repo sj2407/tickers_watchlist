@@ -158,7 +158,16 @@
     "category": "momentum",
     "definition": "Is it beating the market this month?",
     "how_computed": "Ticker 20-day return \u2212 SPY 20-day return.",
-    "good_when": "Positive = leading; sustained negative = a deterioration signal.",
+    "good_when": "Positive = leading the market. (Deterioration is judged by the RS trend regime below, not by a single month's wiggle.)",
+    "source_type": "market_data"
+  },
+  {
+    "key": "rs_trend",
+    "label": "RS trend vs SPY (regime)",
+    "category": "momentum",
+    "definition": "Is the stock in a persistently outperforming or underperforming regime vs the market \u2014 not just a slow week?",
+    "how_computed": "Mansfield/Weinstein relative strength: the RS line (price \u00f7 SPY) compared with its own 50-session average. Below the average = underperforming.",
+    "good_when": "Outperforming. An underperforming regime is a deterioration signal (the standard Stage Analysis sell-side read); needs 50+ sessions of history.",
     "source_type": "market_data"
   },
   {

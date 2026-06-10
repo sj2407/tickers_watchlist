@@ -150,11 +150,19 @@ export interface Signals {
   drivers?: { pile: string[]; deterioration: string[]; blocks: string[] };
 }
 
+export interface RelativeStrength {
+  rs5d?: number | null;
+  rs20d?: number | null;
+  // P3: Mansfield/Weinstein regime — RS line (price ÷ SPY) vs its 50-session MA.
+  rs_trend?: "outperforming" | "underperforming" | null;
+  rs_line_ma50_dist_pct?: number | null;
+}
+
 export interface Ticker {
   ticker: string;
   price: TickerPrice;
   returns: Returns;
-  relative_strength: Record<string, number | null>;
+  relative_strength: RelativeStrength;
   technicals: Technicals;
   fundamentals?: Fundamentals | null;
   thesis_break?: ThesisBreak | null;

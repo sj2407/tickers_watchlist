@@ -27,7 +27,11 @@ def test_returns_calendar_anchored(ticker_hist, bench_hist):
 
 
 def test_relative_strength_values(ticker_hist, bench_hist):
-    assert md.relative_strength(ticker_hist, bench_hist) == {"rs5d": 1.0, "rs20d": 0.23}
+    # P3 declared edit: relative_strength gained the Mansfield regime fields.
+    assert md.relative_strength(ticker_hist, bench_hist) == {
+        "rs5d": 1.0, "rs20d": 0.23,
+        "rs_trend": "outperforming", "rs_line_ma50_dist_pct": 1.45,
+    }
 
 
 def test_positional_fallback_when_anchor_date_missing(ticker_hist):
@@ -41,4 +45,6 @@ def test_empty_frame_yields_all_none():
     import pandas as pd
 
     assert md.compute_returns(pd.DataFrame()) == {"r1d": None, "r5d": None, "r20d": None}
-    assert md.relative_strength(pd.DataFrame(), pd.DataFrame()) == {"rs5d": None, "rs20d": None}
+    assert md.relative_strength(pd.DataFrame(), pd.DataFrame()) == {
+        "rs5d": None, "rs20d": None, "rs_trend": None, "rs_line_ma50_dist_pct": None,
+    }

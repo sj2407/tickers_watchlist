@@ -34,9 +34,18 @@ function buildRows(t: Ticker): Row[] {
 
   const r20 = rs.rs20d;
   if (r20 != null) {
-    const zone = r20 >= 0 ? 3 : 1;
-    const pos = r20 >= 0 ? clamp(0.3 + r20 / 20, 0.3, 0.95) : clamp(0.6 + r20 / 20, 0.05, 0.6);
-    rows.push({ name: "Rel. strength", value: `${r20 >= 0 ? "+" : ""}${r20.toFixed(1)}% vs SPY`, zone, pos });
+    // Zone follows the engine: only an UNDERPERFORMING REGIME (RS line below its
+    // 50-session MA) reads as deterioration; a small negative month inside a good
+    // regime sits in the hold zone — never trim fuel.
+    const under = rs.rs_trend === "underperforming";
+    const zone = under ? 1 : r20 >= 0 ? 3 : 2;
+    const pos = under
+      ? clamp(0.6 + r20 / 20, 0.05, 0.6)
+      : r20 >= 0
+        ? clamp(0.3 + r20 / 20, 0.3, 0.95)
+        : clamp(0.5 + r20 / 20, 0.15, 0.5);
+    const label = `${r20 >= 0 ? "+" : ""}${r20.toFixed(1)}% vs SPY${under ? ", lagging regime" : ""}`;
+    rows.push({ name: "Rel. strength", value: label, zone, pos });
   }
 
   if (f?.revenue_yoy != null) {

@@ -9,14 +9,14 @@ CFG = {"signals": {"rsi_overbought": 70, "rsi_oversold": 30,
 
 
 def mk(held=True, shares=1.0, weight=5.0, trend="uptrend", ma_cross="above",
-       rsi=50.0, d20=2.0, rs20=1.0, rev_yoy=20.0, eps_yoy=20.0, days=30,
-       tb=None):
+       rsi=50.0, d20=2.0, rs20=1.0, rs_trend="outperforming",
+       rev_yoy=20.0, eps_yoy=20.0, days=30, tb=None):
     return {
         "technicals": {"trend": trend, "ma_cross": ma_cross, "rsi14": rsi, "dist_sma20_pct": d20},
         "position": {"held": held, "shares": shares, "weight_pct": weight},
         "earnings": {"days_until_next": days},
         "fundamentals": {"revenue_yoy": rev_yoy, "eps_yoy": eps_yoy},
-        "relative_strength": {"rs20d": rs20},
+        "relative_strength": {"rs20d": rs20, "rs_trend": rs_trend},
         "thesis_break": tb or {"revenue_qoq_drop": False, "margin_compression": False,
                                "repeated_eps_miss": False, "any": False},
     }
@@ -46,7 +46,7 @@ def test_quant_caps_at_trim_never_exit():
 
 def test_deterioration_confluence_is_trim():
     # downtrend + negative relative strength = 2 distinct deterioration dimensions
-    assert lean(mk(trend="downtrend", ma_cross="below", rs20=-3.0)) == "trim"
+    assert lean(mk(trend="downtrend", ma_cross="below", rs20=-3.0, rs_trend="underperforming")) == "trim"
 
 
 def test_single_thesis_flag_alone_is_hold_but_visible():
@@ -101,7 +101,7 @@ def test_C1_position_size_never_changes_the_lean():
     assert lean(mk(weight=5.0)) == lean(mk(weight=90.0))
     # a healthy name that happens to be 90% of the sleeve is NOT trimmed/exited
     assert lean(mk(weight=90.0)) in ("pile_on", "hold")
-    assert lean(mk(weight=95.0, trend="downtrend", ma_cross="below", rs20=-3.0)) == "trim"  # deterioration, not size
+    assert lean(mk(weight=95.0, trend="downtrend", ma_cross="below", rs20=-3.0, rs_trend="underperforming")) == "trim"  # deterioration, not size
 
 
 def test_determinism():
@@ -122,7 +122,7 @@ def test_quant_action_set_excludes_exit():
         lean(mk(held=False, shares=0)),                                          # watch
         lean(mk()),                                                              # pile_on
         lean(mk(rsi=78.0)),                                                      # hold
-        lean(mk(trend="downtrend", ma_cross="below", rs20=-3.0)),               # trim
+        lean(mk(trend="downtrend", ma_cross="below", rs20=-3.0, rs_trend="underperforming")),               # trim
         lean(mk(tb={"revenue_qoq_drop": True, "margin_compression": True,
                     "repeated_eps_miss": True, "any": True})),                   # max deterioration
     }

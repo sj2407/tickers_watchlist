@@ -169,8 +169,8 @@ def validate_leans(snap: dict[str, Any]) -> dict[str, Any]:
 
 # Metric keys this engine references — guarded against metrics.REGISTRY in tests.
 REFERENCED_KEYS = {
-    "trend", "ma_cross", "rsi14", "dist_sma20_pct", "rs_20d", "days_to_earnings",
-    "revenue_growth_yoy", "eps_growth_yoy",
+    "trend", "ma_cross", "rsi14", "dist_sma20_pct", "rs_20d", "rs_trend",
+    "days_to_earnings", "revenue_growth_yoy", "eps_growth_yoy",
     "tb_revenue_qoq_drop", "tb_margin_compression", "tb_repeated_eps_miss",
 }
 
@@ -216,11 +216,14 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
 
     # Deterioration as DISTINCT dimensions (each counted once — correlated revenue
     # signals don't double-count, per review). These are the only things that trim.
+    # RS deterioration is the Mansfield/Weinstein REGIME (RS line below its own
+    # 50-session MA), not a one-period rs20d sign — a name slightly behind SPY for
+    # a couple of weeks inside a strong regime is noise, not deterioration.
     revenue_weakening = (rev_yoy is not None and rev_yoy < 0) or (tb.get("revenue_qoq_drop") is True)
     earnings_quality = (eps_yoy is not None and eps_yoy < 0) or (tb.get("repeated_eps_miss") is True)
     det = {
         "downtrend": (trend == "downtrend") or (ma_cross == "death_cross"),
-        "negative_rel_strength": rs20 is not None and rs20 < 0,
+        "negative_rel_strength": rs.get("rs_trend") == "underperforming",
         "revenue_weakening": revenue_weakening,
         "margin_compression": tb.get("margin_compression") is True,
         "earnings_quality_deteriorating": earnings_quality,

@@ -114,7 +114,16 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
     _m("rs_20d", "Rel. strength vs SPY (1mo)", "momentum",
        "Is it beating the market this month?",
        "Ticker 20-day return − SPY 20-day return.",
-       "Positive = leading; sustained negative = a deterioration signal.", "market_data"),
+       "Positive = leading the market. (Deterioration is judged by the RS trend "
+       "regime below, not by a single month's wiggle.)", "market_data"),
+    _m("rs_trend", "RS trend vs SPY (regime)", "momentum",
+       "Is the stock in a persistently outperforming or underperforming regime "
+       "vs the market — not just a slow week?",
+       "Mansfield/Weinstein relative strength: the RS line (price ÷ SPY) compared "
+       "with its own 50-session average. Below the average = underperforming.",
+       "Outperforming. An underperforming regime is a deterioration signal "
+       "(the standard Stage Analysis sell-side read); needs 50+ sessions of history.",
+       "market_data"),
     # ── fundamental ──────────────────────────────────────────────────
     _m("revenue_growth_yoy", "Revenue growth (YoY)", "fundamental",
        "Is the top line still growing?",

@@ -21,17 +21,25 @@ from .config import get_key
 FINNHUB_BASE = "https://finnhub.io/api/v1"
 _session = requests.Session()
 
-# Per-run Finnhub call counter (lets us prove light intraday runs make ~0 metered calls).
+# Per-run Finnhub call counter (lets us prove light intraday runs make ~0 metered calls)
+# + failure counter (surfaced in the snapshot's data_health so degraded fetches are
+# never indistinguishable from "no news").
 _finnhub_calls = 0
+_finnhub_failures = 0
 
 
 def finnhub_call_count() -> int:
     return _finnhub_calls
 
 
+def finnhub_failure_count() -> int:
+    return _finnhub_failures
+
+
 def reset_finnhub_calls() -> None:
-    global _finnhub_calls
+    global _finnhub_calls, _finnhub_failures
     _finnhub_calls = 0
+    _finnhub_failures = 0
 
 
 # --------------------------------------------------------------------------- #
@@ -88,7 +96,7 @@ def earnings_dates_yf(ticker: str) -> list[date]:
 # Finnhub
 # --------------------------------------------------------------------------- #
 def _finnhub_get(path: str, params: dict[str, Any]) -> Any:
-    global _finnhub_calls
+    global _finnhub_calls, _finnhub_failures
     key = get_key("FINNHUB_API_KEY")
     if not key:
         return None
@@ -104,8 +112,10 @@ def _finnhub_get(path: str, params: dict[str, Any]) -> Any:
             return r.json()
         except Exception:
             if attempt == 2:
+                _finnhub_failures += 1
                 return None
             time.sleep(1.0)
+    _finnhub_failures += 1  # rate-limited through all retries
     return None
 
 

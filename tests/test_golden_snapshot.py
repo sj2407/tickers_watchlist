@@ -91,6 +91,10 @@ PRIOR = {
 @pytest.fixture()
 def fake_world(monkeypatch):
     monkeypatch.setattr(db, "using_db", lambda: False)
+    # Hermetic: the REAL equity-research cache must never leak into the golden
+    # world (data_health would otherwise read the live file's refresh timestamp —
+    # machine- and day-dependent).
+    monkeypatch.setenv("WATCHLIST_USE_CACHE", "0")
     monkeypatch.setattr(snapshot, "datetime", FrozenDateTime)
     monkeypatch.setattr(snapshot, "session_phase", lambda tz: "afterhours")
 

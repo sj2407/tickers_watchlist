@@ -6,7 +6,7 @@ Claude routine fills those in during its run, on the subscription.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -154,6 +154,7 @@ def build_ticker_row(tk, h, q, last, cfg, today, bench_hist, book_value, holding
 
 def build_snapshot(mode: str) -> dict[str, Any]:
     load_env()
+    sources.reset_finnhub_calls()  # per-run call + failure counters (data_health)
     cfg = load_config()
     tz = cfg["timezone"]
     today = datetime.now(ZoneInfo(tz)).date()
@@ -231,8 +232,32 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     # routine to do a full narration instead of relying on a (nonexistent) prior.
     merge_narrative(snap, prior)  # prior fetched before the loop
     signals.validate_leans(snap)  # carried-forward leans must obey the vocabulary too
+    grade_narrative_freshness(snap)
     snap["needs_full_enrichment"] = (prior is None)
+    snap["data_health"] = _data_health(snap, mode)
     return snap
+
+
+def _data_health(snap: dict[str, Any], mode: str) -> dict[str, Any]:
+    """Fetch-quality summary (P8): degraded data must never render like quiet data."""
+    from . import cache_source
+
+    rows = snap.get("tickers", [])
+    cache_ts = cache_source.get_fmp_refreshed_at()
+    age_h = None
+    if cache_ts is not None:
+        age_h = round((datetime.now(timezone.utc) - cache_ts).total_seconds() / 3600, 1)
+    return {
+        "finnhub_calls": sources.finnhub_call_count(),
+        "finnhub_failures": sources.finnhub_failure_count(),
+        # news is only fetched for every name on FULL runs; intraday fetches
+        # triggered names only, so "missing" is meaningless there.
+        "tickers_missing_news": ([r["ticker"] for r in rows if not r.get("news")]
+                                 if mode in ("preopen", "postclose") else []),
+        "tickers_missing_analyst": [r["ticker"] for r in rows if not r.get("analyst")],
+        "equity_cache_used": cache_source.available(),
+        "equity_cache_age_hours": age_h,
+    }
 
 
 # Narrative fields owned by the routine — carried forward verbatim when this run hasn't
@@ -243,8 +268,39 @@ NARRATIVE_TICKER_FIELDS = (
     # validation provenance travels WITH the lean it explains (cleared when the
     # routine writes a fresh valid lean — see enrich.apply_enrichment):
     "lean_coerced_from", "lean_rejected",
+    # when the routine last wrote this ticker's words — carried WITH them so a
+    # stale narrative is always datable (P8):
+    "narrative_as_of",
 )
-NARRATIVE_TOP_FIELDS = ("market_recap", "macro_context")
+
+NARRATIVE_STALE_HOURS = 24
+
+
+def narrative_freshness(narrative_as_of: str | None, generated_at: str | None) -> str | None:
+    """Tri-state narrative age vs the snapshot's numbers (P8) — computed in Python
+    so it's unit-tested; the web renders it purely presentationally.
+    fresh = written this run · carried = older but <24h · stale = >24h behind the
+    numbers · None = never stamped (legacy snapshots)."""
+    if not narrative_as_of or not generated_at:
+        return None
+    try:
+        na = datetime.fromisoformat(str(narrative_as_of))
+        ga = datetime.fromisoformat(str(generated_at))
+    except ValueError:
+        return None
+    if na >= ga:
+        return "fresh"
+    if (ga - na).total_seconds() > NARRATIVE_STALE_HOURS * 3600:
+        return "stale"
+    return "carried"
+
+
+def grade_narrative_freshness(snap: dict[str, Any]) -> None:
+    """Stamp narrative_freshness on every row (in place)."""
+    gen = snap.get("generated_at")
+    for t in snap.get("tickers", []):
+        t["narrative_freshness"] = narrative_freshness(t.get("narrative_as_of"), gen)
+NARRATIVE_TOP_FIELDS = ("market_recap", "macro_context", "market_narrative_as_of")
 
 
 def merge_narrative(fresh: dict[str, Any], prior: dict[str, Any] | None) -> dict[str, Any]:

@@ -72,6 +72,14 @@ export default async function Home() {
           {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York", timeZoneName: "short" })}
         </p>
 
+        {/* Data-health banner (P8): degraded fetches must never look like quiet news */}
+        {(snap.data_health?.finnhub_failures ?? 0) > 0 && (
+          <p className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/20">
+            ⚠ {snap.data_health!.finnhub_failures} data {snap.data_health!.finnhub_failures === 1 ? "fetch" : "fetches"} failed
+            on this run — some news, earnings or analyst data may be missing rather than quiet.
+          </p>
+        )}
+
         {/* Market recap — words first */}
         {(snap.market_recap || snap.macro_context) && (
           <section className="mb-5 rounded-2xl bg-gradient-to-b from-sky-950/40 to-zinc-900/60 p-5 ring-1 ring-zinc-800">
@@ -150,7 +158,14 @@ export default async function Home() {
 
                 {/* the plain-English takeaway is the hero line */}
                 {t.takeaway ? (
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-200"><RichText text={t.takeaway} symbols={symbols} /></p>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-200">
+                    <RichText text={t.takeaway} symbols={symbols} />
+                    {t.narrative_freshness === "stale" && t.narrative_as_of && (
+                      <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
+                        read from {new Date(t.narrative_as_of).toLocaleString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" })}
+                      </span>
+                    )}
+                  </p>
                 ) : (
                   <p className="mt-2 text-sm italic text-zinc-500">Awaiting the routine&apos;s read…</p>
                 )}

@@ -197,6 +197,9 @@ export interface Ticker {
   // routine-written lean that broke the action vocabulary.
   lean_coerced_from?: string | null;
   lean_rejected?: string | null;
+  // P8: when the routine last wrote this name's words + its age vs the numbers.
+  narrative_as_of?: string | null;
+  narrative_freshness?: "fresh" | "carried" | "stale" | null;
 }
 
 export interface Portfolio {
@@ -215,6 +218,15 @@ export interface Alert {
   msg: string;
 }
 
+export interface DataHealth {
+  finnhub_calls?: number;
+  finnhub_failures?: number;
+  tickers_missing_news?: string[];
+  tickers_missing_analyst?: string[];
+  equity_cache_used?: boolean;
+  equity_cache_age_hours?: number | null;
+}
+
 export interface Snapshot {
   generated_at: string;
   mode: "preopen" | "intraday" | "postclose";
@@ -226,7 +238,9 @@ export interface Snapshot {
   tickers: Ticker[];
   market_recap: string | null;
   macro_context: string | null;
+  market_narrative_as_of?: string | null;
   alerts: Alert[];
+  data_health?: DataHealth | null;
 }
 
 export interface PositionUpdate {

@@ -13,6 +13,14 @@
  ],
  "as_of_date": "2026-06-09",
  "benchmark": "SPY",
+ "data_health": {
+  "equity_cache_age_hours": null,
+  "equity_cache_used": false,
+  "finnhub_calls": 0,
+  "finnhub_failures": 0,
+  "tickers_missing_analyst": [],
+  "tickers_missing_news": []
+ },
  "generated_at": "2026-06-09T17:00:00-04:00",
  "intraday_triggered": [],
  "macro_context": "Prior macro.",
@@ -81,6 +89,7 @@
     "source": "equity-cache(fmp,ttm)"
    },
    "invalidation": "Prior invalidation",
+   "narrative_freshness": null,
    "news": [],
    "position": {
     "cost_basis": 90.0,
@@ -1689,6 +1698,7 @@
     "revenue_yoy": -2.0,
     "source": "fmp"
    },
+   "narrative_freshness": null,
    "news": [],
    "position": {
     "cost_basis": 350.0,

@@ -77,6 +77,14 @@ export default async function TickerPage({
 
           {/* The call, in plain English */}
           <section className="mt-4 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-900/50 p-4 ring-1 ring-zinc-800">
+            {(t.narrative_freshness === "carried" || t.narrative_freshness === "stale") && t.narrative_as_of && (
+              <p className={`mb-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                t.narrative_freshness === "stale" ? "bg-amber-500/15 text-amber-300" : "bg-zinc-800 text-zinc-400"
+              }`}>
+                analysis from {new Date(t.narrative_as_of).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET
+                {t.narrative_freshness === "stale" ? " — older than the numbers below" : ""}
+              </p>
+            )}
             {t.takeaway && <p className="text-sm leading-relaxed text-zinc-200"><RichText text={t.takeaway} symbols={symbols} /></p>}
             <div className="mt-3 rounded-xl bg-zinc-950/60 p-3">
               <p className="text-xs uppercase tracking-wide text-zinc-300">Suggested action</p>

@@ -104,7 +104,10 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
        "A volume-confirmed breakout is a momentum signal.",
        "chart_data"),
     # ── momentum / relative strength ─────────────────────────────────
-    _m("ret_1d", "1-day return", "momentum", "Price change today.", "(close/prev_close − 1) × 100.", "Context, not a signal alone.", "market_data"),
+    _m("ret_1d", "1-day return", "momentum", "Total return today.",
+       "(close/prev_close − 1) × 100, dividend-adjusted — on an ex-dividend day this "
+       "can differ from the quoted day-change by the dividend.",
+       "Context, not a signal alone.", "market_data"),
     _m("ret_5d", "1-week return", "momentum", "Move over 5 trading days.", "Trailing 5-session return.", "Sustained strength is favorable.", "market_data"),
     _m("ret_20d", "1-month return", "momentum", "Move over ~20 trading days.", "Trailing 20-session return.", "Sustained strength is favorable.", "market_data"),
     _m("rs_5d", "Rel. strength vs SPY (1wk)", "momentum",

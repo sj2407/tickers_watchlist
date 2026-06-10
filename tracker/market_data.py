@@ -16,11 +16,20 @@ def _pct(a: float | None, b: float | None) -> float | None:
     return round((a / b - 1.0) * 100.0, 2)
 
 
+def _return_closes(hist: pd.DataFrame) -> pd.Series:
+    """Closes for RETURN math: dividend-adjusted ('Adj Close', total return) when
+    the feed provides it, else raw Close. Technicals deliberately do NOT use this —
+    indicator levels follow the chart, returns follow the money."""
+    col = "Adj Close" if "Adj Close" in hist.columns else "Close"
+    return hist[col].dropna()
+
+
 def compute_returns(hist: pd.DataFrame, windows=(1, 5, 20)) -> dict[str, float | None]:
-    """Trailing returns over N *trading* days, anchored to the last session."""
+    """Trailing TOTAL returns over N *trading* days, anchored to the last session
+    (dividend-adjusted when 'Adj Close' is present)."""
     if hist.empty:
         return {f"r{n}d": None for n in windows}
-    closes = hist["Close"].dropna()
+    closes = _return_closes(hist)
     if closes.empty:
         return {f"r{n}d": None for n in windows}
     last = float(closes.iloc[-1])
@@ -138,8 +147,8 @@ def _rs_regime(ticker_hist: pd.DataFrame, bench_hist: pd.DataFrame) -> tuple[str
     sessions — insufficient history never flags."""
     if ticker_hist.empty or bench_hist.empty:
         return None, None
-    t = ticker_hist["Close"].dropna()
-    b = bench_hist["Close"].dropna()
+    t = _return_closes(ticker_hist)
+    b = _return_closes(bench_hist)
     ratio = (t / b).dropna()  # index-aligned; non-overlapping dates drop out
     if len(ratio) < RS_MA_WINDOW + 1:
         return None, None

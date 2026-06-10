@@ -47,7 +47,12 @@ def price_history(ticker: str, days: int = 400) -> pd.DataFrame:
         return pd.DataFrame()
     df = df.rename(columns=str.title)
     df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
-    return df[["Open", "High", "Low", "Close", "Volume"]]
+    cols = ["Open", "High", "Low", "Close", "Volume"]
+    if "Adj Close" in df.columns:
+        # Dividend-adjusted closes (total return) — used ONLY by returns/relative
+        # strength; technicals, charts and position math stay on raw Close.
+        cols.append("Adj Close")
+    return df[cols]
 
 
 def fast_quote(ticker: str) -> dict[str, Any]:

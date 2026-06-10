@@ -120,8 +120,8 @@
     "key": "ret_1d",
     "label": "1-day return",
     "category": "momentum",
-    "definition": "Price change today.",
-    "how_computed": "(close/prev_close \u2212 1) \u00d7 100.",
+    "definition": "Total return today.",
+    "how_computed": "(close/prev_close \u2212 1) \u00d7 100, dividend-adjusted \u2014 on an ex-dividend day this can differ from the quoted day-change by the dividend.",
     "good_when": "Context, not a signal alone.",
     "source_type": "market_data"
   },

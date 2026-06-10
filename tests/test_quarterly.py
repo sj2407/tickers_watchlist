@@ -124,3 +124,48 @@ def test_finite_scrubs_nan_inf_bool():
 def test_nan_cells_treated_as_missing():
     qs = [q("2026-04-30", rev=float("nan")), q("2026-01-31", rev=7012e6)]
     assert rev_qoq(qs) is None
+
+
+# ── P4: gross margin YoY (pp) — the seasonality corroboration ────────────
+
+def test_gross_margin_yoy_pp_math():
+    from tracker.quarterly import gross_margin_yoy_pp
+    qs = [
+        q("2026-04-30", rev=100e6, gp=50e6),   # 50% margin
+        q("2026-01-31", rev=95e6, gp=49e6),
+        q("2025-10-31", rev=90e6, gp=46e6),
+        q("2025-07-31", rev=85e6, gp=43e6),
+        q("2025-04-30", rev=80e6, gp=42e6),    # 52.5% a year ago
+    ]
+    assert gross_margin_yoy_pp(qs) == -2.5
+
+
+def test_gross_margin_yoy_pp_needs_five_quarters():
+    from tracker.quarterly import gross_margin_yoy_pp
+    qs = [q("2026-04-30", rev=100e6, gp=50e6)] * 4
+    assert gross_margin_yoy_pp(qs) is None
+
+
+def test_gross_margin_yoy_pp_missing_gp_is_none():
+    from tracker.quarterly import gross_margin_yoy_pp
+    qs = [
+        q("2026-04-30", rev=100e6, gp=50e6),
+        q("2026-01-31", rev=95e6, gp=49e6),
+        q("2025-10-31", rev=90e6, gp=46e6),
+        q("2025-07-31", rev=85e6, gp=43e6),
+        q("2025-04-30", rev=80e6, gp=None),    # year-ago margin unknown
+    ]
+    assert gross_margin_yoy_pp(qs) is None
+
+
+def test_record_from_quarters_includes_margin_yoy():
+    from tracker.quarterly import record_from_quarters
+    qs = [
+        q("2026-04-30", rev=100e6, gp=50e6),
+        q("2026-01-31", rev=95e6, gp=49e6),
+        q("2025-10-31", rev=90e6, gp=46e6),
+        q("2025-07-31", rev=85e6, gp=43e6),
+        q("2025-04-30", rev=80e6, gp=42e6),
+    ]
+    rec = record_from_quarters(qs)
+    assert rec["gross_margin_yoy_pp"] == -2.5

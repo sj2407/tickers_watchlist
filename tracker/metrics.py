@@ -173,8 +173,10 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
        "Latest-quarter revenue falls vs the prior quarter by ≥ threshold.",
        "False is good. True contributes to a trim/exit case.", "filing_data"),
     _m("tb_margin_compression", "Margin compression", "thesis",
-       "Gross margin falling quarter-over-quarter.",
-       "Gross margin drops vs the prior quarter by ≥ threshold (pp).",
+       "Gross margin genuinely deteriorating — not a seasonal mix swing.",
+       "A mild sequential drop (≥2pp) flags only when the margin is ALSO down vs the "
+       "same quarter last year; a severe collapse (≥5pp) flags unconditionally. Mild "
+       "dips are suppressed for hypergrowth names (capacity ramp/mix noise).",
        "False is good. True contributes to a trim/exit case.", "filing_data"),
     _m("tb_repeated_eps_miss", "Repeated EPS misses", "thesis",
        "Consistently missing estimates — execution concern.",

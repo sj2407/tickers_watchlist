@@ -264,8 +264,8 @@
     "key": "tb_margin_compression",
     "label": "Margin compression",
     "category": "thesis",
-    "definition": "Gross margin falling quarter-over-quarter.",
-    "how_computed": "Gross margin drops vs the prior quarter by \u2265 threshold (pp).",
+    "definition": "Gross margin genuinely deteriorating \u2014 not a seasonal mix swing.",
+    "how_computed": "A mild sequential drop (\u22652pp) flags only when the margin is ALSO down vs the same quarter last year; a severe collapse (\u22655pp) flags unconditionally. Mild dips are suppressed for hypergrowth names (capacity ramp/mix noise).",
     "good_when": "False is good. True contributes to a trim/exit case.",
     "source_type": "filing_data"
   },

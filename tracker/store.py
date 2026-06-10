@@ -108,9 +108,10 @@ def _apply_quarterly(d: dict[str, Any], q: dict[str, Any]) -> None:
     if q.get("stale"):
         d["revenue_qoq_pct"] = None
         d["gross_margin_qoq_pp"] = None
+        d["gross_margin_yoy_pp"] = None
         d["fundamentals_stale"] = True
     else:
-        for k in ("revenue_qoq_pct", "gross_margin_qoq_pp"):
+        for k in ("revenue_qoq_pct", "gross_margin_qoq_pp", "gross_margin_yoy_pp"):
             if d.get(k) is None and q.get(k) is not None:
                 d[k] = q[k]
     if q.get("report_date") is not None:
@@ -159,6 +160,7 @@ def get_fundamentals(ticker: str, earnings: dict | None = None, max_age_days: in
         if _is_behind(d.get("report_date"), earnings):
             d["revenue_qoq_pct"] = None
             d["gross_margin_qoq_pp"] = None
+            d["gross_margin_yoy_pp"] = None
             d["fundamentals_stale"] = True
         return d
     return fundamentals.compute(ticker)

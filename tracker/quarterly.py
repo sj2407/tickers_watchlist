@@ -74,6 +74,26 @@ def gross_margin_qoq_pp(quarters: list[Quarter]) -> float | None:
     return round(g0 - g1, 2)
 
 
+def gross_margin_yoy_pp(quarters: list[Quarter]) -> float | None:
+    """Gross margin vs the SAME quarter a year ago (Q0 vs Q4), in percentage
+    POINTS — the seasonality-proof companion to the sequential QoQ. Needs ≥5
+    usable quarters; None otherwise (never a fabricated value)."""
+    qs = _sorted_newest_first(quarters)
+    if len(qs) < 5:
+        return None
+
+    def gm(q: Quarter) -> float | None:
+        rev, gp = finite(q.revenue), finite(q.gross_profit)
+        if rev is None or rev == 0 or gp is None:
+            return None
+        return gp / rev * 100
+
+    g0, g4 = gm(qs[0]), gm(qs[4])
+    if g0 is None or g4 is None:
+        return None
+    return round(g0 - g4, 2)
+
+
 def quarters_from_yf(df) -> list[Quarter]:
     """Parse a yfinance quarterly_income_stmt DataFrame into Quarters (newest first).
     Pure (no network): rows by label, NaN/missing -> None, columns are period-end dates.
@@ -119,6 +139,7 @@ def record_from_quarters(quarters: list[Quarter]) -> dict | None:
         "gross_margin": gross_margin(qs),
         "revenue_qoq_pct": rev_qoq(qs),
         "gross_margin_qoq_pp": gross_margin_qoq_pp(qs),
+        "gross_margin_yoy_pp": gross_margin_yoy_pp(qs),
         "revenue_yoy": yoy_guarded(qs, "revenue"),
         "eps_yoy": yoy_guarded(qs, "eps"),
     }

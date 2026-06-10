@@ -167,7 +167,7 @@ def upsert_watchlist(ticker: str, **meta: Any) -> None:
 _FUND_COLS = (
     "report_date", "fiscal_period", "revenue", "revenue_yoy", "revenue_qoq_pct",
     "eps", "eps_yoy", "eps_ttm", "gross_margin", "gross_margin_qoq_pp",
-    "eps_miss_count_last3", "source",
+    "gross_margin_yoy_pp", "eps_miss_count_last3", "source",
 )
 
 

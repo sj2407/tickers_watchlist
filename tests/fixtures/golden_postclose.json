@@ -1655,6 +1655,7 @@
    "thesis_break": {
     "any": false,
     "margin_compression": false,
+    "margin_severe": false,
     "repeated_eps_miss": false,
     "revenue_qoq_drop": false
    },
@@ -3211,7 +3212,6 @@
      ],
      "deterioration": [
       "revenue_weakening",
-      "margin_compression",
       "earnings_quality_deteriorating"
      ],
      "pile": [
@@ -3224,7 +3224,6 @@
     "provisional_lean": "trim",
     "trim_points": [
      "revenue_weakening",
-     "margin_compression",
      "earnings_quality_deteriorating"
     ]
    },
@@ -3259,7 +3258,8 @@
    },
    "thesis_break": {
     "any": true,
-    "margin_compression": true,
+    "margin_compression": null,
+    "margin_severe": false,
     "repeated_eps_miss": true,
     "revenue_qoq_drop": true
    },

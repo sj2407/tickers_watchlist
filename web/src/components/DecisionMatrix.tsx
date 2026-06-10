@@ -48,13 +48,20 @@ function buildRows(t: Ticker): Row[] {
     rows.push({ name: "Rel. strength", value: label, zone, pos });
   }
 
-  if (f?.revenue_yoy != null) {
-    const [zone, pos] = growthZone(f.revenue_yoy);
-    rows.push({ name: "Revenue YoY", value: `${f.revenue_yoy >= 0 ? "+" : ""}${f.revenue_yoy.toFixed(0)}%`, zone, pos });
+  // TTM honesty (P7): the matrix shows the value the ENGINE uses — single-quarter
+  // YoY when our statements have it, else the source growth labelled for what it is.
+  const isTtm = (f?.source ?? "").startsWith("equity-cache");
+  const rev = f?.revenue_yoy_q ?? f?.revenue_yoy;
+  if (rev != null) {
+    const [zone, pos] = growthZone(rev);
+    const name = f?.revenue_yoy_q != null ? "Revenue YoY" : isTtm ? "Revenue TTM" : "Revenue YoY";
+    rows.push({ name, value: `${rev >= 0 ? "+" : ""}${rev.toFixed(0)}%`, zone, pos });
   }
-  if (f?.eps_yoy != null) {
-    const [zone, pos] = growthZone(f.eps_yoy);
-    rows.push({ name: "EPS growth", value: `${f.eps_yoy >= 0 ? "+" : ""}${f.eps_yoy.toFixed(0)}%`, zone, pos });
+  const eps = f?.eps_yoy_q ?? f?.eps_yoy;
+  if (eps != null) {
+    const [zone, pos] = growthZone(eps);
+    const name = f?.eps_yoy_q != null ? "EPS YoY" : isTtm ? "EPS TTM" : "EPS growth";
+    rows.push({ name, value: `${eps >= 0 ? "+" : ""}${eps.toFixed(0)}%`, zone, pos });
   }
 
   if (t.thesis_break?.margin_compression === true) {

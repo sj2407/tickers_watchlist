@@ -75,6 +75,14 @@ export interface Fundamentals {
   eps_ttm?: number | null;
   gross_margin?: number | null;
   gross_margin_qoq_pp?: number | null;
+  // P4: margin vs the same quarter last year (pp) — seasonality corroboration.
+  gross_margin_yoy_pp?: number | null;
+  // P7: single-quarter YoY from our own statements (the rules prefer these over
+  // the cache's TTM growth, which revenue_yoy/eps_yoy hold for cache names).
+  revenue_yoy_q?: number | null;
+  eps_yoy_q?: number | null;
+  // P7: cache TTM growth gated to null right after an earnings report.
+  ttm_stale?: boolean;
   eps_miss_count_last3?: number | null;
   pe?: number | null;
   fundamentals_stale?: boolean;

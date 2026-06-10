@@ -149,8 +149,20 @@ export default async function TickerPage({
                 )}
               </SectionHeader>
               <div className="grid grid-cols-3 gap-3">
-                {t.fundamentals.revenue_yoy != null && <Metric label="Revenue growth" value={pct(t.fundamentals.revenue_yoy)} className={signClass(t.fundamentals.revenue_yoy)} hint="YoY" />}
-                {t.fundamentals.eps_yoy != null && <Metric label="EPS growth" value={pct(t.fundamentals.eps_yoy)} className={signClass(t.fundamentals.eps_yoy)} hint="YoY" />}
+                {(() => {
+                  // TTM honesty (P7): prefer our single-quarter YoY; when the value
+                  // is the cache's trailing-12-month growth, SAY so.
+                  const f = t.fundamentals!;
+                  const isTtm = (f.source ?? "").startsWith("equity-cache");
+                  const rev = f.revenue_yoy_q ?? f.revenue_yoy;
+                  const eps = f.eps_yoy_q ?? f.eps_yoy;
+                  return (
+                    <>
+                      {rev != null && <Metric label="Revenue growth" value={pct(rev)} className={signClass(rev)} hint={f.revenue_yoy_q != null ? "YoY" : isTtm ? "TTM" : "YoY"} />}
+                      {eps != null && <Metric label="EPS growth" value={pct(eps)} className={signClass(eps)} hint={f.eps_yoy_q != null ? "YoY" : isTtm ? "TTM" : "YoY"} />}
+                    </>
+                  );
+                })()}
                 {t.fundamentals.gross_margin != null && <Metric label="Gross margin" value={`${t.fundamentals.gross_margin.toFixed(0)}%`} />}
                 {t.fundamentals.pe != null && <Metric label="P/E" value={t.fundamentals.pe.toFixed(1)} hint="vs own history" />}
                 {t.fundamentals.revenue_qoq_pct != null && <Metric label="Rev QoQ" value={pct(t.fundamentals.revenue_qoq_pct)} className={signClass(t.fundamentals.revenue_qoq_pct)} />}

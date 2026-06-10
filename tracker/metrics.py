@@ -128,14 +128,18 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
        "(the standard Stage Analysis sell-side read); needs 50+ sessions of history.",
        "market_data"),
     # ── fundamental ──────────────────────────────────────────────────
-    _m("revenue_growth_yoy", "Revenue growth (YoY)", "fundamental",
+    _m("revenue_growth_yoy", "Revenue growth", "fundamental",
        "Is the top line still growing?",
-       "(latest-quarter revenue / same quarter a year ago − 1) × 100.",
+       "Single-quarter YoY when our statements have it: (latest quarter / same quarter "
+       "a year ago − 1) × 100, labelled YoY. Otherwise the cache's trailing-12-month "
+       "growth, labelled TTM — smoother but ~2 quarters late on a rollover; gated to "
+       "'updating' right after a fresh report.",
        "Stable or accelerating; 15%+ for growth names. Deceleration is a warning.",
        "filing_data"),
-    _m("eps_growth_yoy", "EPS growth (YoY)", "fundamental",
+    _m("eps_growth_yoy", "EPS growth", "fundamental",
        "Is profit per share growing?",
-       "(latest-quarter EPS / a year ago − 1) × 100.",
+       "Single-quarter YoY when available (guarded against near-zero year-ago EPS), "
+       "else the cache's TTM growth — the label always says which.",
        "Stable/accelerating, roughly tracking revenue. Deterioration is a warning.",
        "filing_data"),
     _m("gross_margin", "Gross margin", "fundamental",

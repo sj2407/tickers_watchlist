@@ -114,11 +114,14 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     elif tech.get("ma_cross") == "death_cross":
         badges.append({"label": "Death cross", "tone": "bad"})
 
-    # fundamentals + thesis-break badges
+    # fundamentals + thesis-break badges. The badge shows the value the RULES use:
+    # our single-quarter YoY when available, else the source's growth — labelled
+    # TTM when that's what it actually is (cache-covered names), never "YoY".
     fund = t.get("fundamentals", {}) or {}
-    if fund.get("revenue_yoy") is not None:
-        rg = fund["revenue_yoy"]
-        badges.append({"label": f"Rev {rg:+.0f}% YoY", "tone": "good" if rg >= 15 else ("bad" if rg < 0 else "info")})
+    rg, rg_label = preferred_growth(fund, "revenue")
+    if rg is not None:
+        badges.append({"label": f"Rev {rg:+.0f}% {rg_label}",
+                       "tone": "good" if rg >= 15 else ("bad" if rg < 0 else "info")})
     tb = t.get("thesis_break", {}) or {}
     if tb.get("any"):
         badges.append({"label": "Thesis flag", "tone": "bad"})
@@ -135,6 +138,22 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
         "pile_points": decision["drivers"]["pile"],
         "trim_points": decision["drivers"]["deterioration"],
     }
+
+
+def preferred_growth(fund: dict[str, Any], field: str) -> tuple[float | None, str]:
+    """(value, label) for revenue/EPS growth — TTM honesty (P7/D1).
+
+    Prefer our own single-quarter YoY (`{field}_yoy_q`, guarded, earnings-gated)
+    over the source growth; label is "YoY" when the value is a true year-over-year
+    quarter comparison, "TTM" when it's the cache's trailing-12-month growth
+    (smoother, ~2 quarters late on a rollover — honest labelling, not a rename).
+    """
+    q = fund.get(f"{field}_yoy_q")
+    if q is not None:
+        return q, "YoY"
+    v = fund.get(f"{field}_yoy")
+    src = fund.get("source") or ""
+    return v, ("TTM" if src.startswith("equity-cache") else "YoY")
 
 
 VALID_HELD_LEANS = {"pile_on", "hold", "trim", "exit"}
@@ -214,8 +233,10 @@ def provisional_lean(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     trend = tech.get("trend")
     ma_cross = tech.get("ma_cross")
     rs20 = rs.get("rs20d")
-    rev_yoy = fund.get("revenue_yoy")
-    eps_yoy = fund.get("eps_yoy")
+    # Growth the rules run on: single-quarter YoY when we hold the statements
+    # (catches a rollover ~2 quarters before TTM), else the source growth (P7/D1).
+    rev_yoy, _ = preferred_growth(fund, "revenue")
+    eps_yoy, _ = preferred_growth(fund, "eps")
 
     # Deterioration as DISTINCT dimensions (each counted once — correlated revenue
     # signals don't double-count, per review). These are the only things that trim.

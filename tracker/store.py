@@ -50,6 +50,34 @@ def get_market_extras(ticker: str) -> dict[str, Any]:
 
 
 QUARTERLY_MAX_AGE_DAYS = 45  # routine confirm/refresh cadence for quarterly fundamentals
+TTM_GATE_DAYS = 2            # post-earnings window in which stale cache TTM is gated
+_ET = "America/New_York"
+
+
+def _now_et() -> datetime:
+    from zoneinfo import ZoneInfo
+
+    return datetime.now(ZoneInfo(_ET))
+
+
+def _ttm_stale(last_date, refreshed_at, now) -> bool:
+    """Post-earnings TTM gate (P7, pinned semantics): a quarter was reported within
+    TTM_GATE_DAYS and the cache's FMP batch predates (last_date + 1 day, 00:00 ET) —
+    i.e. the batch can't reflect the new quarter (AMC-safe: a same-evening refresh
+    still gates, costing at most one extra day of 'updating'). Outside the window,
+    or with no report date, the gate never fires."""
+    if last_date is None:
+        return False
+    age = (now.date() - last_date).days
+    if age < 0 or age > TTM_GATE_DAYS:
+        return False
+    if refreshed_at is None:
+        return True
+    from zoneinfo import ZoneInfo
+
+    cutoff = datetime.combine(last_date + timedelta(days=1), datetime.min.time(),
+                              tzinfo=ZoneInfo(_ET))
+    return refreshed_at < cutoff
 
 
 def _parse_date(s):
@@ -109,11 +137,19 @@ def _apply_quarterly(d: dict[str, Any], q: dict[str, Any]) -> None:
         d["revenue_qoq_pct"] = None
         d["gross_margin_qoq_pp"] = None
         d["gross_margin_yoy_pp"] = None
+        d["revenue_yoy_q"] = None
+        d["eps_yoy_q"] = None
         d["fundamentals_stale"] = True
     else:
         for k in ("revenue_qoq_pct", "gross_margin_qoq_pp", "gross_margin_yoy_pp"):
             if d.get(k) is None and q.get(k) is not None:
                 d[k] = q[k]
+        # Single-quarter YoY from our own statements (guarded) — the rules prefer
+        # this over the cache's TTM growth (D1); stored under *_q so the TTM
+        # display values are never overwritten.
+        for src, dst in (("revenue_yoy", "revenue_yoy_q"), ("eps_yoy", "eps_yoy_q")):
+            if d.get(dst) is None and q.get(src) is not None:
+                d[dst] = q[src]
     if q.get("report_date") is not None:
         d["report_date"] = q["report_date"]
 
@@ -136,6 +172,14 @@ def get_fundamentals(ticker: str, earnings: dict | None = None, max_age_days: in
     Always None-safe."""
     cached = cache_source.get_fundamentals(ticker)
     if cached:
+        # Post-earnings TTM gate: if this name just reported and the cache batch
+        # predates the report, its TTM growth is last quarter's — gate to None
+        # (insufficient) rather than serve a stale read into the rules.
+        last = _parse_date(earnings.get("last_date")) if earnings else None
+        if _ttm_stale(last, cache_source.get_fmp_refreshed_at(), _now_et()):
+            cached["revenue_yoy"] = None
+            cached["eps_yoy"] = None
+            cached["ttm_stale"] = True
         if db.using_db():
             q = _fresh_quarterly(ticker, earnings)
             if q is not None:

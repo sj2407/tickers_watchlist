@@ -127,7 +127,9 @@ def render_report(result: dict[str, Any]) -> str:
     """Markdown report with the n<MIN_N honesty rule baked in."""
     lines = ["# Backtest report — lean vs forward returns", "",
              f"Decisions scored: **{result['decisions']}** "
-             f"(cells under n={MIN_N} show stats but draw NO conclusion)", ""]
+             f"(cells under n={MIN_N} show stats but draw NO conclusion)", "",
+             "_Both legs are price returns (snapshot prices vs raw benchmark closes; "
+             "dividends excluded on both sides)._", ""]
 
     def section(title, table: dict, with_hit: bool):
         lines.append(f"## {title}")
@@ -172,13 +174,15 @@ def _load_snapshots() -> list[dict]:
 
 
 def _bench_closes(symbol: str = "SPY") -> dict[date, float]:
+    # RAW closes, deliberately: the ticker legs are snapshot prices (price
+    # returns, no dividends), so the benchmark leg must match or excess20 is
+    # biased against the sleeve by SPY's dividend yield (review R1-4).
     from . import sources
-    from . import market_data as md
 
     hist = sources.price_history(symbol, days=400)
     if hist.empty:
         return {}
-    closes = md._return_closes(hist)
+    closes = hist["Close"].dropna()
     return {ts.date(): float(v) for ts, v in closes.items()}
 
 

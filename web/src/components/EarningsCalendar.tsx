@@ -8,6 +8,7 @@ export interface EarningsEvent {
   hour: string | null;
   days: number;
   held: boolean;
+  est?: boolean; // yfinance-estimated date (Finnhub unconfirmed) — shown with "~"
 }
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -112,6 +113,7 @@ export default function EarningsCalendar({ events, today }: { events: EarningsEv
                 <Link key={e.ticker} href={`/ticker/${e.ticker}`}
                   className="flex items-center gap-1.5 rounded-lg bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-100 ring-1 ring-zinc-700 hover:ring-sky-500">
                   <span className="font-medium">{e.ticker}</span>
+                  {e.est && <span className="text-[10px] text-amber-300">~est.</span>}
                   {e.hour && <span className="text-[10px] text-zinc-500">{e.hour === "amc" ? "after close" : e.hour === "bmo" ? "before open" : e.hour}</span>}
                   {e.days >= 0 && e.days <= 1 && <span className="rounded bg-rose-500/20 px-1 text-[9px] text-rose-300">T‑1</span>}
                 </Link>

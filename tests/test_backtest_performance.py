@@ -137,3 +137,54 @@ def test_compute_performance_vs_benchmarks():
 def test_insufficient_history_is_none():
     assert performance.compute_performance(
         [{"as_of_date": "2026-06-01", "book_value": 1000.0, "invested": 1000.0}]) is None
+
+
+# ── review remediation R1-1: exact ledger flows vs the approximation ──────
+
+def test_loss_realizing_sell_with_exact_flows_is_correct():
+    """Sell at a LOSS: book 1000 (two 500 positions); one is sold for 450
+    proceeds (50 realized loss). True period return = (500 remaining + 450 cash
+    out) / 1000 − 1 = −5%. The invested-delta approximation reads 0% (it removes
+    the full 500 basis, hiding the loss) — the exact-flow path must not."""
+    from datetime import date as _date
+
+    history = [
+        {"as_of_date": "2026-06-01", "book_value": 1000.0, "invested": 1000.0},
+        {"as_of_date": "2026-06-02", "book_value": 500.0, "invested": 500.0},
+    ]
+    flows = {_date(2026, 6, 2): {"buys": 0.0, "sells": 450.0}}
+    assert performance.twr_pct(history, flows=flows) == pytest.approx(-5.0)
+    # the documented approximation bias, pinned so it stays documented:
+    assert performance.twr_pct(history, flows=None) == pytest.approx(0.0)
+
+
+def test_contribution_with_exact_flows_still_21pct():
+    from datetime import date as _date
+
+    history = [
+        {"as_of_date": "2026-06-01", "book_value": 1000.0, "invested": 1000.0},
+        {"as_of_date": "2026-06-02", "book_value": 1100.0, "invested": 1000.0},
+        {"as_of_date": "2026-06-03", "book_value": 2310.0, "invested": 2000.0},
+    ]
+    flows = {_date(2026, 6, 3): {"buys": 1000.0, "sells": 0.0}}
+    assert performance.twr_pct(history, flows=flows) == pytest.approx(21.0)
+
+
+def test_performance_note_says_which_flow_basis():
+    history = [
+        {"as_of_date": "2026-06-01", "book_value": 1000.0, "invested": 1000.0},
+        {"as_of_date": "2026-06-05", "book_value": 1100.0, "invested": 1000.0},
+    ]
+    exact = performance.compute_performance(history, flows={})
+    approx = performance.compute_performance(history, flows=None)
+    assert "ledger" in exact["note"]
+    assert "approximated" in approx["note"]
+
+
+def test_realized_unrealized_passthrough():
+    history = [
+        {"as_of_date": "2026-06-01", "book_value": 1000.0, "invested": 1000.0},
+        {"as_of_date": "2026-06-05", "book_value": 1100.0, "invested": 1000.0},
+    ]
+    out = performance.compute_performance(history, realized_pl=12.5, unrealized_pl=100.0)
+    assert out["realized_pl"] == 12.5 and out["unrealized_pl"] == 100.0

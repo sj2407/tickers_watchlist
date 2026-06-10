@@ -45,6 +45,9 @@
   "unrealized_pl_pct": 61.25
  },
  "session_phase": "afterhours",
+ "thresholds": {
+  "big_move_pct": 7.0
+ },
  "tickers": [
   {
    "analyst": {

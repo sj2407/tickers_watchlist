@@ -203,6 +203,27 @@ def claim_alert(ticker: str, trigger: str, alert_date) -> bool:
     return n > 0
 
 
+def fetch_daily_flows() -> list[dict[str, Any]]:
+    """Exact cash flows per ET trade date from the ledger (P10 review fix R1-1):
+    buys = cost in (shares·price+fees), sells = PROCEEDS out (shares·price−fees) —
+    proceeds, not basis, so realized P/L never leaks into the TWR."""
+    with connect() as c:
+        return c.execute(
+            "SELECT (executed_at AT TIME ZONE 'America/New_York')::date AS d, "
+            "COALESCE(SUM(shares*price+fees) FILTER (WHERE side='buy'), 0)  AS buys, "
+            "COALESCE(SUM(shares*price-fees) FILTER (WHERE side='sell'), 0) AS sells "
+            "FROM transactions GROUP BY 1 ORDER BY 1"
+        ).fetchall()
+
+
+def fetch_total_realized_pl() -> float:
+    """Realized P/L across ALL tickers incl. fully-closed ones (the positions
+    fetch filters shares>0 and would drop closed names' realized P/L)."""
+    with connect() as c:
+        row = c.execute("SELECT COALESCE(SUM(realized_pl), 0) AS r FROM current_positions").fetchone()
+    return float(row["r"])
+
+
 def fetch_book_history() -> list[dict[str, Any]]:
     """(as_of_date, book_value, invested) per day — latest snapshot per day wins.
     Feeds the sleeve-performance TWR (P10)."""

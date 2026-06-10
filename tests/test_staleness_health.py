@@ -107,3 +107,23 @@ def test_failure_counter_increments_and_resets(monkeypatch):
     assert sources.finnhub_failure_count() == 2
     sources.reset_finnhub_calls()
     assert sources.finnhub_failure_count() == 0
+
+
+def test_junk_only_overlay_does_not_refresh_the_stamp(tmp_path, monkeypatch):
+    """Review R1-2: an overlay entry with zero narrative fields must not bump
+    narrative_as_of (the words didn't change — the stamp must not lie)."""
+    old_stamp = "2026-06-05T16:14:00-04:00"
+    snap = {
+        "generated_at": GEN, "as_of_date": "2026-06-09", "market_recap": None,
+        "tickers": [{"ticker": "AAA", "position": {"held": True, "shares": 1.0},
+                     "signals": {"provisional_lean": "hold"}, "final_lean": "hold",
+                     "takeaway": "old words", "narrative_as_of": old_stamp}],
+    }
+    sp = tmp_path / "snapshot.json"
+    ep = tmp_path / "enrichment.json"
+    sp.write_text(json.dumps(snap))
+    ep.write_text(json.dumps({"tickers": {"AAA": {"junk_key": "x"}}}))
+    monkeypatch.setattr(store, "publish_enriched", lambda s, sid=None: None)
+    out = enrich.apply_enrichment(sp, ep)
+    assert out["tickers"][0]["narrative_as_of"] == old_stamp
+    assert out["tickers"][0]["narrative_freshness"] == "stale"

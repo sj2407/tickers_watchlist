@@ -173,7 +173,10 @@ def validate_leans(snap: dict[str, Any]) -> dict[str, Any]:
     """
     for row in snap.get("tickers", []):
         pos = row.get("position") or {}
-        held = bool(pos.get("held")) and (pos.get("shares") or 0) > 0
+        # A failed price fetch yields {"held": True} with NO shares key
+        # (position_math) — that's still a held name; never rewrite its stored
+        # lean to 'watch' on a degraded run (review R1-3).
+        held = bool(pos.get("held")) and (pos.get("shares") is None or (pos.get("shares") or 0) > 0)
         lean = row.get("final_lean")
         if lean is None:
             continue

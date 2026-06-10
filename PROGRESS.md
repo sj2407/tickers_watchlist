@@ -102,9 +102,31 @@ integration tests run green against local Docker PG. Highlights:
   + sleeve TWR vs SPY/QQQ + max drawdown (time-weighted — contributions aren't returns),
   board scoreboard row.
 
-**Merge ops (after review):** `python -m tracker.migrate` on Neon (0006 view swap + 0007
+**Diff reviews (done):** 2 independent agents reviewed the implementation. R1 (correctness):
+ship-with-fixes — 1 major (TWR sell-flow used invested deltas = basis, permanently
+overstating returns after a realized loss) + 8 minors; all four hard constraints verified
+independently (cache read-only, size never trims, quant never exits, backward compat).
+R2 (test integrity): sound-with-fixes — 5 minors; verified every golden regen was
+key-surgical and in its declaring commit, no weakened/flipped assertions, no vacuous tests.
+**All findings remediated** (commit `review:` below): exact ledger flows for TWR (proceeds
+not basis; buys at period start, sale proceeds at period end), enrich stamps only on real
+narrative fields, degraded-price runs never rewrite stored leans, backtest benchmark legs
+matched to price returns, "(estimated)" rendering for unconfirmed earnings dates, shared
+big-move threshold, LLM-escalated trims narrated honestly, RS crossover-flip test,
+realized P/L in the performance block.
+
+**Declared deviations ledger (exact):** P4 edited FOUR pre-existing thesis fixtures (not
+the plan's three, not the commit's "5") — the 4th (`test_margin_compression_suppressed_for_
+hypergrowth`) was mechanically forced and not weakened. Three promised tests live in
+different files than the plan named (trigger-eligibility → test_enrich_validation; P7 badge
++ store-coexistence → test_ttm_honesty). P5's claim_alert push-dedup deferred until a push
+channel exists (alerts are in-snapshot every run, so dedup has no consumer). P10 shipped a
+scoreboard stat row instead of a chart; `data_health.equity_cache_used` reports
+availability, not per-run use.
+
+**Merge ops (when approved):** `python -m tracker.migrate` on Neon (0006 view swap + 0007
 column), re-run `python -m tracker.backfill_fundamentals --verify` (populates margin YoY),
-`vercel deploy --prod --cwd web`. Next: 2 independent diff reviews → user localhost review.
+`vercel deploy --prod --cwd web`. Next: user localhost review → merge.
 
 ## Previous session (2026-06-05) — SHIPPED & LIVE on `main`
 

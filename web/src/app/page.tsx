@@ -44,9 +44,10 @@ export default async function Home() {
   // Movers chart derives straight from day_change_pct (display), decoupled from the
   // big_move ALERT (which is mode-gated — suppressed at preopen where the change is
   // yesterday's move). The chart still shows on a preopen board; the alert doesn't.
+  const bigMovePct = snap.thresholds?.big_move_pct ?? 7;
   const movers: Mover[] = snap.tickers
     .map((t) => ({ ticker: t.ticker, chg: t.price.day_change_pct ?? NaN }))
-    .filter((m) => Number.isFinite(m.chg) && Math.abs(m.chg) >= 7);
+    .filter((m) => Number.isFinite(m.chg) && Math.abs(m.chg) >= bigMovePct);
   const otherAlerts = snap.alerts.filter((a) => a.type !== "big_move");
   const earningsEvents: EarningsEvent[] = snap.tickers
     .filter((t) => t.earnings?.next_date)
@@ -56,6 +57,7 @@ export default async function Home() {
       hour: t.earnings.next_hour ?? null,
       days: t.earnings.days_until_next ?? 999,
       held: t.position.held,
+      est: t.earnings.next_date_estimated ?? false,
     }));
   const tickers = [...snap.tickers].sort((a, b) => {
     const la = (a.final_lean ?? a.signals.provisional_lean) as Lean;

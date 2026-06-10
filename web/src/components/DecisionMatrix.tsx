@@ -96,7 +96,13 @@ function buildNote(t: Ticker, lean: Lean): string {
   const det = (d?.deterioration ?? []).map((k) => DET_PHRASE[k] ?? k);
   const blocks = d?.blocks ?? [];
   if (lean === "exit") return `Confirmed thesis break: ${det.join(", ") || "escalated by the read"}. Exit closes the position.`;
-  if (lean === "trim") return `${det.length} deterioration signals (${det.join(", ")}); two or more, at least one of them hard (downtrend, revenue decline, severe margin collapse), triggers a trim.`;
+  if (lean === "trim") {
+    // An LLM-escalated trim (quant didn't propose it) must not be narrated as a
+    // rule firing (review R1-8).
+    if (t.signals?.provisional_lean !== "trim")
+      return `Escalated to a trim by the qualitative read${det.length ? ` (signals: ${det.join(", ")})` : ""} — see the rationale above.`;
+    return `${det.length} deterioration signals (${det.join(", ")}); two or more, at least one of them hard (downtrend, revenue decline, severe margin collapse), triggers a trim.`;
+  }
   if (lean === "pile_on") return "Strong and leading the market with room to add, and no deterioration signals.";
   if (d?.review) return `Several soft signals (${det.join(", ")}) are worth a review, but a trim needs at least one hard signal (downtrend, revenue decline, or a severe margin collapse), so hold.`;
   if (blocks.length) return `Strong, but ${blocks.join(" and ")}, which removes the room to add (do not chase).`;

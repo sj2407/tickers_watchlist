@@ -224,6 +224,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         "macro_context": None,
         "alerts": _mechanical_alerts(rows, cfg, mode),
         "intraday_triggered": intraday_triggered,
+        "thresholds": {"big_move_pct": BIG_MOVE_PCT},
     }
 
     # Carry forward the prior run's narrative onto this fresh quant so no run — intraday
@@ -235,11 +236,12 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     grade_narrative_freshness(snap)
     snap["needs_full_enrichment"] = (prior is None)
     snap["data_health"] = _data_health(snap, mode)
-    snap["performance"] = _performance_block(bench_hist, cfg)
+    snap["performance"] = _performance_block(bench_hist, cfg, portfolio.get("unrealized_pl"))
     return snap
 
 
-def _performance_block(bench_hist: pd.DataFrame, cfg: dict[str, Any]) -> dict[str, Any] | None:
+def _performance_block(bench_hist: pd.DataFrame, cfg: dict[str, Any],
+                       unrealized_pl: float | None = None) -> dict[str, Any] | None:
     """Sleeve TWR vs SPY/QQQ from the stored snapshot history (P10). None in file
     mode or on any failure — never blocks a run."""
     if not db.using_db():
@@ -249,12 +251,20 @@ def _performance_block(bench_hist: pd.DataFrame, cfg: dict[str, Any]) -> dict[st
     try:
         history = [{"as_of_date": str(r["as_of_date"]), "book_value": r["book_value"],
                     "invested": r["invested"]} for r in db.fetch_book_history()]
+        # Exact ledger flows (proceeds for sells, cost for buys) — never the
+        # invested-delta approximation in production (review R1-1).
+        flows = {r["d"]: {"buys": float(r["buys"]), "sells": float(r["sells"])}
+                 for r in db.fetch_daily_flows()}
         spy = {ts.date(): float(v) for ts, v in md._return_closes(bench_hist).items()} \
             if not bench_hist.empty else None
         qqq_hist = sources.price_history("QQQ", cfg["history_days"])
         qqq = {ts.date(): float(v) for ts, v in md._return_closes(qqq_hist).items()} \
             if not qqq_hist.empty else None
-        return performance.compute_performance(history, spy=spy, qqq=qqq)
+        return performance.compute_performance(
+            history, spy=spy, qqq=qqq, flows=flows,
+            realized_pl=round(db.fetch_total_realized_pl(), 2),
+            unrealized_pl=unrealized_pl,
+        )
     except Exception:
         return None
 
@@ -295,6 +305,7 @@ NARRATIVE_TICKER_FIELDS = (
 )
 
 NARRATIVE_STALE_HOURS = 24
+BIG_MOVE_PCT = 7.0  # single source for the alert AND the web movers chart (review R1-7)
 
 
 def narrative_freshness(narrative_as_of: str | None, generated_at: str | None) -> str | None:
@@ -384,7 +395,7 @@ def _mechanical_alerts(rows: list[dict[str, Any]], cfg: dict[str, Any],
             alerts.append({"ticker": tk, "type": "earnings_t1",
                            "msg": f"{tk} reports {when} ({r['earnings'].get('next_hour') or 'time TBD'})"})
         chg = r["price"].get("day_change_pct")
-        if mode != "preopen" and chg is not None and abs(chg) >= 7:
+        if mode != "preopen" and chg is not None and abs(chg) >= BIG_MOVE_PCT:
             alerts.append({"ticker": tk, "type": "big_move", "msg": f"{tk} moved {chg:+.1f}% today"})
         # NOTE: no position-weight alert — this is a small satellite sleeve; size isn't a risk here.
     return alerts

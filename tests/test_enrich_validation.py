@@ -169,3 +169,16 @@ def test_routine_overwrite_clears_old_coercion_flag(tmp_path, monkeypatch):
     a = out["tickers"][0]
     assert a["final_lean"] == "trim"
     assert not a.get("lean_coerced_from")  # routine wrote a real lean; flag cleared
+
+
+def test_failed_price_fetch_never_rewrites_a_stored_lean():
+    """Review R1-3: position_math emits {"held": True} with NO shares key when
+    the price fetch failed — that's still a held name; a degraded run must not
+    coerce its stored trim to 'watch'."""
+    s = _snap({"ticker": "AAA", "position": {"held": True},  # no shares key
+               "final_lean": "trim", "signals": {"provisional_lean": "trim"},
+               "technicals": {}, "thesis_break": {}, "price": {}})
+    validate_leans(s)
+    t = s["tickers"][0]
+    assert t["final_lean"] == "trim"
+    assert not t.get("lean_coerced_from") and not t.get("lean_rejected")

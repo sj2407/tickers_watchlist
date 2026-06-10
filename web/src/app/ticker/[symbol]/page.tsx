@@ -195,6 +195,7 @@ export default async function TickerPage({
               {e.next_date && (
                 <p className="text-sm text-zinc-200">
                   <span className="font-medium">Next report:</span> {new Date(e.next_date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                  {e.next_date_estimated && <span className="text-amber-300"> (estimated, unconfirmed)</span>}
                   {e.next_hour && <span className="text-zinc-400"> ({e.next_hour === "amc" ? "after close" : e.next_hour === "bmo" ? "before open" : e.next_hour})</span>}
                   {e.days_until_next != null && <span className="text-zinc-400">, {earningsWhen(e.days_until_next)}</span>}
                 </p>

@@ -64,12 +64,16 @@ def apply_enrichment(snapshot_path: Path = SNAPSHOT, enrichment_path: Path = ENR
         e = by_ticker.get(row["ticker"].upper())
         if not e:
             continue
+        wrote_narrative = False
         for f in _TICKER_FIELDS:
             if f in e:
                 row[f] = e[f]
-        # The routine wrote this name's words THIS run — stamp them (P8). Tickers
+                wrote_narrative = True
+        # Stamp ONLY when actual narrative fields landed (an overlay entry with
+        # junk-only keys must not refresh the stamp — review R1-2). Tickers
         # absent from the overlay keep their carried stamp.
-        row["narrative_as_of"] = now_iso
+        if wrote_narrative:
+            row["narrative_as_of"] = now_iso
         if "final_lean" in e:
             # The routine took a fresh stance on this name: old validation
             # provenance no longer applies (validate_leans below re-flags if the

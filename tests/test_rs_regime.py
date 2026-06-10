@@ -108,3 +108,18 @@ def test_small_negative_rs20d_blocks_pile_on_but_does_not_trim():
     # pile side pinned: rs_ok still requires rs20d >= 0, regardless of regime.
     out = signals.provisional_lean(_row(rs20=-1.0, rs_trend="outperforming", trend="uptrend"), CFG)
     assert out["lean"] == "hold"
+
+
+def test_regime_flips_when_the_rs_line_crosses_its_ma():
+    """Review R2-3: one series that CROSSES — outperforming early, then a hard
+    fade pulls the RS line below its own 50-session MA and the regime flips."""
+    n = 130
+    bench = _frame(np.full(n, 100.0))
+    up = 100 * (1.004 ** np.arange(100))                      # 100 strong sessions
+    down = up[-1] * (0.99 ** np.arange(1, 31))                # 30-session fade
+    tick = _frame(np.concatenate([up, down]))
+    assert md.relative_strength(tick, bench)["rs_trend"] == "underperforming"
+    # same series, truncated before the fade: still outperforming
+    tick_early = _frame(up)
+    bench_early = _frame(np.full(100, 100.0))
+    assert md.relative_strength(tick_early, bench_early)["rs_trend"] == "outperforming"

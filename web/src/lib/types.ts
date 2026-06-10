@@ -234,6 +234,8 @@ export interface Performance {
   qqq_pct?: number | null;
   excess_vs_spy_pp?: number | null;
   max_drawdown_pct?: number | null;
+  realized_pl?: number | null;
+  unrealized_pl?: number | null;
   n_sessions?: number;
   note?: string;
 }
@@ -253,6 +255,8 @@ export interface Snapshot {
   alerts: Alert[];
   data_health?: DataHealth | null;
   performance?: Performance | null;
+  // shared display thresholds emitted by the pipeline (single source — R1-7)
+  thresholds?: { big_move_pct?: number } | null;
 }
 
 export interface PositionUpdate {

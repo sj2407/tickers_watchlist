@@ -117,6 +117,26 @@ export default async function Home() {
               <span>Worst: {pf.top_loser[0]} <span className={signClass(pf.top_loser[1])}>{pct(pf.top_loser[1])}</span></span>
             </div>
           )}
+          {/* Sleeve scoreboard (P10): time-weighted, so trades/contributions are not "returns" */}
+          {snap.performance && (
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-800 pt-3 text-xs text-zinc-400">
+              <span>Sleeve since {new Date(snap.performance.since + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}:{" "}
+                <span className={signClass(snap.performance.twr_pct)}>{pct(snap.performance.twr_pct)}</span>
+              </span>
+              {snap.performance.spy_pct != null && (
+                <span>SPY <span className={signClass(snap.performance.spy_pct)}>{pct(snap.performance.spy_pct)}</span></span>
+              )}
+              {snap.performance.qqq_pct != null && (
+                <span>QQQ <span className={signClass(snap.performance.qqq_pct)}>{pct(snap.performance.qqq_pct)}</span></span>
+              )}
+              {snap.performance.excess_vs_spy_pp != null && (
+                <span>vs SPY <span className={signClass(snap.performance.excess_vs_spy_pp)}>{pct(snap.performance.excess_vs_spy_pp)}</span></span>
+              )}
+              {snap.performance.max_drawdown_pct != null && (
+                <span>max drawdown <span className="text-zinc-300">{pct(snap.performance.max_drawdown_pct)}</span></span>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Big movers — labeled bar chart */}

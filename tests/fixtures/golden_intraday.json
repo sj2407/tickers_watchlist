@@ -28,6 +28,7 @@
  "min_position_usd": 200,
  "mode": "intraday",
  "needs_full_enrichment": false,
+ "performance": null,
  "portfolio": {
   "book_value": 2580.0,
   "invested": 1600.0,

@@ -227,6 +227,17 @@ export interface DataHealth {
   equity_cache_age_hours?: number | null;
 }
 
+export interface Performance {
+  since: string;
+  twr_pct: number;
+  spy_pct?: number | null;
+  qqq_pct?: number | null;
+  excess_vs_spy_pp?: number | null;
+  max_drawdown_pct?: number | null;
+  n_sessions?: number;
+  note?: string;
+}
+
 export interface Snapshot {
   generated_at: string;
   mode: "preopen" | "intraday" | "postclose";
@@ -241,6 +252,7 @@ export interface Snapshot {
   market_narrative_as_of?: string | null;
   alerts: Alert[];
   data_health?: DataHealth | null;
+  performance?: Performance | null;
 }
 
 export interface PositionUpdate {

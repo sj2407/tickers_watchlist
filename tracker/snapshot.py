@@ -235,7 +235,28 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     grade_narrative_freshness(snap)
     snap["needs_full_enrichment"] = (prior is None)
     snap["data_health"] = _data_health(snap, mode)
+    snap["performance"] = _performance_block(bench_hist, cfg)
     return snap
+
+
+def _performance_block(bench_hist: pd.DataFrame, cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """Sleeve TWR vs SPY/QQQ from the stored snapshot history (P10). None in file
+    mode or on any failure — never blocks a run."""
+    if not db.using_db():
+        return None
+    from . import performance
+
+    try:
+        history = [{"as_of_date": str(r["as_of_date"]), "book_value": r["book_value"],
+                    "invested": r["invested"]} for r in db.fetch_book_history()]
+        spy = {ts.date(): float(v) for ts, v in md._return_closes(bench_hist).items()} \
+            if not bench_hist.empty else None
+        qqq_hist = sources.price_history("QQQ", cfg["history_days"])
+        qqq = {ts.date(): float(v) for ts, v in md._return_closes(qqq_hist).items()} \
+            if not qqq_hist.empty else None
+        return performance.compute_performance(history, spy=spy, qqq=qqq)
+    except Exception:
+        return None
 
 
 def _data_health(snap: dict[str, Any], mode: str) -> dict[str, Any]:

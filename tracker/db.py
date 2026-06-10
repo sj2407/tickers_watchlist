@@ -203,6 +203,18 @@ def claim_alert(ticker: str, trigger: str, alert_date) -> bool:
     return n > 0
 
 
+def fetch_book_history() -> list[dict[str, Any]]:
+    """(as_of_date, book_value, invested) per day — latest snapshot per day wins.
+    Feeds the sleeve-performance TWR (P10)."""
+    with connect() as c:
+        return c.execute(
+            "SELECT DISTINCT ON (as_of_date) as_of_date, "
+            "(payload#>>'{portfolio,book_value}')::float AS book_value, "
+            "(payload#>>'{portfolio,invested}')::float  AS invested "
+            "FROM snapshots ORDER BY as_of_date, generated_at DESC"
+        ).fetchall()
+
+
 def transaction_count(ticker: str) -> int:
     with connect() as c:
         row = c.execute("SELECT count(*) AS n FROM transactions WHERE ticker = %s", (ticker.upper(),)).fetchone()

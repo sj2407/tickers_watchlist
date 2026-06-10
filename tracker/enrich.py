@@ -61,6 +61,18 @@ def apply_enrichment(snapshot_path: Path = SNAPSHOT, enrichment_path: Path = ENR
         for f in _TICKER_FIELDS:
             if f in e:
                 row[f] = e[f]
+        if "final_lean" in e:
+            # The routine took a fresh stance on this name: old validation
+            # provenance no longer applies (validate_leans below re-flags if the
+            # NEW lean is also invalid).
+            row["lean_coerced_from"] = None
+            row["lean_rejected"] = None
+
+    # Enforce the action vocabulary on ALL rows (overlaid AND carried) — see
+    # signals.validate_leans. Never trust the LLM's labels blindly.
+    from . import signals
+
+    signals.validate_leans(snap)
 
     snapshot_path.write_text(json.dumps(snap, indent=2, default=str))
 

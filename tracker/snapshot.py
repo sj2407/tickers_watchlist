@@ -221,6 +221,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     # (fully on full runs; for triggered names on intraday). Cold start: flag for the
     # routine to do a full narration instead of relying on a (nonexistent) prior.
     merge_narrative(snap, prior)  # prior fetched before the loop
+    signals.validate_leans(snap)  # carried-forward leans must obey the vocabulary too
     snap["needs_full_enrichment"] = (prior is None)
     return snap
 
@@ -230,6 +231,9 @@ def build_snapshot(mode: str) -> dict[str, Any]:
 NARRATIVE_TICKER_FIELDS = (
     "takeaway", "sentiment", "catalyst_summary", "earnings_recap",
     "final_lean", "rationale", "entry_guidance", "invalidation",
+    # validation provenance travels WITH the lean it explains (cleared when the
+    # routine writes a fresh valid lean — see enrich.apply_enrichment):
+    "lean_coerced_from", "lean_rejected",
 )
 NARRATIVE_TOP_FIELDS = ("market_recap", "macro_context")
 

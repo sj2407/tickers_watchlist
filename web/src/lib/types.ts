@@ -174,6 +174,10 @@ export interface Ticker {
   rationale: string | null;
   entry_guidance?: string | null;
   invalidation?: string | null;
+  // validation provenance (P2): set when the pipeline coerced/rejected a
+  // routine-written lean that broke the action vocabulary.
+  lean_coerced_from?: string | null;
+  lean_rejected?: string | null;
 }
 
 export interface Portfolio {

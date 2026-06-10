@@ -134,6 +134,39 @@ def build_signals(t: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+VALID_HELD_LEANS = {"pile_on", "hold", "trim", "exit"}
+VALID_NOT_HELD_LEANS = {"watch", "hold"}
+
+
+def validate_leans(snap: dict[str, Any]) -> dict[str, Any]:
+    """Enforce the action vocabulary on every ticker row (in place; returns snap).
+
+    Every tracked name is held (the user keeps ~$200 in anything worth watching), so
+    `watch` is never a valid call on a held name — the routine once used it to demote
+    a quant trim into a non-action label, silently. Coercions are VISIBLE
+    (`lean_coerced_from` / `lean_rejected`), never silent; a None lean (pre-narrative)
+    is left alone (the board falls back to the provisional lean).
+    Runs post-merge in both the pipeline and the enrich step, so carried-forward bad
+    leans heal without waiting on the LLM.
+    """
+    for row in snap.get("tickers", []):
+        pos = row.get("position") or {}
+        held = bool(pos.get("held")) and (pos.get("shares") or 0) > 0
+        lean = row.get("final_lean")
+        if lean is None:
+            continue
+        if held and lean == "watch":
+            row["final_lean"] = "hold"
+            row["lean_coerced_from"] = "watch"
+        elif held and lean not in VALID_HELD_LEANS:
+            row["final_lean"] = (row.get("signals") or {}).get("provisional_lean") or "hold"
+            row["lean_rejected"] = lean
+        elif not held and lean not in VALID_NOT_HELD_LEANS:
+            row["final_lean"] = "watch"
+            row["lean_coerced_from"] = lean
+    return snap
+
+
 # Metric keys this engine references — guarded against metrics.REGISTRY in tests.
 REFERENCED_KEYS = {
     "trend", "ma_cross", "rsi14", "dist_sma20_pct", "rs_20d", "days_to_earnings",

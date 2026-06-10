@@ -103,7 +103,7 @@
     "label": "Daily swing (ATR%)",
     "category": "technical",
     "definition": "How much the stock typically moves in a day.",
-    "how_computed": "ATR(14) \u00f7 price \u00d7 100.",
+    "how_computed": "Wilder-smoothed ATR(14) \u00f7 price \u00d7 100 (same smoothing as the RSI).",
     "good_when": "Context: a 4% move is normal for a high-ATR name, alarming for a low one.",
     "source_type": "chart_data"
   },

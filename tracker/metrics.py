@@ -95,7 +95,7 @@ REGISTRY: dict[str, MetricDef] = {m.key: m for m in [
        "market_data"),
     _m("atr14_pct", "Daily swing (ATR%)", "technical",
        "How much the stock typically moves in a day.",
-       "ATR(14) ÷ price × 100.",
+       "Wilder-smoothed ATR(14) ÷ price × 100 (same smoothing as the RSI).",
        "Context: a 4% move is normal for a high-ATR name, alarming for a low one.",
        "chart_data"),
     _m("breakout", "Breakout", "technical",

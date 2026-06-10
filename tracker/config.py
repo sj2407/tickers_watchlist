@@ -47,17 +47,15 @@ def require_key(name: str) -> str:
 _DEFAULTS: dict[str, Any] = {
     "timezone": "America/New_York",
     "benchmark": "SPY",
-    "growth_benchmark": "QQQ",
     "min_position_usd": 200.0,
     "history_days": 400,  # enough for 200-day MA + buffer
     "news_lookback_days": 4,
     "max_news_per_ticker": 8,
     "signals": {
         "rsi_overbought": 70,
-        "rsi_oversold": 35,
+        "rsi_oversold": 30,  # PLAN-v2 decision #1 (30/70 Wilder bands)
         "rel_vol_spike": 2.0,
         "extended_above_sma20_pct": 12.0,  # far above 20d MA → trim watch
-        "position_weight_cap_pct": 15.0,  # single name > this % of book → trim watch
         "earnings_soon_days": 7,
         # P4b (provisional, tunable — revisit with backtest evidence): dimensions
         # that count as HARD deterioration. A trim needs ≥2 dimensions incl. ≥1

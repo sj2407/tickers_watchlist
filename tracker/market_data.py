@@ -54,12 +54,15 @@ def compute_returns(hist: pd.DataFrame, windows=(1, 5, 20)) -> dict[str, float |
 
 
 def _atr(hist: pd.DataFrame, period: int = 14) -> float | None:
+    """Wilder-smoothed ATR (same smoothing convention as the RSI), not a plain
+    rolling mean — reacts to a volatility spike then decays, as standard."""
     if len(hist) < period + 1:
         return None
     h, l, c = hist["High"], hist["Low"], hist["Close"]
     prev_c = c.shift(1)
     tr = pd.concat([(h - l), (h - prev_c).abs(), (l - prev_c).abs()], axis=1).max(axis=1)
-    return round(float(tr.rolling(period).mean().iloc[-1]), 2)
+    atr = tr.ewm(alpha=1.0 / period, adjust=False).mean().iloc[-1]
+    return round(float(atr), 2)
 
 
 def compute_technicals(hist: pd.DataFrame) -> dict[str, Any]:

@@ -1,7 +1,7 @@
 {
  "alerts": [
   {
-   "msg": "AAA reports in ~1 week (2026-06-16)",
+   "msg": "AAA reports in 7d (2026-06-16)",
    "ticker": "AAA",
    "type": "earnings_t7"
   },

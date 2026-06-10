@@ -103,6 +103,9 @@ export interface Position {
 
 export interface Earnings {
   next_date?: string;
+  // P5: true when the date is a yfinance ESTIMATE (Finnhub didn't answer) —
+  // treat as unconfirmed in any display.
+  next_date_estimated?: boolean;
   days_until_next?: number | null;
   next_hour?: string | null;
   next_eps_estimate?: number | null;

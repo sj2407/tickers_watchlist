@@ -41,13 +41,12 @@ export default async function Home() {
   const unrealized = liveOn ? liveUnrealized : pf.unrealized_pl;
   const returnPct = liveOn ? (liveInvested ? (liveUnrealized / liveInvested) * 100 : null) : pf.unrealized_pl_pct;
   const positionsCount = liveOn ? Object.values(byTicker).filter((p) => p.held).length : pf.positions_count;
-  // Big-move alerts → a comparable bar chart; other alerts (earnings) stay as pills.
-  const dayChg: Record<string, number | null> = {};
-  for (const t of snap.tickers) dayChg[t.ticker] = t.price.day_change_pct ?? null;
-  const movers: Mover[] = snap.alerts
-    .filter((a) => a.type === "big_move")
-    .map((a) => ({ ticker: a.ticker, chg: dayChg[a.ticker] ?? NaN }))
-    .filter((m) => Number.isFinite(m.chg));
+  // Movers chart derives straight from day_change_pct (display), decoupled from the
+  // big_move ALERT (which is mode-gated — suppressed at preopen where the change is
+  // yesterday's move). The chart still shows on a preopen board; the alert doesn't.
+  const movers: Mover[] = snap.tickers
+    .map((t) => ({ ticker: t.ticker, chg: t.price.day_change_pct ?? NaN }))
+    .filter((m) => Number.isFinite(m.chg) && Math.abs(m.chg) >= 7);
   const otherAlerts = snap.alerts.filter((a) => a.type !== "big_move");
   const earningsEvents: EarningsEvent[] = snap.tickers
     .filter((t) => t.earnings?.next_date)

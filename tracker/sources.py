@@ -143,7 +143,9 @@ def recommendation_trend(ticker: str) -> dict[str, Any] | None:
     }
 
 
-def earnings_calendar(ticker: str, ahead_days: int = 120) -> list[dict[str, Any]]:
+def earnings_calendar(ticker: str, ahead_days: int = 120) -> list[dict[str, Any]] | None:
+    """None = transport failure (DON'T cache — retry next call); [] = Finnhub
+    answered and genuinely has no events in the window (cacheable for the day)."""
     today = date.today()
     data = _finnhub_get(
         "/calendar/earnings",
@@ -154,7 +156,7 @@ def earnings_calendar(ticker: str, ahead_days: int = 120) -> list[dict[str, Any]
         },
     )
     if not isinstance(data, dict):
-        return []
+        return None  # failed/rate-limited/no key — never "no earnings"
     rows = data.get("earningsCalendar") or []
     out = []
     for r in rows:

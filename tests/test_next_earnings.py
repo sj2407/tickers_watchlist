@@ -39,17 +39,17 @@ def test_upcoming_and_last_from_finnhub_calendar(monkeypatch):
     assert out["last_eps_surprise_pct"] == 20.0  # (1.2-1.0)/1.0
 
 
-def test_union_lets_earliest_upcoming_date_win(monkeypatch):
-    # Pre-P5 behavior: a yfinance date EARLIER than Finnhub's wins next_date
-    # (this is the phantom-date exposure P5 will change — declared baseline).
+def test_finnhub_confirmed_date_wins_over_yf_estimate(monkeypatch):
+    # P5 declared update: pre-P5 the earliest UNION date won (yf phantom 6/12 beat
+    # Finnhub's confirmed 6/16). Now the confirmed calendar is authoritative.
     monkeypatch.setattr(sources, "earnings_calendar", _cal([
         {"date": "2026-06-16", "hour": "amc", "eps_estimate": 1.5,
          "eps_actual": None, "revenue_estimate": None, "revenue_actual": None},
     ]))
     monkeypatch.setattr(sources, "earnings_dates_yf", lambda t: [date(2026, 6, 12)])
     out = snapshot._next_earnings("X", TODAY)
-    assert out["next_date"] == "2026-06-12" and out["days_until_next"] == 3
-    assert "next_hour" not in out  # no Finnhub row for the yf date
+    assert out["next_date"] == "2026-06-16" and out["days_until_next"] == 7
+    assert out["next_hour"] == "amc"
 
 
 def test_no_data_at_all_is_empty_dict(monkeypatch):

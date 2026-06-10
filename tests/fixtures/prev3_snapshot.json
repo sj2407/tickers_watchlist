@@ -1,0 +1,455 @@
+{
+ "generated_at": "2026-06-10T13:14:47.220180-04:00",
+ "mode": "intraday",
+ "session_phase": "open",
+ "as_of_date": "2026-06-10",
+ "benchmark": "SPY",
+ "min_position_usd": 200,
+ "portfolio": {
+  "book_value": 25398.34,
+  "invested": 26762.55,
+  "unrealized_pl": -1364.22,
+  "unrealized_pl_pct": -5.1,
+  "positions_count": 22,
+  "top_gainer": [
+   "LITE",
+   3.13
+  ],
+  "top_loser": [
+   "AVGO",
+   -4.83
+  ]
+ },
+ "market_recap": "Semis ripped on June 9 on the memory supercycle. Micron's capex boost and Bank of America's raised equipment estimates lifted MU up 9.9%, AMAT up 8.6%, KLAC up 9.3% and LRCX up 7%, while Marvell jumped 9.6% on S&P 500 inclusion plus Jensen Huang calling it the next trillion-dollar name. Underneath that, a tech de-risking dragged the Nasdaq down about 1% (S&P 500 down 0.3%) ahead of CPI: quantum (IONQ down 9.7% as Quantinuum's blockbuster debut reset valuations), optical (LITE down 8.2% on profit-taking), and rare earth (MP down 5.7% as US-China tension eased) all gave back gains.",
+ "macro_context": "May CPI, out 8:30 ET this morning, ran hot on the headline at 4.2% year over year, the highest since April 2023, but core was the relief: 0.2% month over month (below the 0.3% feared) and 2.9% year over year. Energy drove more than 60% of the monthly increase, tied to the Iran war and Strait of Hormuz disruption, so the inflation is being read as an energy shock rather than broad demand. Markets still expect the Fed on hold at the June 17 meeting. Watch PPI Thursday and the SpaceX mega-IPO Friday.",
+ "alerts": [],
+ "intraday_triggered": [
+  "AVGO",
+  "NVDA"
+ ],
+ "needs_full_enrichment": false,
+ "tickers": [
+  {
+   "ticker": "HIMS",
+   "price": {
+    "last": 28.58,
+    "prev_close": 28.98,
+    "open": 28.3799991607666,
+    "day_high": 29.75,
+    "day_low": 28.08,
+    "day_change_pct": -1.38
+   },
+   "returns": {
+    "r1d": -1.38,
+    "r5d": 3.89,
+    "r20d": 14.18
+   },
+   "relative_strength": {
+    "rs5d": 7.2,
+    "rs20d": 15.39
+   },
+   "technicals": {
+    "last_close": 28.58,
+    "sma20": 25.56,
+    "dist_sma20_pct": 11.8,
+    "sma50": 25.35,
+    "dist_sma50_pct": 12.76,
+    "sma200": 33.74,
+    "dist_sma200_pct": -15.29,
+    "rsi14": 59.4,
+    "macd_state": "no_cross",
+    "macd_hist": 0.336,
+    "ma_cross": "below",
+    "atr14": 1.99,
+    "atr14_pct": 6.96,
+    "high_52w": 66.18,
+    "low_52w": 14.52,
+    "dist_52w_high_pct": -56.81,
+    "dist_52w_low_pct": 96.83,
+    "support_dist_pct": 9.97,
+    "resistance_dist_pct": 1.96,
+    "support_price": 25.99,
+    "resistance_price": 29.14,
+    "rel_volume": 0.45,
+    "avg_vol_20d": 19256065,
+    "breakout": false,
+    "breakout_confirmed": false,
+    "trend": "mixed"
+   },
+   "fundamentals": {
+    "source": "equity-cache(fmp,ttm)",
+    "revenue_yoy": 3.8,
+    "eps_yoy": null,
+    "gross_margin": 72.919,
+    "pe": null,
+    "eps_ttm": -0.09,
+    "net_margin": -0.559,
+    "forward_pe": 32.5618,
+    "revenue_qoq_pct": -1.57,
+    "gross_margin_qoq_pp": -6.69,
+    "report_date": "2026-03-31"
+   },
+   "thesis_break": {
+    "revenue_qoq_drop": false,
+    "margin_compression": true,
+    "repeated_eps_miss": null,
+    "any": true
+   },
+   "earnings_reaction": {
+    "report_date": "2026-05-11",
+    "eps_actual": -0.18,
+    "eps_estimate": 0.0442,
+    "eps_surprise_pct": -507.23981900452486,
+    "revenue_surprise_pct": -3.351901788939451,
+    "price_reaction_1d": -14.10431979783413,
+    "price_reaction_5d": -16.884008851564026
+   },
+   "scores": {
+    "value_z": 0.13523675362491588,
+    "quality_z": 0.7152536948689684,
+    "growth_z": -0.2632336466646635,
+    "health_z": -1.1678705588872276,
+    "momentum_z": -1.0922130143691264,
+    "composite": -0.22257621469242606,
+    "rank": 1647
+   },
+   "series": [
+    {
+     "t": "2026-06-04",
+     "o": 27.4,
+     "h": 29.82,
+     "l": 27.14,
+     "c": 28.01,
+     "v": 23839300
+    },
+    {
+     "t": "2026-06-05",
+     "o": 27.1,
+     "h": 27.89,
+     "l": 25.4,
+     "c": 26.19,
+     "v": 18614000
+    },
+    {
+     "t": "2026-06-08",
+     "o": 26.48,
+     "h": 27.33,
+     "l": 25.96,
+     "c": 27.17,
+     "v": 13842600
+    },
+    {
+     "t": "2026-06-09",
+     "o": 27.17,
+     "h": 29.18,
+     "l": 26.02,
+     "c": 28.98,
+     "v": 25336400
+    },
+    {
+     "t": "2026-06-10",
+     "o": 28.38,
+     "h": 29.75,
+     "l": 28.08,
+     "c": 28.58,
+     "v": 9729217
+    }
+   ],
+   "position": {
+    "held": true,
+    "shares": 53.401239000000004,
+    "cost_basis": 28.083893914708607,
+    "market_value": 1526.21,
+    "invested": 1499.71,
+    "unrealized_pl": 26.5,
+    "since_entry_pct": 1.77,
+    "weight_pct": 6.01
+   },
+   "earnings": {
+    "next_date": "2026-08-03",
+    "days_until_next": 54,
+    "next_hour": "",
+    "next_eps_estimate": 0.0668,
+    "next_revenue_estimate": 705482765,
+    "last_date": "2026-05-11",
+    "last_eps_estimate": 0.0442,
+    "last_eps_actual": -0.19,
+    "last_revenue_estimate": 629189825,
+    "last_revenue_actual": 608104000,
+    "last_eps_surprise_pct": -529.9
+   },
+   "analyst": {
+    "buy": 8,
+    "hold": 13,
+    "sell": 0,
+    "period": "2026-06-01",
+    "strongBuy": 2,
+    "strongSell": 0
+   },
+   "price_target": {
+    "low": 21.0,
+    "high": 35.0,
+    "mean": 26.61,
+    "median": 25.0,
+    "source": "yfinance",
+    "num_analysts": 14
+   },
+   "news": [],
+   "takeaway": "Up 6.7% to $29, but this is the one name where the fundamentals genuinely softened: last print showed revenue up just 3.8% year over year with gross margin down 6.7 points and an EPS miss. Price is recovering on the peptides narrative and a new chief medical officer, but growth and margins are the thing to watch closely.",
+   "sentiment": "mixed",
+   "catalyst_summary": "A peptides/longevity push and leadership additions are reviving sentiment, set against a sharp deceleration in growth and margin compression in the most recent quarter.",
+   "earnings_recap": null,
+   "final_lean": "watch",
+   "rationale": "Trim/exit here would be driven by deterioration, not size: growth fell from hypergrowth to low single digits with margins compressing. The recovery momentum and the peptides catalyst earn it a watch rather than an immediate trim, but it is on the shortest leash in the book.",
+   "signals": {
+    "badges": [
+     {
+      "label": "Analysts bullish",
+      "tone": "good"
+     },
+     {
+      "label": "Rev +4% YoY",
+      "tone": "info"
+     },
+     {
+      "label": "Thesis flag",
+      "tone": "bad"
+     }
+    ],
+    "provisional_lean": "hold",
+    "drivers": {
+     "pile": [
+      "leading the market (positive RS)"
+     ],
+     "deterioration": [
+      "margin_compression"
+     ],
+     "blocks": []
+    },
+    "pile_points": [
+     "leading the market (positive RS)"
+    ],
+    "trim_points": [
+     "margin_compression"
+    ]
+   },
+   "entry_guidance": "No add. Watch the next print for whether revenue reaccelerates and margins stabilize.",
+   "invalidation": "Another quarter of sub-10% revenue growth with continued margin compression would turn this watch into a trim."
+  },
+  {
+   "ticker": "NVDA",
+   "price": {
+    "last": 202.32,
+    "prev_close": 208.19,
+    "open": 204.4250030517578,
+    "day_high": 207.22,
+    "day_low": 201.61,
+    "day_change_pct": -2.82
+   },
+   "returns": {
+    "r1d": -2.82,
+    "r5d": -5.79,
+    "r20d": -8.36
+   },
+   "relative_strength": {
+    "rs5d": -2.48,
+    "rs20d": -7.15
+   },
+   "technicals": {
+    "last_close": 202.32,
+    "sma20": 217.29,
+    "dist_sma20_pct": -6.89,
+    "sma50": 205.75,
+    "dist_sma50_pct": -1.67,
+    "sma200": 189.03,
+    "dist_sma200_pct": 7.03,
+    "rsi14": 42.3,
+    "macd_state": "no_cross",
+    "macd_hist": -2.566,
+    "ma_cross": "above",
+    "atr14": 8.64,
+    "atr14_pct": 4.27,
+    "high_52w": 235.74,
+    "low_52w": 141.97,
+    "dist_52w_high_pct": -14.18,
+    "dist_52w_low_pct": 42.51,
+    "support_dist_pct": 2.96,
+    "resistance_dist_pct": 2.33,
+    "support_price": 196.5,
+    "resistance_price": 207.04,
+    "rel_volume": 0.48,
+    "avg_vol_20d": 175277261,
+    "breakout": false,
+    "breakout_confirmed": false,
+    "trend": "mixed"
+   },
+   "fundamentals": {
+    "source": "equity-cache(fmp,ttm)",
+    "revenue_yoy": null,
+    "eps_yoy": 65.9933,
+    "gross_margin": 74.1454,
+    "pe": 31.6773,
+    "eps_ttm": 6.54,
+    "net_margin": 62.9659,
+    "forward_pe": 16.4159,
+    "revenue_qoq_pct": 19.8,
+    "gross_margin_qoq_pp": -0.06,
+    "report_date": "2026-04-30"
+   },
+   "thesis_break": {
+    "revenue_qoq_drop": false,
+    "margin_compression": false,
+    "repeated_eps_miss": null,
+    "any": false
+   },
+   "earnings_reaction": {
+    "report_date": "2026-05-20",
+    "eps_actual": 1.87,
+    "eps_estimate": 1.7922,
+    "eps_surprise_pct": 4.341033366811745,
+    "revenue_surprise_pct": 1.470688405140957,
+    "price_reaction_1d": -1.7720529342800773,
+    "price_reaction_5d": -4.125833968917059
+   },
+   "scores": {
+    "value_z": -0.3392347608575764,
+    "quality_z": 0.795862510283257,
+    "growth_z": 1.0396924661012,
+    "health_z": 0.49806111027154787,
+    "momentum_z": -0.01764209815963387,
+    "composite": 0.5713240706717048,
+    "rank": 235
+   },
+   "series": [
+    {
+     "t": "2026-06-04",
+     "o": 213.91,
+     "h": 221.6,
+     "l": 210.97,
+     "c": 218.66,
+     "v": 169022200
+    },
+    {
+     "t": "2026-06-05",
+     "o": 214.53,
+     "h": 214.87,
+     "l": 204.33,
+     "c": 205.1,
+     "v": 219655500
+    },
+    {
+     "t": "2026-06-08",
+     "o": 210.18,
+     "h": 210.47,
+     "l": 206.0,
+     "c": 208.64,
+     "v": 138372800
+    },
+    {
+     "t": "2026-06-09",
+     "o": 210.62,
+     "h": 211.4,
+     "l": 199.34,
+     "c": 208.19,
+     "v": 180327000
+    },
+    {
+     "t": "2026-06-10",
+     "o": 204.43,
+     "h": 207.22,
+     "l": 201.61,
+     "c": 202.32,
+     "v": 86582636
+    }
+   ],
+   "position": {
+    "held": true,
+    "shares": 14.322329000000002,
+    "cost_basis": 209.46313092933414,
+    "market_value": 2897.69,
+    "invested": 3000.0,
+    "unrealized_pl": -102.31,
+    "since_entry_pct": -3.41,
+    "weight_pct": 11.41
+   },
+   "earnings": {
+    "next_date": "2026-08-25",
+    "days_until_next": 76,
+    "next_hour": "amc",
+    "next_eps_estimate": 2.1227,
+    "next_revenue_estimate": 93483809451,
+    "last_date": "2026-05-20",
+    "last_eps_estimate": 1.7922,
+    "last_eps_actual": 1.87,
+    "last_revenue_estimate": 80432094512,
+    "last_revenue_actual": 81615000000,
+    "last_eps_surprise_pct": 4.3
+   },
+   "analyst": {
+    "buy": 39,
+    "hold": 4,
+    "sell": 1,
+    "period": "2026-06-01",
+    "strongBuy": 24,
+    "strongSell": 0
+   },
+   "price_target": {
+    "low": 180.0,
+    "high": 500.0,
+    "mean": 298.42,
+    "median": 288.0,
+    "source": "yfinance",
+    "num_analysts": 59
+   },
+   "news": [
+    {
+     "datetime": "2026-06-10T16:40:03+00:00",
+     "headline": "Stay informed with the top movers within the dow jones index on Wednesday.",
+     "source": "ChartMill",
+     "url": "https://finnhub.io/api/news?id=a776024e8740f6f39dbbd438ea4830713818e6353e142930f12318f6d5c2d9f5",
+     "summary": "Stay updated with the movements of the dow jones index in the middle of the day on Wednesday. Discover which stocks are leading as top gainers and losers in today's session.",
+     "category": "company"
+    },
+    {
+     "datetime": "2026-06-10T15:50:00+00:00",
+     "headline": "Is Lululemon Stock Too Cheap to Pass Up?",
+     "source": "Yahoo",
+     "url": "https://finnhub.io/api/news?id=ead217f5514454708d15a2f3f6be0ed9c12f164ff2da7d1648643f4f26e8af06",
+     "summary": "The apparel stock has plummeted 40% this year.",
+     "category": "company"
+    }
+   ],
+   "takeaway": "Down 2.82% to $202, dragged by a macro de-risk and chip-sector sympathy, not anything company-specific. A hotter May jobs report cut the odds of near-term Fed cuts and hit high-multiple tech, and Broadcom's soft AI outlook soured sentiment across semis. The fundamentals are unchanged: last print beat with EPS up 66% year over year and a forward P/E of 16. Sitting just under the 50-day at $206 with support at $196.50, RSI 42.",
+   "sentiment": "bullish",
+   "catalyst_summary": "Blackwell demand and the Rubin roadmap; caught in the Broadcom-led AI derate rather than anything NVDA-specific. Analyst consensus Strong Buy, target near $299.",
+   "earnings_recap": null,
+   "final_lean": "hold",
+   "rationale": "A market-multiple move, not an NVDA problem. Thesis intact, valuation undemanding, and the stock is pulling back into a defined support zone rather than topping.",
+   "signals": {
+    "badges": [
+     {
+      "label": "Analysts bullish",
+      "tone": "good"
+     }
+    ],
+    "provisional_lean": "hold",
+    "drivers": {
+     "pile": [],
+     "deterioration": [
+      "negative_rel_strength"
+     ],
+     "blocks": []
+    },
+    "pile_points": [],
+    "trim_points": [
+     "negative_rel_strength"
+    ]
+   },
+   "triggers": [
+    "entry_zone"
+   ],
+   "entry_guidance": "Add zone on a dip into $196 to $200 near support; thesis intact. A clean break below $196.50 would mean reassess rather than add.",
+   "invalidation": "Blackwell/Rubin demand signals weakening or hyperscaler capex guidance cuts."
+  }
+ ]
+}

@@ -45,6 +45,43 @@ def reset_finnhub_calls() -> None:
 # --------------------------------------------------------------------------- #
 # yfinance
 # --------------------------------------------------------------------------- #
+# Overnight / global markets that move the US open: Asia + Europe trade while the
+# US sleeps and are LIVE at the 9am ET pre-open run; index futures point at the open.
+# All "up = good" so the UI can color them uniformly. yfinance fast_info is empty for
+# these symbols, so recent_change() reads them off a short daily history instead.
+GLOBAL_MARKETS_DEFAULT: list[dict[str, str]] = [
+    {"symbol": "^N225", "label": "Nikkei 225", "region": "Asia"},
+    {"symbol": "^KS11", "label": "KOSPI", "region": "Asia"},
+    {"symbol": "^HSI", "label": "Hang Seng", "region": "Asia"},
+    {"symbol": "^TWII", "label": "Taiwan", "region": "Asia"},
+    {"symbol": "^STOXX50E", "label": "Euro Stoxx 50", "region": "Europe"},
+    {"symbol": "^GDAXI", "label": "DAX", "region": "Europe"},
+    {"symbol": "^FTSE", "label": "FTSE 100", "region": "Europe"},
+    {"symbol": "ES=F", "label": "S&P 500 fut", "region": "US futures"},
+    {"symbol": "NQ=F", "label": "Nasdaq 100 fut", "region": "US futures"},
+]
+
+
+def recent_change(symbol: str) -> dict[str, Any] | None:
+    """Last close + prior close from a short daily history. Works for indices and
+    futures (where fast_info is empty). None on failure/empty — caller drops it, so
+    a degraded global-markets fetch never blocks a run."""
+    try:
+        df = yf.Ticker(symbol).history(period="5d", interval="1d", auto_adjust=False)
+    except Exception:
+        return None
+    if df is None or df.empty or "Close" not in df.columns:
+        return None
+    closes = df["Close"].dropna()
+    if len(closes) < 2:
+        return None
+    return {
+        "last": round(float(closes.iloc[-1]), 2),
+        "prev_close": round(float(closes.iloc[-2]), 2),
+        "as_of_date": pd.Timestamp(closes.index[-1]).date().isoformat(),
+    }
+
+
 def price_history(ticker: str, days: int = 400) -> pd.DataFrame:
     """Daily OHLCV indexed by date (tz-naive). Empty frame on failure."""
     try:

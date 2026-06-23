@@ -104,6 +104,9 @@ def fake_world(monkeypatch):
     monkeypatch.setattr(sources, "earnings_calendar", lambda tk, ahead_days=120: EARN_CAL[tk])
     monkeypatch.setattr(sources, "earnings_dates_yf", lambda tk: [])
     monkeypatch.setattr(sources, "company_news", lambda tk, lb, lim: NEWS[tk])
+    # Global/overnight markets — deterministic so the golden is hermetic.
+    monkeypatch.setattr(sources, "recent_change",
+                        lambda sym: {"last": 100.0, "prev_close": 102.0, "as_of_date": "2026-06-09"})
     monkeypatch.setattr(sources, "recommendation_trend",
                         lambda tk: {"period": "2026-06-01", "strongBuy": 10, "buy": 5,
                                     "hold": 3, "sell": 1, "strongSell": 0})

@@ -6,6 +6,7 @@ import { BadgeRow, LeanPill, SentimentChip, Metric } from "@/components/ui";
 import RichText from "@/components/RichText";
 import MoversChart, { type Mover } from "@/components/MoversChart";
 import EarningsCalendar, { type EarningsEvent } from "@/components/EarningsCalendar";
+import GlobalMarkets from "@/components/GlobalMarkets";
 import type { Lean } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -74,18 +75,51 @@ export default async function Home() {
           {new Date(snap.generated_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York", timeZoneName: "short" })}
         </p>
 
-        {/* Data-health banner (P8): degraded fetches must never look like quiet news */}
-        {(snap.data_health?.finnhub_failures ?? 0) > 0 && (
-          <p className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/20">
-            ⚠ {snap.data_health!.finnhub_failures} data {snap.data_health!.finnhub_failures === 1 ? "fetch" : "fetches"} failed
-            on this run — some news, earnings or analyst data may be missing rather than quiet.
-          </p>
-        )}
+        {/* Data-health banner (P8): degraded fetches must never look like quiet news.
+            Name exactly WHICH names/feeds are stale so doubt lands on one line, not the
+            whole board. */}
+        {(() => {
+          const dh = snap.data_health;
+          if (!dh) return null;
+          const missNews = dh.tickers_missing_news ?? [];
+          const missAnalyst = dh.tickers_missing_analyst ?? [];
+          const cacheOld = (dh.equity_cache_age_hours ?? 0) > 48;
+          if (missNews.length === 0 && missAnalyst.length === 0 && !cacheOld) return null;
+          const parts: string[] = [];
+          if (missNews.length) parts.push(`news for ${missNews.join(", ")}`);
+          if (missAnalyst.length) parts.push(`analyst data for ${missAnalyst.join(", ")}`);
+          return (
+            <div className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/20">
+              {parts.length > 0 ? (
+                <p>⚠ Didn&apos;t refresh this run: {parts.join("; ")}. Those cards may be missing
+                  items rather than genuinely quiet — everything else is current.</p>
+              ) : null}
+              {cacheOld && (
+                <p className={parts.length ? "mt-1" : ""}>
+                  Fundamentals are from a cache ~{Math.round(dh.equity_cache_age_hours!)}h old.
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Overnight / global markets — deterministic, fresh every run (Asia/EU/futures) */}
+        <GlobalMarkets data={snap.global_markets} />
 
         {/* Market recap — words first */}
         {(snap.market_recap || snap.macro_context) && (
           <section className="mb-5 rounded-2xl bg-gradient-to-b from-sky-950/40 to-zinc-900/60 p-5 ring-1 ring-zinc-800">
-            <h2 className="mb-2 text-sm font-medium text-sky-300">Today&apos;s market</h2>
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-medium text-sky-300">Today&apos;s market</h2>
+              {(snap.market_narrative_freshness === "carried" || snap.market_narrative_freshness === "stale") && snap.market_narrative_as_of && (
+                <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                  snap.market_narrative_freshness === "stale" ? "bg-amber-500/15 text-amber-300" : "bg-zinc-800 text-zinc-400"
+                }`}>
+                  written {new Date(snap.market_narrative_as_of).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} ET
+                  {snap.market_narrative_freshness === "stale" ? " — older than today" : ""}
+                </span>
+              )}
+            </div>
             {snap.market_recap && <p className="text-sm leading-relaxed text-zinc-200"><RichText text={snap.market_recap} symbols={symbols} /></p>}
             {snap.macro_context && (
               <p className="mt-2 border-t border-zinc-800 pt-2 text-xs leading-relaxed text-zinc-400">

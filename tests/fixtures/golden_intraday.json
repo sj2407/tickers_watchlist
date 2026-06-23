@@ -22,8 +22,86 @@
   "tickers_missing_news": []
  },
  "generated_at": "2026-06-09T17:00:00-04:00",
+ "global_markets": {
+  "as_of": "2026-06-09T17:00:00-04:00",
+  "markets": [
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "Nikkei 225",
+    "last": 100.0,
+    "region": "Asia",
+    "symbol": "^N225"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "KOSPI",
+    "last": 100.0,
+    "region": "Asia",
+    "symbol": "^KS11"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "Hang Seng",
+    "last": 100.0,
+    "region": "Asia",
+    "symbol": "^HSI"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "Taiwan",
+    "last": 100.0,
+    "region": "Asia",
+    "symbol": "^TWII"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "Euro Stoxx 50",
+    "last": 100.0,
+    "region": "Europe",
+    "symbol": "^STOXX50E"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "DAX",
+    "last": 100.0,
+    "region": "Europe",
+    "symbol": "^GDAXI"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "FTSE 100",
+    "last": 100.0,
+    "region": "Europe",
+    "symbol": "^FTSE"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "S&P 500 fut",
+    "last": 100.0,
+    "region": "US futures",
+    "symbol": "ES=F"
+   },
+   {
+    "as_of_date": "2026-06-09",
+    "change_pct": -1.96,
+    "label": "Nasdaq 100 fut",
+    "last": 100.0,
+    "region": "US futures",
+    "symbol": "NQ=F"
+   }
+  ]
+ },
  "intraday_triggered": [],
  "macro_context": "Prior macro.",
+ "market_narrative_freshness": null,
  "market_recap": "Prior market recap.",
  "min_position_usd": 200,
  "mode": "intraday",

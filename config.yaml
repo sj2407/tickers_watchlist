@@ -13,6 +13,15 @@ history_days: 400       # >200 so the 200-day MA is available
 news_lookback_days: 4
 max_news_per_ticker: 8
 
+# Overnight / global markets shown in the brief (Asia + Europe are live at 9am ET;
+# futures point at the US open). Defaults live in sources.GLOBAL_MARKETS_DEFAULT;
+# uncomment to override. Each entry needs symbol (yfinance), label, region.
+# global_markets:
+#   - {symbol: "^N225", label: "Nikkei 225", region: "Asia"}
+#   - {symbol: "^KS11", label: "KOSPI", region: "Asia"}
+#   - {symbol: "^STOXX50E", label: "Euro Stoxx 50", region: "Europe"}
+#   - {symbol: "ES=F", label: "S&P 500 fut", region: "US futures"}
+
 # Optional: map a ticker to its sector ETF for sector-relative strength later.
 sector_etf:
   AAPL: XLK

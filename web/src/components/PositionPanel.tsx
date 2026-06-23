@@ -47,7 +47,6 @@ export default function PositionPanel({
       {pos.held ? (
         <div className="grid grid-cols-3 gap-3">
           <Metric label="Shares" value={num(pos.shares, 4)} />
-          <Metric label="Avg cost" value={usd(pos.cost_basis)} hint="what you paid" />
           <Metric label="Value" value={usd(pos.market_value)} hint="at last price" />
           <Metric label="Invested" value={usd(pos.invested)} />
           <Metric label="Gain/loss" value={usd(pos.unrealized_pl)} className={signClass(pos.unrealized_pl)} hint="unrealized" />

@@ -235,9 +235,37 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     signals.validate_leans(snap)  # carried-forward leans must obey the vocabulary too
     grade_narrative_freshness(snap)
     snap["needs_full_enrichment"] = (prior is None)
+    # Is the carried-forward market narrative older than the numbers it sits above?
+    # (Reuses the per-ticker grader so the rule is identical and unit-tested.)
+    snap["market_narrative_freshness"] = narrative_freshness(
+        snap.get("market_narrative_as_of"), snap.get("generated_at"))
+    # Deterministic overnight/global block — recomputed EVERY run (never carried),
+    # so a 9am pre-open refresh always delivers fresh Asia/Europe/futures even when
+    # the LLM narrative didn't regenerate.
+    snap["global_markets"] = _global_markets_block(cfg)
     snap["data_health"] = _data_health(snap, mode)
     snap["performance"] = _performance_block(bench_hist, cfg, portfolio.get("unrealized_pl"))
     return snap
+
+
+def _global_markets_block(cfg: dict[str, Any]) -> dict[str, Any] | None:
+    """Live overnight/global market moves (Asia + Europe + US futures), fetched
+    fresh each run. None if the whole fetch fails — the UI then hides the strip
+    rather than showing a stale one."""
+    specs = cfg.get("global_markets") or sources.GLOBAL_MARKETS_DEFAULT
+    markets: list[dict[str, Any]] = []
+    for spec in specs:
+        q = sources.recent_change(spec["symbol"])
+        chg = md._pct(q.get("last"), q.get("prev_close")) if q else None
+        if chg is None:
+            continue
+        markets.append({
+            "symbol": spec["symbol"], "label": spec["label"], "region": spec["region"],
+            "change_pct": chg, "last": q.get("last"), "as_of_date": q.get("as_of_date"),
+        })
+    if not markets:
+        return None
+    return {"as_of": datetime.now(ZoneInfo(cfg["timezone"])).isoformat(), "markets": markets}
 
 
 def _performance_block(bench_hist: pd.DataFrame, cfg: dict[str, Any],

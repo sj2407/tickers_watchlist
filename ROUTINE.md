@@ -7,7 +7,9 @@ times a day and **adapts to the market session** — the Python pipeline is the 
 the work that would otherwise cost API tokens.
 
 ## When it runs (one routine, clock-branched)
-Cron `5 9,13,16 * * 1-5` (≈ 9:05 / 1:05 / 4:05 ET, weekdays; jitter ~9 min). The mode is
+Cron `30 8,13,16 * * 1-5` (≈ 8:30 / 1:30 / 4:30 ET, weekdays; +several-min dispatch delay). The
+morning fires pre-open with enough runway to finish enrichment (~15 min) and still leave time to
+read and position before the 9:30 open. The mode is
 resolved from the REAL market session via `tracker.run --mode auto` → `calendar_utils.resolve_mode`:
 - **premarket → `preopen`** (full): forward-looking brief.
 - **open → `intraday`** (light): entry-watch only.
@@ -26,6 +28,10 @@ resolved from the REAL market session via `tracker.run --mode auto` → `calenda
      tickers — `market` recap + macro, and per ticker `takeaway` (the hero line), `sentiment`,
      `catalyst_summary` (filter Finnhub noise), `earnings_recap` (if it just reported: EPS/rev
      beat-miss, guidance, reaction), `final_lean`, `rationale`, `entry_guidance`, `invalidation`.
+     On a **preopen** brief, LEAD the recap with the overnight picture: the snapshot's
+     `global_markets` block (Asia + Europe already trading, plus US index futures — fetched fresh
+     every run, so it's never stale even if you don't regenerate) and overnight news/macro, with the
+     read-through to held names (e.g. a Korea / memory-chip selloff into TSM, MU).
    - **INTRADAY** (light): if `intraday_triggered` is empty, STOP (carried narrative stands). Else,
      for JUST those tickers, web-search what's moving them and write a SHORT entry note (`takeaway`
      + `entry_guidance`) into `out/enrichment.json` for those tickers only. Don't re-narrate the rest.

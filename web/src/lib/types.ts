@@ -227,6 +227,20 @@ export interface DataHealth {
   equity_cache_age_hours?: number | null;
 }
 
+export interface GlobalMarket {
+  symbol: string;
+  label: string;
+  region: string;
+  change_pct: number;
+  last?: number | null;
+  as_of_date?: string | null;
+}
+
+export interface GlobalMarkets {
+  as_of: string;
+  markets: GlobalMarket[];
+}
+
 export interface Performance {
   since: string;
   twr_pct: number;
@@ -252,6 +266,8 @@ export interface Snapshot {
   market_recap: string | null;
   macro_context: string | null;
   market_narrative_as_of?: string | null;
+  market_narrative_freshness?: "fresh" | "carried" | "stale" | null;
+  global_markets?: GlobalMarkets | null;
   alerts: Alert[];
   data_health?: DataHealth | null;
   performance?: Performance | null;

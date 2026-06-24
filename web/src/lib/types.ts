@@ -200,6 +200,12 @@ export interface Ticker {
   // P8: when the routine last wrote this name's words + its age vs the numbers.
   narrative_as_of?: string | null;
   narrative_freshness?: "fresh" | "carried" | "stale" | null;
+  // Price-feed fallback: set only when this run's daily-bar fetch failed and values
+  // were carried from the prior snapshot.
+  price_stale?: boolean;
+  priced_as_of?: string | null;
+  series_carried?: boolean;
+  series_as_of?: string | null;
 }
 
 export interface Portfolio {
@@ -221,6 +227,9 @@ export interface Alert {
 export interface DataHealth {
   finnhub_calls?: number;
   finnhub_failures?: number;
+  tickers_missing_price?: string[];
+  tickers_price_carried?: string[];
+  price_feed_down?: boolean;
   tickers_missing_news?: string[];
   tickers_missing_analyst?: string[];
   equity_cache_used?: boolean;

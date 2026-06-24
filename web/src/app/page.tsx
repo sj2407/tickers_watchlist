@@ -81,21 +81,29 @@ export default async function Home() {
         {(() => {
           const dh = snap.data_health;
           if (!dh) return null;
+          // With the yfinance→Finnhub→last-known-good chain, prices are populated every
+          // run; a name shows here ONLY in the rare case both live feeds were down and
+          // the last close was carried — a quiet, honest note, not an outage alarm.
+          const carried = dh.tickers_price_carried ?? [];
           const missNews = dh.tickers_missing_news ?? [];
           const missAnalyst = dh.tickers_missing_analyst ?? [];
           const cacheOld = (dh.equity_cache_age_hours ?? 0) > 48;
-          if (missNews.length === 0 && missAnalyst.length === 0 && !cacheOld) return null;
+          if (carried.length === 0 && missNews.length === 0 && missAnalyst.length === 0 && !cacheOld) return null;
           const parts: string[] = [];
           if (missNews.length) parts.push(`news for ${missNews.join(", ")}`);
           if (missAnalyst.length) parts.push(`analyst data for ${missAnalyst.join(", ")}`);
           return (
             <div className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-200 ring-1 ring-amber-500/20">
+              {carried.length > 0 && (
+                <p>Live price feed was briefly unavailable for {carried.join(", ")}; showing the
+                  last close until the next run.</p>
+              )}
               {parts.length > 0 ? (
-                <p>⚠ Didn&apos;t refresh this run: {parts.join("; ")}. Those cards may be missing
+                <p className={carried.length ? "mt-1" : ""}>⚠ Didn&apos;t refresh this run: {parts.join("; ")}. Those cards may be missing
                   items rather than genuinely quiet — everything else is current.</p>
               ) : null}
               {cacheOld && (
-                <p className={parts.length ? "mt-1" : ""}>
+                <p className={carried.length || parts.length ? "mt-1" : ""}>
                   Fundamentals are from a cache ~{Math.round(dh.equity_cache_age_hours!)}h old.
                 </p>
               )}

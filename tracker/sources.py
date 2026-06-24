@@ -66,11 +66,8 @@ def recent_change(symbol: str) -> dict[str, Any] | None:
     """Last close + prior close from a short daily history. Works for indices and
     futures (where fast_info is empty). None on failure/empty — caller drops it, so
     a degraded global-markets fetch never blocks a run."""
-    try:
-        df = yf.Ticker(symbol).history(period="5d", interval="1d", auto_adjust=False)
-    except Exception:
-        return None
-    if df is None or df.empty or "Close" not in df.columns:
+    df = _yf_history(symbol, "5d")
+    if df.empty or "Close" not in df.columns:
         return None
     closes = df["Close"].dropna()
     if len(closes) < 2:
@@ -82,13 +79,27 @@ def recent_change(symbol: str) -> dict[str, Any] | None:
     }
 
 
+def _yf_history(ticker: str, period: str) -> pd.DataFrame:
+    """yfinance daily history with retries. Yahoo rate-limits bursts (a full run
+    fires ~35 calls) and returns empty/errors transiently — without a retry, one
+    blip blanks the whole board. 3 attempts with backoff; empty frame only if all
+    fail. Mirrors the Finnhub retry convention."""
+    for attempt in range(3):
+        try:
+            df = yf.Ticker(ticker).history(period=period, interval="1d", auto_adjust=False)
+            if df is not None and not df.empty:
+                return df
+        except Exception:
+            pass
+        if attempt < 2:
+            time.sleep(1.0 * (attempt + 1))
+    return pd.DataFrame()
+
+
 def price_history(ticker: str, days: int = 400) -> pd.DataFrame:
-    """Daily OHLCV indexed by date (tz-naive). Empty frame on failure."""
-    try:
-        df = yf.Ticker(ticker).history(period=f"{days}d", interval="1d", auto_adjust=False)
-    except Exception:
-        return pd.DataFrame()
-    if df is None or df.empty:
+    """Daily OHLCV indexed by date (tz-naive). Empty frame on failure (after retries)."""
+    df = _yf_history(ticker, f"{days}d")
+    if df.empty:
         return pd.DataFrame()
     df = df.rename(columns=str.title)
     df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
@@ -101,11 +112,13 @@ def price_history(ticker: str, days: int = 400) -> pd.DataFrame:
 
 
 def fast_quote(ticker: str) -> dict[str, Any]:
-    """Latest price + pre/post market if available, via yfinance fast_info/info."""
+    """Latest price + day range via yfinance fast_info. Best-effort and single-shot:
+    fast_info often returns None even when history is fine, so the snapshot's price
+    chain falls back to the daily-bar close, then Finnhub /quote, then last-known-good
+    — no point sleep-retrying here when None is a common steady state."""
     out: dict[str, Any] = {}
     try:
-        t = yf.Ticker(ticker)
-        fi = t.fast_info
+        fi = yf.Ticker(ticker).fast_info
         out["last_price"] = _f(fi.get("last_price"))
         out["prev_close"] = _f(fi.get("previous_close"))
         out["open"] = _f(fi.get("open"))
@@ -178,6 +191,25 @@ def company_news(ticker: str, lookback_days: int = 4, limit: int = 8) -> list[di
             }
         )
     return items
+
+
+def finnhub_quote(ticker: str) -> dict[str, Any] | None:
+    """Current price via Finnhub /quote — a SECOND live source so a yfinance/Yahoo
+    outage can't blank the board. Same shape as fast_quote. None if Finnhub has no
+    data (c=0 for unknown symbols) or the call fails. US equities/ADRs only."""
+    data = _finnhub_get("/quote", {"symbol": ticker})
+    if not isinstance(data, dict):
+        return None
+    last = _f(data.get("c"))
+    if not last:  # Finnhub returns c=0 when it has no quote
+        return None
+    return {
+        "last_price": last,
+        "prev_close": _f(data.get("pc")),
+        "open": _f(data.get("o")),
+        "day_high": _f(data.get("h")),
+        "day_low": _f(data.get("l")),
+    }
 
 
 def recommendation_trend(ticker: str) -> dict[str, Any] | None:

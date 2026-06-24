@@ -18,8 +18,11 @@
   "equity_cache_used": false,
   "finnhub_calls": 0,
   "finnhub_failures": 0,
+  "price_feed_down": false,
   "tickers_missing_analyst": [],
-  "tickers_missing_news": []
+  "tickers_missing_news": [],
+  "tickers_missing_price": [],
+  "tickers_price_carried": []
  },
  "generated_at": "2026-06-09T17:00:00-04:00",
  "global_markets": {

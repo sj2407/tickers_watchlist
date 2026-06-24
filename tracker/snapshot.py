@@ -174,6 +174,7 @@ def build_snapshot(mode: str) -> dict[str, Any]:
     book_value = 0.0
     # first pass for book value (needs last prices)
     last_prices: dict[str, float | None] = {}
+    price_source: dict[str, str | None] = {}  # yfinance | finnhub | carried | None
     hists: dict[str, pd.DataFrame] = {}
     quotes: dict[str, dict] = {}
     for tk in tickers:
@@ -181,10 +182,25 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         hists[tk] = h
         q = sources.fast_quote(tk)
         quotes[tk] = q
+        # Fallback chain so a single feed hiccup can NEVER blank a price:
+        #   1) yfinance quote → 2) yfinance daily close → 3) Finnhub /quote (2nd live
+        #   source) → 4) last-known-good from the prior snapshot.
         last = q.get("last_price")
+        src = "yfinance" if last is not None else None
         if last is None and not h.empty:
             last = round(float(h["Close"].dropna().iloc[-1]), 2)
+            src = "yfinance"
+        if last is None:
+            fq = sources.finnhub_quote(tk)
+            if fq:
+                quotes[tk] = q = {**q, **fq}  # adopt Finnhub prev_close/high/low too
+                last = fq.get("last_price")
+                src = "finnhub"
+        if last is None:
+            last = (prior_by_ticker.get(tk) or {}).get("price", {}).get("last")
+            src = "carried" if last is not None else None
         last_prices[tk] = last
+        price_source[tk] = src
         hold = holdings.get(tk)
         if hold and last:
             book_value += float(hold.get("shares") or 0) * last
@@ -208,6 +224,9 @@ def build_snapshot(mode: str) -> dict[str, Any]:
             row["news"] = sources.company_news(tk, cfg["news_lookback_days"], cfg["max_news_per_ticker"])
 
         rows.append(row)
+
+    # Last-known-good fallback: never publish a blank board if the daily-bar feed hiccuped.
+    carry_forward_quant(rows, prior, price_source)
 
     portfolio = _portfolio_block(rows, book_value)
     snap = {
@@ -306,9 +325,18 @@ def _data_health(snap: dict[str, Any], mode: str) -> dict[str, Any]:
     age_h = None
     if cache_ts is not None:
         age_h = round((datetime.now(timezone.utc) - cache_ts).total_seconds() / 3600, 1)
+    # Price-feed health. With the yfinance→Finnhub→last-known-good fallback chain a
+    # name should ~never be fully blank; tickers_price_carried lists names whose LAST
+    # price had to be carried from the prior run (both live sources down) so the UI can
+    # mark them. tickers_missing_price is the true-failure backstop (should stay empty).
+    missing_price = [r["ticker"] for r in rows if r.get("price", {}).get("last") is None]
+    carried_price = [r["ticker"] for r in rows if r.get("price_stale")]
     return {
         "finnhub_calls": sources.finnhub_call_count(),
         "finnhub_failures": sources.finnhub_failure_count(),
+        "tickers_missing_price": missing_price,
+        "tickers_price_carried": carried_price,
+        "price_feed_down": len(missing_price) == len(rows) and len(rows) > 0,
         # news is only fetched for every name on FULL runs; intraday fetches
         # triggered names only, so "missing" is meaningless there.
         "tickers_missing_news": ([r["ticker"] for r in rows if not r.get("news")]
@@ -381,6 +409,34 @@ def merge_narrative(fresh: dict[str, Any], prior: dict[str, Any] | None) -> dict
         if fresh.get(f) is None and prior.get(f) is not None:
             fresh[f] = prior[f]
     return fresh
+
+
+def carry_forward_quant(rows: list[dict[str, Any]], prior: dict[str, Any] | None,
+                        price_source: dict[str, str | None]) -> None:
+    """Last-known-good fallback for the daily-bar feed (in place). When this run's
+    history fetch failed for a name (empty series → null returns/RS/technicals/chart),
+    reuse the prior snapshot's values — EOD-derived blocks don't change intraday, so
+    carrying them is correct, not stale. Only when the LAST PRICE itself had to be
+    carried (both live sources down) do we flag price_stale, so the UI can say so."""
+    if not prior:
+        return
+    pby = {t.get("ticker"): t for t in prior.get("tickers", [])}
+    prior_gen = prior.get("generated_at")
+    for t in rows:
+        p = pby.get(t.get("ticker"))
+        if not p:
+            continue
+        if not t.get("series") and p.get("series"):
+            for f in ("returns", "relative_strength", "technicals", "series"):
+                if p.get(f) is not None:
+                    t[f] = p[f]
+            t["series_carried"] = True
+            t["series_as_of"] = p.get("series_as_of") or prior_gen
+        if price_source.get(t.get("ticker")) == "carried":
+            if p.get("price"):
+                t["price"] = {**p["price"]}  # whole live price block from last good run
+            t["price_stale"] = True
+            t["priced_as_of"] = p.get("priced_as_of") or prior_gen
 
 
 def _portfolio_block(rows: list[dict[str, Any]], book_value: float) -> dict[str, Any]:

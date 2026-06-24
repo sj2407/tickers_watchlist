@@ -87,8 +87,11 @@ export default async function Home() {
           const carried = dh.tickers_price_carried ?? [];
           const missNews = dh.tickers_missing_news ?? [];
           const missAnalyst = dh.tickers_missing_analyst ?? [];
-          const cacheOld = (dh.equity_cache_age_hours ?? 0) > 48;
-          if (carried.length === 0 && missNews.length === 0 && missAnalyst.length === 0 && !cacheOld) return null;
+          // NB: equity_cache_age_hours is NOT surfaced — when that cache is >36h old the
+          // pipeline self-fetches fresh fundamentals, so its age is a diagnostic, not a
+          // staleness the user should see. Genuine fundamentals staleness is flagged
+          // per-ticker (fundamentals_stale / ttm_stale) instead.
+          if (carried.length === 0 && missNews.length === 0 && missAnalyst.length === 0) return null;
           const parts: string[] = [];
           if (missNews.length) parts.push(`news for ${missNews.join(", ")}`);
           if (missAnalyst.length) parts.push(`analyst data for ${missAnalyst.join(", ")}`);
@@ -102,11 +105,6 @@ export default async function Home() {
                 <p className={carried.length ? "mt-1" : ""}>⚠ Didn&apos;t refresh this run: {parts.join("; ")}. Those cards may be missing
                   items rather than genuinely quiet — everything else is current.</p>
               ) : null}
-              {cacheOld && (
-                <p className={carried.length || parts.length ? "mt-1" : ""}>
-                  Fundamentals are from a cache ~{Math.round(dh.equity_cache_age_hours!)}h old.
-                </p>
-              )}
             </div>
           );
         })()}

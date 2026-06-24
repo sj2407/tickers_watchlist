@@ -58,6 +58,10 @@ resolved from the REAL market session via `tracker.run --mode auto` → `calenda
 - **Never delete/null an output** — narrative is carried forward for all names; you only OVERWRITE
   (full: all; intraday: triggered). A failed enrich leaves the prior read intact.
 - Decision-support, not advice — the user places every order.
+- **Don't narrate `data_health.equity_cache_age_hours` as staleness** — when that cache is >36h old
+  the pipeline self-fetches fresh fundamentals, so its age is a diagnostic, not a data note. Only
+  surface what the snapshot actually flags (`tickers_price_carried`, `tickers_missing_news`,
+  per-ticker `fundamentals_stale`/`ttm_stale`).
 
 ## Narrative writing style (takeaway / catalyst / recap / rationale)
 - **Never use em-dashes (—).** Use commas, semicolons, or periods. (En-dash ranges like `19-28%` are fine.)

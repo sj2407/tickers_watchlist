@@ -170,6 +170,8 @@ def get_fundamentals(ticker: str, earnings: dict | None = None, max_age_days: in
       2) our own fetch for the rest, cached in Neon, with the same staleness degrade.
     Pass `earnings` (the per-ticker dict with last_date) to enable the freshness gate.
     Always None-safe."""
+    # cache_source returns None once its FMP batch is >36h old (DEFAULT_MAX_AGE_HOURS),
+    # so a stale upstream cache automatically falls through to our own fresh fetch below.
     cached = cache_source.get_fundamentals(ticker)
     if cached:
         # Post-earnings TTM gate: if this name just reported and the cache batch

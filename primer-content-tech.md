@@ -132,7 +132,9 @@ of sales exposed to China export bans, and service revenue (the recurring part).
 
 **The competitive landscape.** Five firms (ASML, Applied Materials, Lam Research, Tokyo Electron,
 KLA) control roughly 70% of all chip-equipment spending, and each owns a different step, so they
-rarely compete head to head. You own four of the five. **[VISUAL: share bar of the big five.]**
+rarely compete head to head. You own four of the five. By revenue the order is roughly ASML ($28B),
+Applied Materials ($26.5B), Tokyo Electron ($19.2B), Lam ($16.8B), and KLA ($10.8B) in fiscal 2025.
+**[VISUAL: share bar of the big five.]**
 
 #### ASML (ASML)
 - **Role.** Makes lithography machines, the tools that use light to print circuit patterns onto

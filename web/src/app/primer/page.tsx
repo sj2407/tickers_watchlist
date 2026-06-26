@@ -9,7 +9,7 @@ export default function Primer() {
   return (
     <main className="flex-1 min-h-[calc(100dvh-48px)] bg-zinc-950">
       <iframe
-        src="/primer.html"
+        src="/primer.html?theme=app"
         title="Field guide — Technology, Healthcare & Frontier"
         className="block h-full min-h-[calc(100dvh-48px)] w-full border-0"
       />

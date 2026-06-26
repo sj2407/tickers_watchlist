@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Primer · Field guide, Part 2: Healthcare, the GLP-1 ecosystem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script>/* embedded-in-app variant: ?theme=app swaps to the app's Geist look + compact scale */
+try{if(new URLSearchParams(location.search).get('theme')==='app')document.documentElement.dataset.theme='app';}catch(e){}</script>
 <style>
   :root{
     --bg:#0a0a0d; --surface-1:#121217; --surface-2:#1a1b22; --hairline:rgba(255,255,255,.09);
@@ -213,6 +215,75 @@
     .chart-body{flex-direction:column;align-items:flex-start}
     .donut{width:130px;height:130px;align-self:center}
   }
+
+  /* ============================================================
+     EMBEDDED-IN-APP VARIANT (?theme=app): match the watchlist app
+     — Geist sans, the app's compact mobile-first scale. Colours,
+     charts, structure unchanged. The standalone (no param) is
+     untouched. ============================================================ */
+  [data-theme="app"]{
+    --serif:'Geist',system-ui,sans-serif;
+    --sans:'Geist',system-ui,sans-serif;
+    --mono:'Geist Mono',ui-monospace,monospace;
+  }
+  [data-theme="app"] body{font-size:15px;line-height:1.6;background-image:none}
+  [data-theme="app"] .main{padding:24px clamp(16px,4vw,40px) 96px}
+  [data-theme="app"] .hero{padding:18px 0 4px}
+  [data-theme="app"] h1{font-size:clamp(24px,6.4vw,32px);font-weight:600;letter-spacing:-.02em;margin-top:8px}
+  [data-theme="app"] h1 em{font-style:normal;font-weight:600}
+  [data-theme="app"] .deck{font-size:16px;line-height:1.55;margin-top:12px}
+  [data-theme="app"] .eyebrow{font-size:11px;letter-spacing:.1em}
+  [data-theme="app"] .sec{padding-top:46px}
+  [data-theme="app"] .sec-head{gap:12px;padding-top:20px;align-items:center}
+  [data-theme="app"] .sec-head h2{font-size:clamp(19px,4.8vw,23px);font-weight:600;letter-spacing:-.01em}
+  [data-theme="app"] .sec-no{font-size:30px;-webkit-text-stroke-width:1px;margin-top:0}
+  [data-theme="app"] .lead{font-size:15.5px;line-height:1.6}
+  [data-theme="app"] .p1,[data-theme="app"] .concept p{font-size:15px;line-height:1.6}
+  [data-theme="app"] .takeaway{font-size:1em}
+  [data-theme="app"] .force .ft p{font-size:14.5px}
+  [data-theme="app"] .force .fn{font-size:13px;height:26px;min-width:26px}
+  [data-theme="app"] .gauge .gn{font-size:13.5px}
+  /* phase + company headers */
+  [data-theme="app"] .phase{padding-top:40px}
+  [data-theme="app"] .phase-band{padding:12px 14px;gap:12px}
+  [data-theme="app"] .phase-no{font-size:26px}
+  [data-theme="app"] .phase-ic,[data-theme="app"] .phase-ic svg{width:24px;height:24px}
+  [data-theme="app"] .phase-h{font-size:18px;font-weight:600;line-height:1.15}
+  [data-theme="app"] .co-list-lab{font-size:12px;letter-spacing:.04em}
+  [data-theme="app"] .co-h{gap:11px;padding:13px 16px}
+  [data-theme="app"] .co-tk{font-size:12px;padding:3px 9px}
+  [data-theme="app"] .co-n{font-size:16.5px;font-weight:600}
+  [data-theme="app"] .co-body{padding:2px 16px 16px}
+  /* field micro-labels: the app uses small uppercase labels */
+  [data-theme="app"] .lab{font-size:11.5px;font-weight:600;letter-spacing:.06em}
+  [data-theme="app"] .fld{margin:13px 0}
+  [data-theme="app"] .fld-p{font-size:15px;line-height:1.55}
+  [data-theme="app"] .scn-p{font-size:14px}
+  [data-theme="app"] .scn-k{font-size:11.5px}
+  [data-theme="app"] .supply p{font-size:13.5px}
+  [data-theme="app"] .onemin li{font-size:15px}
+  [data-theme="app"] .sw-btn{font-size:12.5px;padding:8px 15px}
+  [data-theme="app"] .nav-title{font-size:10.5px}
+  [data-theme="app"] .nav a{font-size:12.5px}
+  [data-theme="app"] .fig{font-size:.95em}
+  /* charts a touch larger / legible on the app's narrower column */
+  [data-theme="app"] .chart{padding:14px}
+  [data-theme="app"] .donut{width:140px;height:140px}
+  [data-theme="app"] .legend li{font-size:13px}
+  [data-theme="app"] figcaption{font-size:11.5px}
+  [data-theme="app"] .depmap,[data-theme="app"] .supmap{padding:11px;max-width:560px;margin-left:auto;margin-right:auto}
+  [data-theme="app"] .supmap .legend-row{display:none} /* the vertical dia-cap replaces it */
+  /* vertical HTML diagrams (used in the app variant) */
+  .dia-cap{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin:2px 2px 12px}
+  .dep-flow,.sup-flow{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .dep-node{border:1.6px solid var(--c);background:#13141a;border-radius:11px;padding:11px 14px;text-align:center;font-family:var(--mono);font-weight:600;font-size:14px;color:var(--c);box-shadow:0 8px 22px -18px var(--c)}
+  .dia-arrow{align-self:center;color:var(--ink-3);font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;line-height:1;padding:7px 0}
+  .dep-feed{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0}
+  .dep-feed .fl{font-size:12px;color:var(--ink-2);font-family:var(--mono)}
+  .dep-feed .fc{font-family:var(--mono);font-weight:600;font-size:12.5px;padding:3px 10px;border-radius:8px;border:1px solid var(--c);color:var(--c);background:#13141a}
+  .sup-feedrow{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--ring2,rgba(255,255,255,.16));border-radius:13px;padding:9px 9px 11px;margin:8px 0 0}
+  .sup-feedrow .frl{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);text-align:center}
+  .sup-flow .nodebox,.sup-feedrow .nodebox{height:auto}
 </style>
 </head>
 <body>
@@ -235,34 +306,33 @@ const DATA = {};
 const TC = DATA.themeColor||{}, ICONS = DATA.icons||{}, SUP = DATA.supplies||{};
 const PH = {}; (DATA.phases||[]).forEach(p=>PH[p.theme]=p);
 function san(c){return c.replace(/[^A-Za-z]/g,'');}
+const APP = document.documentElement.dataset.theme==='app';  // embedded-in-app variant
 
-/* ---- L1 dependency map: concept nodes, "requires" arrows (tech only) ---- */
-if(document.getElementById('dep'))(function(){
-  const W=900,H=250,NS='http://www.w3.org/2000/svg';
-  const main=[
-    {l:'Demand for compute',x:14,c:'#7dd3fc'},
-    {l:'Cloud',x:150,c:'#fbbf63'},
-    {l:'Data center',x:262,c:'#fbbf63'},
-    {l:'Chip (GPU)',x:392,c:'#5ea8ff'},
-    {l:'Designer',x:512,c:'#5ea8ff'},
-    {l:'Foundry',x:626,c:'#2dd4bf'},
-    {l:'Equipment',x:752,c:'#e879c9'},
-  ];
-  const feed=[{l:'Memory',x:392,y:158,c:'#a78bfa'},{l:'Interconnect',x:262,y:158,c:'#fb7185'}];
-  const y=72,w=110,h=42;
-  let s=`<svg class="dep" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>`;
-  [...new Set([...main,...feed].map(n=>n.c))].forEach(c=>{
-    s+=`<marker id="m${san(c)}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${c}"/></marker>`;});
-  s+=`</defs>`;
-  s+=`<text x="${W-4}" y="14" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#5d626d">arrows read “requires” — follow the need rightward</text>`;
-  for(let i=0;i<main.length-1;i++){const a=main[i],b=main[i+1];
-    s+=`<path d="M${a.x+w},${y+h/2} L${b.x},${y+h/2}" stroke="${b.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san(b.c)})"/>`;}
-  feed.forEach(fd=>{s+=`<path d="M${fd.x+w/2},${fd.y} L${392+w/2},${y+h}" stroke="${fd.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san('#5ea8ff')})" opacity=".85"/>`;});
-  [...main.map(n=>({...n,y})),...feed].forEach(n=>{
-    s+=`<g class="dnode"><rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="10" fill="#13141a" stroke="${n.c}" stroke-width="1.5"/>`+
-       `<text x="${n.x+w/2}" y="${n.y+h/2+4}" text-anchor="middle" fill="${n.c}">${n.l}</text></g>`;});
-  document.getElementById('dep').innerHTML=s;
-})();
+/* ---- L1 dependency map (tech only): vertical HTML for app, wide SVG standalone ---- */
+if(document.getElementById('dep')){
+  const main=[['Demand for compute','#7dd3fc'],['Cloud','#fbbf63'],['Data center','#fbbf63'],['Chip (GPU)','#5ea8ff'],['Designer','#5ea8ff'],['Foundry','#2dd4bf'],['Equipment','#e879c9']];
+  const feed=[['Memory','#a78bfa'],['Interconnect','#fb7185']];
+  if(APP){
+    let h='<div class="dia-cap">each step requires the next · memory + interconnect feed the chip</div><div class="dep-flow">';
+    main.forEach((n,i)=>{
+      h+=`<div class="dep-node" style="--c:${n[1]}">${n[0]}</div>`;
+      if(n[0]==='Chip (GPU)')h+=`<div class="dep-feed"><span class="fl">fed by</span>${feed.map(f=>`<span class="fc" style="--c:${f[1]}">${f[0]}</span>`).join('')}</div>`;
+      if(i<main.length-1)h+='<div class="dia-arrow">↓ requires</div>';
+    });
+    document.getElementById('dep').innerHTML=h+'</div>';
+  } else {(function(){
+    const W=900,H=250,NS='http://www.w3.org/2000/svg',w=110,hh=42,y=72;
+    const m=main.map((n,i)=>({l:n[0],c:n[1],x:[14,150,262,392,512,626,752][i]}));
+    const fd=[{l:'Memory',x:392,y:158,c:'#a78bfa'},{l:'Interconnect',x:262,y:158,c:'#fb7185'}];
+    let s=`<svg class="dep" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>`;
+    [...new Set([...m,...fd].map(n=>n.c))].forEach(c=>{s+=`<marker id="m${san(c)}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${c}"/></marker>`;});
+    s+=`</defs><text x="${W-4}" y="14" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#5d626d">arrows read “requires” — follow the need rightward</text>`;
+    for(let i=0;i<m.length-1;i++){const a=m[i],b=m[i+1];s+=`<path d="M${a.x+w},${y+hh/2} L${b.x},${y+hh/2}" stroke="${b.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san(b.c)})"/>`;}
+    fd.forEach(f=>{s+=`<path d="M${f.x+w/2},${f.y} L${392+w/2},${y+hh}" stroke="${f.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san('#5ea8ff')})" opacity=".85"/>`;});
+    [...m.map(n=>({...n,y})),...fd].forEach(n=>{s+=`<g class="dnode"><rect x="${n.x}" y="${n.y}" width="${w}" height="${hh}" rx="10" fill="#13141a" stroke="${n.c}" stroke-width="1.5"/><text x="${n.x+w/2}" y="${n.y+hh/2+4}" text-anchor="middle" fill="${n.c}">${n.l}</text></g>`;});
+    document.getElementById('dep').innerHTML=s;
+  })();}
+}
 
 /* ---- cycle gauges (the four numbers named in the verbatim sentence; tech only) ---- */
 if(document.getElementById('gauges')){
@@ -283,19 +353,29 @@ const LAYOUT={
 };
 const DOWN=[['semicap equipment','foundry'],['foundry','AI silicon'],['AI silicon','AI infrastructure'],['AI infrastructure','software']];
 const FEED=[['semiconductor IP','AI silicon'],['memory','AI silicon'],['optical/connectivity','AI infrastructure']];
-if(document.getElementById('map'))(function(){
-  const NS='http://www.w3.org/2000/svg',W=730,H=716;
-  const themes=Object.keys(LAYOUT);
-  const markers=themes.map(t=>`<marker id="ah-${san(t)}" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${TC[t]}"/></marker>`).join('');
-  const aDown=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],x=a.x+a.w/2;return `<path d="M${x},${a.y+a.h} L${x},${b.y}" stroke="${TC[t]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(t)})"/>`;};
-  const aFeed=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],sx=a.x,sy=a.y+a.h/2,ex=b.x+b.w,ey=b.y+b.h/2,cx=(sx+ex)/2;return `<path d="M${sx},${sy} C${cx},${sy} ${cx},${ey} ${ex},${ey}" stroke="${TC[f]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(f)})"/>`;};
-  const box=t=>{const b=LAYOUT[t],p=PH[t];const chips=p.tickers.map(tk=>`<span class="tkn" data-t="${tk}">${tk}</span>`).join('');
-    return `<foreignObject x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"><div xmlns="http://www.w3.org/1999/xhtml" class="nodebox" style="--c:${TC[t]}">
-      <div class="phaseboxh" data-p="${p.slug}">${ICONS[t]}<span class="t">${p.title}</span><span class="i">jump ›</span></div>
-      <div class="chips">${chips}</div></div></foreignObject>`;};
-  document.getElementById('map').innerHTML=`<svg class="map" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>${markers}</defs>`+
-    DOWN.map(a=>aDown(a[0],a[1])).join('')+FEED.map(a=>aFeed(a[0],a[1])).join('')+themes.map(box).join('')+`</svg>`;
-})();
+if(document.getElementById('map')){
+  const card=t=>{const p=PH[t];const chips=p.tickers.map(tk=>`<span class="tkn" data-t="${tk}">${tk}</span>`).join('');
+    return `<div class="nodebox" style="--c:${TC[t]}"><div class="phaseboxh" data-p="${p.slug}">${ICONS[t]}<span class="t">${p.title}</span><span class="i">jump ›</span></div><div class="chips">${chips}</div></div>`;};
+  if(APP){
+    const chain=['semicap equipment','foundry','AI silicon','AI infrastructure','software'];
+    const feedBy={'AI silicon':['semiconductor IP','memory'],'AI infrastructure':['optical/connectivity']};
+    let h='<div class="dia-cap">↓ = supplies / sells to · dashed groups feed the chain</div><div class="sup-flow">';
+    chain.forEach((t,i)=>{
+      h+=card(t);
+      if(feedBy[t])h+=`<div class="sup-feedrow"><span class="frl">↳ also fed by</span>${feedBy[t].map(card).join('')}</div>`;
+      if(i<chain.length-1)h+='<div class="dia-arrow">↓ supplies</div>';
+    });
+    document.getElementById('map').innerHTML=h+'</div>';
+  } else {(function(){
+    const NS='http://www.w3.org/2000/svg',W=730,H=716,themes=Object.keys(LAYOUT);
+    const markers=themes.map(t=>`<marker id="ah-${san(t)}" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${TC[t]}"/></marker>`).join('');
+    const aDown=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],x=a.x+a.w/2;return `<path d="M${x},${a.y+a.h} L${x},${b.y}" stroke="${TC[t]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(t)})"/>`;};
+    const aFeed=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],sx=a.x,sy=a.y+a.h/2,ex=b.x+b.w,ey=b.y+b.h/2,cx=(sx+ex)/2;return `<path d="M${sx},${sy} C${cx},${sy} ${cx},${ey} ${ex},${ey}" stroke="${TC[f]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(f)})"/>`;};
+    const box=t=>{const b=LAYOUT[t];return `<foreignObject x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"><div xmlns="http://www.w3.org/1999/xhtml">${card(t)}</div></foreignObject>`;};
+    document.getElementById('map').innerHTML=`<svg class="map" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>${markers}</defs>`+
+      DOWN.map(a=>aDown(a[0],a[1])).join('')+FEED.map(a=>aFeed(a[0],a[1])).join('')+themes.map(box).join('')+`</svg>`;
+  })();}
+}
 
 /* tap diagram -> jump to section/company (and open the collapsed card) */
 document.addEventListener('click',e=>{

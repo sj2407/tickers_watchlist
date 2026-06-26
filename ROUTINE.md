@@ -58,6 +58,14 @@ resolved from the REAL market session via `tracker.run --mode auto` → `calenda
 - **Never delete/null an output** — narrative is carried forward for all names; you only OVERWRITE
   (full: all; intraday: triggered). A failed enrich leaves the prior read intact.
 - Decision-support, not advice — the user places every order.
+- **Ground every claim about the book as a whole in `portfolio.composition`, never recall.**
+  Any portfolio-LEVEL statement — counts ("two healthcare names", "X of N"), superlatives
+  ("the only", "the one", "the biggest position", "most of the book"), or "off the AI complex"
+  type groupings — must match the snapshot: `portfolio.composition.by_theme` (member list +
+  count per theme) and the per-ticker `theme` field. "The AI complex" is the union of the
+  semis/AI themes (memory, semicap equipment, foundry, AI silicon, optical/connectivity, AI
+  infrastructure, software, semiconductor IP); names in other themes are NOT in it. If a name
+  is under `composition.untagged`, you don't have ground truth for its bucket — don't assert one.
 - **Don't narrate `data_health.equity_cache_age_hours` as staleness** — when that cache is >36h old
   the pipeline self-fetches fresh fundamentals, so its age is a diagnostic, not a data note. Only
   surface what the snapshot actually flags (`tickers_price_carried`, `tickers_missing_news`,

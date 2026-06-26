@@ -28,6 +28,41 @@ sector_etf:
   NVDA: XLK
   MSFT: XLK
 
+# Theme bucket per ticker. Purely descriptive ground truth: the pipeline rolls these
+# up into snapshot.portfolio.composition (counts + member lists per theme) so the
+# routine grounds portfolio-LEVEL claims ("the only healthcare name", "two GLP-1
+# names", "most of the book is semis") in data instead of recall. Names tracked but
+# absent here show up under composition.untagged so a missing tag is visible.
+# Granular on purpose — coarse groupings (e.g. "the AI complex") are unions of these.
+theme:
+  # --- semis / AI hardware-software complex ---
+  MU: memory
+  SNDK: memory
+  AMAT: semicap equipment
+  KLAC: semicap equipment
+  LRCX: semicap equipment
+  ASML: semicap equipment
+  TSM: foundry
+  NVDA: AI silicon
+  AVGO: AI silicon
+  MRVL: AI silicon
+  COHR: optical/connectivity
+  LITE: optical/connectivity
+  CRDO: optical/connectivity
+  CRWV: AI infrastructure
+  CRWD: software
+  NOW: software
+  CEVA: semiconductor IP
+  # --- off the semis/AI complex ---
+  LLY: healthcare/GLP-1
+  HIMS: healthcare/GLP-1
+  MP: rare-earth materials
+  OUST: lidar
+  IONQ: quantum computing
+  # --- sample/file-mode names ---
+  AAPL: consumer tech
+  MSFT: software
+
 # Thresholds for the rule-based signal layer (the routine refines the final call).
 signals:
   rsi_overbought: 70

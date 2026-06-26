@@ -72,6 +72,7 @@ _DEFAULTS: dict[str, Any] = {
     },
     "tickers": [],
     "sector_etf": {},  # optional ticker -> sector ETF for relative strength
+    "theme": {},       # optional ticker -> theme bucket (grounds portfolio.composition)
 }
 
 

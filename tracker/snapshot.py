@@ -133,6 +133,7 @@ def build_ticker_row(tk, h, q, last, cfg, today, bench_hist, book_value, holding
 
     row: dict[str, Any] = {
         "ticker": tk,
+        "theme": (cfg.get("theme") or {}).get(tk),  # grounds portfolio.composition
         "price": {
             "last": last, "prev_close": q.get("prev_close"), "open": q.get("open"),
             "day_high": q.get("day_high"), "day_low": q.get("day_low"),
@@ -457,6 +458,26 @@ def _portfolio_block(rows: list[dict[str, Any]], book_value: float) -> dict[str,
         "positions_count": len(held),
         "top_gainer": movers[-1] if movers else None,
         "top_loser": movers[0] if movers else None,
+        "composition": _composition_block(rows),
+    }
+
+
+def _composition_block(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Ground-truth book breakdown by theme, so the routine grounds portfolio-level
+    claims ("the only X", "two healthcare names", "most of the book is Y") in data
+    instead of recall. `untagged` surfaces names with no theme so a missing tag is
+    visible rather than silently miscounted."""
+    by_theme: dict[str, list[str]] = {}
+    untagged: list[str] = []
+    for r in rows:
+        th = r.get("theme")
+        (by_theme.setdefault(th, []) if th else untagged).append(r["ticker"])
+    return {
+        "by_theme": {
+            th: {"count": len(tks), "tickers": sorted(tks)}
+            for th, tks in sorted(by_theme.items())
+        },
+        "untagged": sorted(untagged),
     }
 
 

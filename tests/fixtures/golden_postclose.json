@@ -112,6 +112,13 @@
  "performance": null,
  "portfolio": {
   "book_value": 2580.0,
+  "composition": {
+   "by_theme": {},
+   "untagged": [
+    "AAA",
+    "BBB"
+   ]
+  },
   "invested": 1600.0,
   "positions_count": 2,
   "top_gainer": [
@@ -1746,6 +1753,7 @@
     "support_price": 173.42,
     "trend": "uptrend"
    },
+   "theme": null,
    "thesis_break": {
     "any": false,
     "margin_compression": false,
@@ -3351,6 +3359,7 @@
     "support_price": 376.42,
     "trend": "uptrend"
    },
+   "theme": null,
    "thesis_break": {
     "any": true,
     "margin_compression": null,

@@ -6,8 +6,9 @@
 <title>Primer · Field guide, Part 3: Frontier and enabling tech</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<script>/* embedded-in-app variant: ?theme=app swaps to the app's Geist look + compact scale */
-try{if(new URLSearchParams(location.search).get('theme')==='app')document.documentElement.dataset.theme='app';}catch(e){}</script>
+<script>/* App/phone format is the DEFAULT (Geist, compact, vertical readable diagrams,
+   interactive donuts). Opt into the editorial wide/serif look with ?theme=editorial. */
+try{if(new URLSearchParams(location.search).get('theme')!=='editorial')document.documentElement.dataset.theme='app';}catch(e){document.documentElement.dataset.theme='app';}</script>
 <style>
   :root{
     --bg:#0a0a0d; --surface-1:#121217; --surface-2:#1a1b22; --hairline:rgba(255,255,255,.09);

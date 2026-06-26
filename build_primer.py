@@ -775,9 +775,18 @@ def healthcare_parts(model, pfx=""):
     l1_body = f'<div class="prose">{"".join(parts)}</div>'
 
     force_accents = ["#fbbf63", "#a78bfa", "#fb7185", "#5ea8ff", "#2dd4bf"]
+    hfic = [
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3.3 7L12 12l8.7-5M12 12v9"/></svg>',  # supply (box)
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="20" height="8" rx="4"/><path d="M12 8v8"/></svg>',  # pills
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13l-7 7-9-9V4h7z"/><circle cx="7.5" cy="7.5" r="1.1"/></svg>',  # price tag
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>',  # new uses (expand)
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>',  # regulation (shield)
+    ]
     forces = "".join(
         f'<div class="force" style="--cat:{force_accents[(f["num"] - 1) % len(force_accents)]}">'
-        f'<div class="fn">{f["num"]}</div><div class="ft">{lead_para(f["lead"], f["body"])}</div></div>'
+        f'<div class="force-side"><span class="fn">{f["num"]}</span>'
+        f'<span class="force-ic">{hfic[(f["num"] - 1) % len(hfic)]}</span></div>'
+        f'<div class="ft">{lead_para(f["lead"], f["body"])}</div></div>'
         for f in model["forces"])
 
     co = "".join(company_html(c, accent, names) for c in model["companies"])

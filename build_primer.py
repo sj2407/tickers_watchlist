@@ -24,7 +24,8 @@ SRC_HEALTH = ROOT / "primer-content-healthcare.md"
 OUT_HEALTH = ROOT / "primer-healthcare.html"
 SRC_FRONTIER = ROOT / "primer-content-frontier.md"
 OUT_FRONTIER = ROOT / "primer-frontier.html"
-OUT_ALL = ROOT / "web" / "public" / "primer.html"  # consolidated, deployable static file
+OUT_ALL = ROOT / "web" / "public" / "primer.html"  # in-app tab iframes this (same-origin)
+OUT_STANDALONE = ROOT / "primer-standalone" / "index.html"  # its own Vercel project (public)
 
 # ---- theme taxonomy -> accent colour (vivid, AA on near-black; neighbours in the
 #      reading sequence differ in hue family so adjacent sections never clash) ----
@@ -1032,9 +1033,10 @@ def main():
     # consolidated build (all three with a sector toggle)
     if not only or "all" in only:
         combined = build_all()
-        OUT_ALL.parent.mkdir(parents=True, exist_ok=True)
-        OUT_ALL.write_text(combined, encoding="utf-8")
-        print(f"[all] wrote {OUT_ALL.relative_to(ROOT)} ({len(combined)} bytes)")
+        for out in (OUT_ALL, OUT_STANDALONE):
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(combined, encoding="utf-8")
+            print(f"[all] wrote {out.relative_to(ROOT)} ({len(combined)} bytes)")
         if audit_mode:
             mds = [SRC_TECH.read_text(encoding="utf-8"), SRC_HEALTH.read_text(encoding="utf-8"),
                    SRC_FRONTIER.read_text(encoding="utf-8")]

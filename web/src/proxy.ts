@@ -12,8 +12,7 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico" ||
-    pathname === "/primer.html" // public so the standalone field guide can be shared
+    pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
   }

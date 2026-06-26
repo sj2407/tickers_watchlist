@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Primer · Field guide, Part 2: Healthcare, the GLP-1 ecosystem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0d; --surface-1:#121217; --surface-2:#1a1b22; --hairline:rgba(255,255,255,.09);
+    --ink-0:#f4f5f7; --ink-1:#c7cad1; --ink-2:#9499a3; --ink-3:#5d626d;
+    --serif:'Fraunces',Georgia,serif; --sans:'Hanken Grotesk',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+    --cat:#5ea8ff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink-1);font-family:var(--sans);font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(1200px 700px at 82% -10%,rgba(94,168,255,.10),transparent 60%);}
+  ::selection{background:rgba(94,168,255,.28);color:#fff}
+  a{color:inherit}
+  h1,h2,h3,h4{text-wrap:balance}
+  p{text-wrap:pretty}
+
+  /* layout */
+  .layout{display:grid;grid-template-columns:236px minmax(0,1fr);max-width:1180px;margin:0 auto;gap:0}
+  .main{min-width:0;padding:40px clamp(18px,4vw,64px) 120px;max-width:920px}
+  .prose{max-width:720px}
+
+  /* sticky contents nav */
+  .nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:34px 14px 40px 24px;border-right:1px solid var(--hairline)}
+  .nav-title{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);line-height:1.5;margin-bottom:18px}
+  .nav a{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink-2);font-size:13px;padding:5px 0;transition:color .15s}
+  .nav a:hover{color:var(--ink-0)}
+  .nav-top{font-weight:600;color:var(--ink-1);margin-top:12px}
+  .nav-top .nr{font-family:var(--mono);font-size:10px;color:var(--ink-3);min-width:20px}
+  .nav-sub{padding-left:4px;font-size:12.5px}
+  .nav-sub .dot{width:8px;height:8px;border-radius:50%;flex:none;opacity:.85}
+  .nav a.active{color:var(--ink-0)}
+  .nav-sub.active{font-weight:600}
+
+  /* hero */
+  .eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--cat)}
+  .hero{padding:26px 0 8px}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,7vw,68px);line-height:1.04;letter-spacing:-.02em;margin:10px 0 0;color:var(--ink-0)}
+  h1 em{font-style:italic;color:var(--cat)}
+  .deck{font-size:20px;line-height:1.55;color:var(--ink-1);margin:18px 0 0;max-width:60ch}
+
+  /* section heads with ghosted numeral */
+  .sec{padding-top:84px;position:relative}
+  .sec-head{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px;border-top:1px solid var(--hairline);padding-top:30px}
+  .sec-no{font-family:var(--serif);font-weight:600;font-size:56px;line-height:.8;color:var(--cat);flex:none;margin-top:-4px;
+    -webkit-text-fill-color:transparent;-webkit-text-stroke:1.5px var(--cat);text-shadow:0 0 24px color-mix(in srgb,var(--cat) 40%,transparent)}
+  .sec-head h2{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4vw,40px);line-height:1.08;letter-spacing:-.01em;margin:4px 0 0;color:var(--ink-0)}
+  .lead{font-size:18.5px;color:var(--ink-1);margin:0 0 18px;max-width:68ch}
+
+  /* figures / emphasis */
+  .fig{font-family:var(--mono);font-weight:600;font-size:.92em;font-variant-numeric:tabular-nums;letter-spacing:-.01em;color:var(--cat);white-space:nowrap}
+  .ent{font-weight:600;color:var(--ink-0)}
+  .key{font-style:italic;font-weight:600;color:var(--ink-0)}
+  .lead-in{font-weight:700;color:var(--ink-0)}
+  .takeaway{font-size:1.12em;line-height:1.5;color:var(--ink-0);margin:18px 0;padding:14px 0 14px 20px;
+    border-left:3px solid var(--cat);background:linear-gradient(90deg,color-mix(in srgb,var(--cat) 9%,transparent),transparent 62%)}
+  .takeaway p{margin:0}
+
+  /* L1 concept blocks */
+  .concept{margin:0 0 12px;padding:13px 16px;border:1px solid var(--hairline);border-radius:12px;background:var(--surface-1)}
+  .concept p{margin:0;font-size:16px;color:var(--ink-1)}
+  .concept.bullet{margin-left:18px;border-left:3px solid var(--cat)}
+
+  /* four forces */
+  .forces{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .force{border:1px solid var(--hairline);border-top:3px solid var(--cat);border-radius:14px;background:var(--surface-1);padding:16px 17px;display:flex;gap:13px}
+  .force .fn{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--cat);background:color-mix(in srgb,var(--cat) 16%,transparent);
+    border-radius:9px;height:30px;min-width:30px;display:flex;align-items:center;justify-content:center;flex:none}
+  .force .ft p{margin:0;font-size:15px;color:var(--ink-1)}
+
+  /* gauges */
+  .gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+  .gauge{border:1px solid var(--hairline);border-radius:13px;background:var(--surface-1);padding:14px 15px}
+  .gauge .gn{font-size:14.5px;font-weight:600;color:var(--ink-0)}
+  .gauge .gv{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:7px;display:flex;align-items:center;gap:7px}
+  .gauge .gd{width:9px;height:9px;border-radius:50%;background:var(--cat);box-shadow:0 0 10px var(--cat)}
+
+  /* breakout figures (diagrams) wider than prose */
+  .breakout{margin:6px 0 4px;width:100%}
+  .depmap,.supmap{border:1px solid var(--hairline);border-radius:18px;background:linear-gradient(180deg,rgba(94,168,255,.05),var(--surface-1));padding:12px}
+  svg.dep,svg.map{display:block;width:100%;height:auto}
+  .dnode{cursor:pointer}
+  .dnode:hover rect{filter:brightness(1.3)}
+  .dnode text{font-family:var(--mono);font-size:11px;font-weight:700;pointer-events:none}
+  .legend-row{display:flex;flex-wrap:wrap;gap:8px 18px;padding:6px 8px 12px;font-size:11.5px;color:var(--ink-2)}
+  .legend-row b{color:var(--ink-1)}
+
+  /* supply-chain map node boxes */
+  .nodebox{height:100%;border-radius:13px;border:1.5px solid var(--c);background:#13141a;box-shadow:0 12px 30px -18px var(--c);display:flex;flex-direction:column;overflow:hidden}
+  .phaseboxh{display:flex;align-items:center;gap:7px;padding:8px 11px;background:color-mix(in srgb,var(--c) 18%,transparent);border-bottom:1px solid color-mix(in srgb,var(--c) 32%,transparent);cursor:pointer}
+  .phaseboxh:hover{background:color-mix(in srgb,var(--c) 28%,transparent)}
+  .phaseboxh svg{width:15px;height:15px;color:var(--c);flex:none}
+  .phaseboxh .t{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--c);flex:1}
+  .phaseboxh .i{font-size:10px;color:var(--c);opacity:.7}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px;align-content:flex-start}
+  .tkn{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink-0);background:#20212a;border:1px solid var(--hairline);border-radius:7px;padding:3px 8px;cursor:pointer;transition:.14s;white-space:nowrap}
+  .tkn:hover{border-color:var(--c);color:#fff;transform:translateY(-1px)}
+
+  /* phase sections */
+  .phase{padding-top:54px}
+  .phase-band{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;margin-bottom:18px;
+    background:linear-gradient(100deg,color-mix(in srgb,var(--cat) 20%,transparent),color-mix(in srgb,var(--cat) 5%,transparent) 70%);
+    border:1px solid color-mix(in srgb,var(--cat) 30%,transparent)}
+  .phase-no{font-family:var(--serif);font-weight:600;font-size:40px;line-height:.8;color:var(--cat);flex:none;opacity:.85}
+  .phase-ic{width:30px;height:30px;color:var(--cat);flex:none}
+  .phase-ic svg{width:30px;height:30px}
+  .phase-tt .eyebrow{color:var(--cat)}
+  .phase-h{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.1;margin:3px 0 0;color:var(--ink-0)}
+
+  .glance{border:1px solid var(--hairline);border-left:3px solid var(--cat);border-radius:0 14px 14px 0;background:var(--surface-1);padding:6px 18px 10px;margin-bottom:18px}
+
+  /* labelled fields */
+  .fld{margin:16px 0}
+  .lab{display:block;font-family:var(--mono);font-size:15.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--cat);margin-bottom:5px}
+  .fld-p{margin:0;font-size:15.5px;color:var(--ink-1)}
+
+  /* charts */
+  .charts{display:flex;flex-wrap:wrap;gap:16px;margin:6px 0 20px}
+  .chart{flex:1 1 300px;min-width:280px;border:1px solid var(--hairline);border-radius:14px;background:var(--surface-1);padding:15px 16px;margin:0}
+  .chart-body{display:flex;align-items:center;gap:16px}
+  .donut{width:150px;height:150px;flex:none}
+  .d-big{font-family:var(--mono);font-weight:600;font-size:30px;fill:var(--ink-0);font-variant-numeric:tabular-nums}
+  .d-small{font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;fill:var(--ink-2)}
+  .legend{list-style:none;margin:0;padding:0;display:grid;gap:6px;flex:1;min-width:0}
+  .legend li{display:grid;grid-template-columns:11px 1fr auto;align-items:center;gap:9px;font-size:13px;color:var(--ink-2)}
+  .legend li.me{color:var(--ink-0);font-weight:600}
+  .legend .sw{width:11px;height:11px;border-radius:3px}
+  .legend .ln{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .legend .fig{background:none;box-shadow:none;color:var(--ink-2);padding:0}
+  .legend li.me .fig{color:var(--cat)}
+  figcaption{font-size:11.5px;color:var(--ink-3);margin-top:12px;font-family:var(--mono)}
+  /* bars */
+  .barset{display:grid;gap:11px}
+  .bar-row{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:13px}
+  .bar-label{font-size:14px;color:var(--ink-1)}
+  .bar-row.me .bar-label{color:var(--ink-0);font-weight:600}
+  .bar-track{height:15px;border-radius:8px;background:var(--surface-2);overflow:hidden}
+  .bar-fill{display:block;height:100%;min-width:3px;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--cat) 60%,#000),var(--cat))}
+  .bars .fig{background:none;box-shadow:none;color:var(--ink-0)}
+  /* mechanism diagram (e.g. GLP-1 three effects) */
+  .mech{display:flex;flex-wrap:wrap;gap:12px;width:100%}
+  .mech-card{flex:1 1 150px;border:1px solid var(--hairline);border-top:3px solid var(--cat);border-radius:13px;background:var(--surface-2);padding:15px;text-align:center}
+  .mech-ic{width:34px;height:34px;margin:0 auto 9px;color:var(--cat)}
+  .mech-ic svg{width:34px;height:34px}
+  .mech-t{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink-0)}
+  .mech-s{font-size:13px;color:var(--ink-2);margin-top:3px}
+
+  /* company cards */
+  .co-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 12px}
+  .co-list-lab{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-1)}
+  .co-count{font-size:12px;color:var(--bg);background:var(--cat);border-radius:20px;padding:1px 9px}
+  .expand-all{font-family:var(--mono);font-size:12px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--hairline);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .expand-all:hover{color:var(--ink-0);border-color:var(--ink-3)}
+  .co{border:1px solid var(--hairline);border-radius:16px;background:var(--surface-1);margin:11px 0;overflow:hidden}
+  .co[open]{border-color:color-mix(in srgb,var(--cat) 45%,var(--hairline))}
+  .co-h{display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;list-style:none;
+    background:linear-gradient(100deg,color-mix(in srgb,var(--cat) 13%,transparent),transparent 65%)}
+  .co-h::-webkit-details-marker{display:none}
+  .co[open] .co-h{border-bottom:1px solid var(--hairline)}
+  .co-h:hover{background:linear-gradient(100deg,color-mix(in srgb,var(--cat) 20%,transparent),transparent 65%)}
+  .co-tk{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--bg);background:var(--cat);border-radius:8px;padding:4px 11px;flex:none}
+  .co-n{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink-0);margin:0;flex:1}
+  .chev{width:20px;height:20px;color:var(--cat);flex:none;transition:transform .18s}
+  .co[open] .chev{transform:rotate(90deg)}
+  .co-body{padding:4px 18px 18px}
+
+  /* scenarios */
+  .scn-wrap{margin:16px 0 4px}
+  .scn-rows{display:grid;gap:8px}
+  .scn{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:start;padding:11px 13px;border-radius:11px;border:1px solid var(--hairline);background:var(--surface-2)}
+  .scn-k{font-family:var(--mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding-top:1px}
+  .scn-p{margin:0;font-size:15px;color:var(--ink-1)}
+  .scn.worst{border-left:3px solid #fb7185}.scn.worst .scn-k{color:#fb7185}
+  .scn.base{border-left:3px solid var(--ink-3)}.scn.base .scn-k{color:var(--ink-2)}
+  .scn.best{border-left:3px solid #4ade80}.scn.best .scn-k{color:#4ade80}
+
+  /* supply links */
+  .supply p{margin:0;font-size:14px;color:var(--ink-2)}
+  .supply .tk{font-family:var(--mono);font-weight:700;color:var(--ink-1);text-decoration:none;border-bottom:1px dotted var(--ink-3)}
+  .supply .tk:hover{color:var(--cat);border-color:var(--cat)}
+
+  /* one minute + sources */
+  .onemin{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+  .onemin li{border:1px solid var(--hairline);border-left:3px solid var(--cat);border-radius:0 12px 12px 0;background:var(--surface-1);padding:13px 16px;font-size:15.5px;color:var(--ink-1)}
+  .sources{display:grid}
+  .srcrow{display:grid;gap:3px;border-bottom:1px solid var(--hairline);padding:10px 0}
+  .srcrow .sl{font-size:14px;color:var(--ink-1)}
+  .srcrow .slk a{font-family:var(--mono);font-size:11px;color:var(--ink-3);text-decoration:none;margin-right:14px}
+  .srcrow .slk a:hover{color:var(--cat)}
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--hairline);font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--ink-3)}
+
+  @media(max-width:1040px){
+    .layout{grid-template-columns:1fr}
+    .nav{display:none}
+  }
+  @media(max-width:620px){
+    .forces{grid-template-columns:1fr}
+    .gauges{grid-template-columns:1fr 1fr}
+    .chart-body{flex-direction:column;align-items:flex-start}
+    .donut{width:130px;height:130px;align-self:center}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="nav"><div class="nav-in"><div class="nav-title">Field guide<br>· Healthcare ·</div>
+<a class="nav-top" href="#sec-1"><span class="nr">I</span>How the ecosystem works</a>
+<a class="nav-top" href="#sec-2"><span class="nr">II</span>The forces that move it</a>
+<a class="nav-top" href="#sec-3"><span class="nr">III</span>Indicators to watch</a>
+<a class="nav-top" href="#sec-4"><span class="nr">IV</span>The companies</a>
+<a class="nav-sub" href="#co-LLY"><span class="dot" style="background:#34d399"></span>LLY · Eli Lilly</a>
+<a class="nav-sub" href="#co-HIMS"><span class="dot" style="background:#34d399"></span>HIMS · Hims &amp; Hers</a>
+<a class="nav-top" href="#sec-5"><span class="nr">V</span>Sources</a></div></aside>
+  <main class="main"><header class="hero" style="--cat:#34d399"><div class="eyebrow">The watchlist · a field guide</div><h1>The <em>GLP-1</em> ecosystem</h1><p class="deck" data-src="Both of your healthcare names ride one event: the arrival of drugs that let people lose large amounts of weight safely, often 15 to 22% of body weight. This has turned obesity and type 2 diabetes, two of the largest and most expensive health problems in the world, into the fastest growing market in medicine. One name (LLY) makes the drugs; the other (HIMS) sells access to treatments online.">Both of your healthcare names ride one event: the arrival of drugs that let people lose large amounts of weight safely, often <span class="fig">15 to 22%</span> of body weight. This has turned obesity and type 2 diabetes, two of the largest and most expensive health problems in the world, into the fastest growing market in medicine. One name (LLY) makes the drugs; the other (HIMS) sells access to treatments online.</p></header><section class="sec" id="sec-1" style="--cat:#34d399"><div class="sec-head"><span class="sec-no">I</span><div><span class="eyebrow">The system</span><h2>How the ecosystem works</h2></div></div><div class="prose"><div class="fld"><span class="lab">Why it exists</span><p class="fld-p" data-src="Obesity and type 2 diabetes affect hundreds of millions of people and drive a large share of healthcare costs. Until recently, no medicine treated them well. The new GLP-1 drugs change that: they produce weight loss that used to require surgery. Demand is enormous, and for years the binding constraint has not been demand but the ability to manufacture enough. That single fact, demand far above supply, is the force behind everything in this ecosystem.">Obesity and type 2 diabetes affect hundreds of millions of people and drive a large share of healthcare costs. Until recently, no medicine treated them well. The new GLP-1 drugs change that: they produce weight loss that used to require surgery. Demand is enormous, and for years the binding constraint has not been demand but the ability to manufacture enough. That single fact, demand far above supply, is the force behind everything in this ecosystem.</p></div><div class="fld"><span class="lab">How the drugs actually work</span><p class="fld-p" data-src="A hormone is a chemical messenger the body releases into the blood to tell organs what to do. After you eat, the gut releases a hormone called GLP-1 (glucagon-like peptide-1). GLP-1 does three useful things: it acts on the appetite center of the brain (the hypothalamus) to make you feel full and reduces the hunger hormone ghrelin, it slows how fast the stomach empties so fullness lasts longer, and it helps the body manage blood sugar. These drugs are agonists, meaning they are built to mimic that hormone and switch on the same receptors. Injected weekly, they keep the &quot;I am full&quot; signal on, so people eat less and lose weight. Novo Nordisk&#x27;s molecule is called semaglutide (sold as Ozempic for diabetes and Wegovy for obesity). Eli Lilly&#x27;s molecule, tirzepatide (sold as Mounjaro for diabetes and Zepbound for obesity), goes one step further: it mimics GLP-1 and a second gut hormone called GIP at the same time, which in trials produces more weight loss, and is the main reason Lilly has pulled ahead.">A hormone is a chemical messenger the body releases into the blood to tell organs what to do. After you eat, the gut releases a hormone called GLP-1 (glucagon-like peptide-1). GLP-1 does three useful things: it acts on the appetite center of the brain (the hypothalamus) to make you feel full and reduces the hunger hormone ghrelin, it slows how fast the stomach empties so fullness lasts longer, and it helps the body manage blood sugar. These drugs are <span class="key">agonists</span>, meaning they are built to mimic that hormone and switch on the same receptors. Injected weekly, they keep the &quot;I am full&quot; signal on, so people eat less and lose weight. <span class="ent">Novo Nordisk</span>&#x27;s molecule is called <span class="ent">semaglutide</span> (sold as <span class="ent">Ozempic</span> for diabetes and <span class="ent">Wegovy</span> for obesity). <span class="ent">Eli Lilly</span>&#x27;s molecule, <span class="ent">tirzepatide</span> (sold as <span class="ent">Mounjaro</span> for diabetes and <span class="ent">Zepbound</span> for obesity), goes one step further: it mimics GLP-1 and a second gut hormone called GIP at the same time, which in trials produces more weight loss, and is the main reason <span class="ent">Lilly</span> has pulled ahead.</p></div><figure class="chart" style="--cat:#34d399"><div class="mech"><div class="mech-card"><div class="mech-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V14a3 3 0 0 0 4 3 3 3 0 0 0 3 0V6a3 3 0 0 0-3-3z"/><path d="M15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V14a3 3 0 0 1-4 3"/></svg></div><div class="mech-t">Brain</div><div class="mech-s">feel full, less ghrelin</div></div><div class="mech-card"><div class="mech-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a4 4 0 0 0 4 4h2a4 4 0 0 1 4 4 5 5 0 0 1-5 5c-5 0-8-3-8-8V6"/></svg></div><div class="mech-t">Stomach</div><div class="mech-s">empties slower</div></div><div class="mech-card"><div class="mech-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg></div><div class="mech-t">Blood sugar</div><div class="mech-s">better control</div></div></div><figcaption>How a GLP-1 drug works: it mimics the gut hormone and switches on the same three effects</figcaption></figure><div class="fld"><span class="lab">The landscape</span><p class="fld-p" data-src="This is a two-company race. Eli Lilly and Novo Nordisk own almost the entire GLP-1 market between them; Lilly held roughly 57% as of 2025, having overtaken Novo during the year. Around the drugmakers sits a thin distribution layer: telehealth companies that get treatments to patients online without an in-person doctor visit, which is where HIMS plays. Pfizer, Amgen, and others are developing rival drugs but remain far behind.">This is a two-company race. <span class="ent">Eli Lilly</span> and <span class="ent">Novo Nordisk</span> own almost the entire GLP-1 market between them; <span class="ent">Lilly</span> held roughly <span class="fig">57%</span> as of 2025, having overtaken <span class="ent">Novo</span> during the year. Around the drugmakers sits a thin distribution layer: telehealth companies that get treatments to patients online without an in-person doctor visit, which is where HIMS plays. <span class="ent">Pfizer</span>, <span class="ent">Amgen</span>, and others are developing rival drugs but remain far behind.</p></div><div class="charts"><figure class="chart" style="--cat:#34d399"><div class="chart-body"><svg viewBox="0 0 160 160" class="donut" role="img" aria-label="% of the GLP-1 market, 2025 (Lilly and Novo own almost all of it)"><circle cx="80" cy="80" r="64" fill="none" stroke="#1a1b22" stroke-width="24"/><circle cx="80" cy="80" r="64" fill="none" stroke="#34d399" stroke-width="28" stroke-linecap="butt" stroke-dasharray="226.7 175.4" stroke-dashoffset="-0.0" transform="rotate(-90 80 80)"/><circle cx="80" cy="80" r="64" fill="none" stroke="#7b8190" stroke-width="24" stroke-linecap="butt" stroke-dasharray="170.4 231.7" stroke-dashoffset="-229.2" transform="rotate(-90 80 80)"/><text x="80" y="80" text-anchor="middle" class="d-big">57%</text><text x="80" y="98" text-anchor="middle" class="d-small">GLP-1</text></svg><ul class="legend"><li class="me"><span class="sw" style="background:#34d399"></span><span class="ln">Eli Lilly</span><span class="fig">57%</span></li><li class=""><span class="sw" style="background:#7b8190"></span><span class="ln">Novo Nordisk</span><span class="fig">43%</span></li></ul></div><figcaption>% of the GLP-1 market, 2025 (Lilly and Novo own almost all of it)</figcaption></figure></div></div></section><section class="sec" id="sec-2" style="--cat:#34d399"><div class="sec-head"><span class="sec-no">II</span><div><span class="eyebrow">What moves it</span><h2>The forces that move it</h2></div></div><div class="forces"><div class="force" style="--cat:#fbbf63"><div class="fn">1</div><div class="ft"><p data-src="Supply, not demand. For years the limit has been manufacturing capacity for injectable peptides, which is hard and slow to build. Whoever can make more, sells more."><strong class="lead-in">Supply, not demand.</strong> For years the limit has been manufacturing capacity for injectable peptides, which is hard and slow to build. Whoever can make more, sells more.</p></div></div><div class="force" style="--cat:#a78bfa"><div class="fn">2</div><div class="ft"><p data-src="The shift to pills. Injections limit the market. Both leaders are racing to launch GLP-1 pills, which are easier to take and to manufacture; pills are expected to take about 20% of the roughly 80 billion dollar obesity market by 2030."><strong class="lead-in">The shift to pills.</strong> Injections limit the market. Both leaders are racing to launch GLP-1 pills, which are easier to take and to manufacture; pills are expected to take about <span class="fig">20%</span> of the roughly 80 billion dollar obesity market by 2030.</p></div></div><div class="force" style="--cat:#fb7185"><div class="fn">3</div><div class="ft"><p data-src="Price competition. As supply catches up, the leaders have cut direct-to-consumer prices by as much as 80%, which expands access but squeezes anyone reselling the drugs."><strong class="lead-in">Price competition.</strong> As supply catches up, the leaders have cut direct-to-consumer prices by as much as <span class="fig">80%</span>, which expands access but squeezes anyone reselling the drugs.</p></div></div><div class="force" style="--cat:#5ea8ff"><div class="fn">4</div><div class="ft"><p data-src="New uses expand the market. Trials are extending these drugs into heart disease, sleep apnea, and liver disease, each of which enlarges the addressable population."><strong class="lead-in">New uses expand the market.</strong> Trials are extending these drugs into heart disease, sleep apnea, and liver disease, each of which enlarges the addressable population.</p></div></div><div class="force" style="--cat:#2dd4bf"><div class="fn">5</div><div class="ft"><p data-src="Regulation of copies. During shortages, pharmacies were allowed to make cheap compounded copies (a compounded drug is a pharmacy-made version of a drug in short supply). As shortages end, that allowance is being withdrawn, which directly threatens businesses built on selling compounded GLP-1."><strong class="lead-in">Regulation of copies.</strong> During shortages, pharmacies were allowed to make cheap <span class="key">compounded</span> copies (a <span class="key">compounded</span> drug is a pharmacy-made version of a drug in short supply). As shortages end, that allowance is being withdrawn, which directly threatens businesses built on selling <span class="key">compounded</span> GLP-1.</p></div></div></div></section><section class="sec" id="sec-3" style="--cat:#34d399"><div class="sec-head"><span class="sec-no">III</span><div><span class="eyebrow">What to watch</span><h2>Indicators to watch</h2></div></div><p class="lead" data-src="Prescription share between Lilly and Novo, manufacturing-capacity additions, the trial results and launch of the GLP-1 pills, new disease approvals, and pricing.">Prescription share between <span class="ent">Lilly</span> and <span class="ent">Novo</span>, manufacturing-capacity additions, the trial results and launch of the GLP-1 pills, new disease approvals, and pricing.</p></section><section class="sec" id="sec-4" style="--cat:#34d399"><div class="sec-head"><span class="sec-no">IV</span><div><span class="eyebrow">The names</span><h2>The companies</h2></div></div><div class="co-list"><div class="co-list-head"><span class="co-list-lab">The companies <span class="co-count">2</span></span><button class="expand-all" type="button">Expand all</button></div><details class="co" id="co-LLY" style="--cat:#34d399"><summary class="co-h"><span class="co-tk">LLY</span><h4 class="co-n"><span data-src="Eli Lilly">Eli Lilly</span></h4><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></summary><div class="co-body"><div class="fld"><span class="lab">Role</span><p class="fld-p" data-src="One of the two companies that dominate GLP-1, and currently the leader, because its drug works better. Tirzepatide (Mounjaro for diabetes, Zepbound for obesity) is its engine. It also has an approved Alzheimer&#x27;s drug and a deep pipeline of other medicines.">One of the two companies that dominate GLP-1, and currently the leader, because its drug works better. Tirzepatide (<span class="ent">Mounjaro</span> for diabetes, <span class="ent">Zepbound</span> for obesity) is its engine. It also has an approved Alzheimer&#x27;s drug and a deep pipeline of other medicines.</p></div><div class="fld"><span class="lab">Revenue source</span><p class="fld-p" data-src="Sells patented drugs at high margin. The driver today is simply that demand for its GLP-1 drugs runs far ahead of how much it can make, so every increment of new manufacturing turns into sales.">Sells patented drugs at high margin. The driver today is simply that demand for its GLP-1 drugs runs far ahead of how much it can make, so every increment of new manufacturing turns into sales.</p></div><div class="fld"><span class="lab">Competitive landscape</span><p class="fld-p" data-src="Roughly 57% of the GLP-1 market, ahead of Novo Nordisk (Ozempic, Wegovy), the only true rival; together they hold almost the whole market. Pfizer and Amgen are developing competitors, mostly pills, but are years behind. The competition with Novo is fought on three fronts: efficacy (Lilly&#x27;s dual-hormone drug wins), pills (both racing), and price.">Roughly <span class="fig">57%</span> of the GLP-1 market, ahead of <span class="ent">Novo Nordisk</span> (<span class="ent">Ozempic</span>, <span class="ent">Wegovy</span>), the only true rival; together they hold almost the whole market. <span class="ent">Pfizer</span> and <span class="ent">Amgen</span> are developing competitors, mostly pills, but are years behind. The competition with <span class="ent">Novo</span> is fought on three fronts: efficacy (<span class="ent">Lilly</span>&#x27;s dual-hormone drug wins), pills (both racing), and price.</p></div><div class="fld"><span class="lab">Moat</span><p class="fld-p" data-src="Strong and layered: patents on tirzepatide, clinical-trial data showing it produces more weight loss than Novo&#x27;s drug, deep trust with doctors, and the genuinely hard ability to manufacture injectable peptides at massive scale, which takes years and billions to build. Its efficacy lead is the differentiator that is currently taking share from Novo.">Strong and layered: patents on <span class="ent">tirzepatide</span>, clinical-trial data showing it produces more weight loss than <span class="ent">Novo</span>&#x27;s drug, deep trust with doctors, and the genuinely hard ability to manufacture injectable peptides at massive scale, which takes years and billions to build. Its efficacy lead is the differentiator that is currently taking share from <span class="ent">Novo</span>.</p></div><div class="fld"><span class="lab">Indicators to watch</span><p class="fld-p" data-src="Prescription share versus Novo, new manufacturing capacity, the trial results and launch of its GLP-1 pill (orforglipron), new disease approvals, and pricing.">Prescription share versus <span class="ent">Novo</span>, new manufacturing capacity, the trial results and launch of its GLP-1 pill (<span class="ent">orforglipron</span>), new disease approvals, and pricing.</p></div><div class="fld"><span class="lab">Catalysts</span><p class="fld-p" data-src="The oral-pill launch, approvals in new diseases (heart, sleep, liver), and pipeline readouts beyond obesity.">The oral-pill launch, approvals in new diseases (heart, sleep, liver), and pipeline readouts beyond obesity.</p></div><div class="scn-wrap"><span class="lab">Worst / Base / Best</span><div class="scn-rows"><div class="scn worst"><span class="scn-k">Worst</span><p class="scn-p" data-src="A safer or cheaper pill from a rival, or pricing and political pressure, caps the economics and slows growth from spectacular to merely strong.">A safer or cheaper pill from a rival, or pricing and political pressure, caps the economics and slows growth from spectacular to merely strong.</p></div><div class="scn base"><span class="scn-k">Base</span><p class="scn-p" data-src="Demand outruns supply for years and Lilly and Novo split a vast, still-growing market, with Lilly ahead.">Demand outruns supply for years and <span class="ent">Lilly</span> and <span class="ent">Novo</span> split a vast, still-growing market, with <span class="ent">Lilly</span> ahead.</p></div><div class="scn best"><span class="scn-k">Best</span><p class="scn-p" data-src="GLP-1 expands into many new diseases and the pipeline delivers, making Lilly the most valuable drugmaker in the world.">GLP-1 expands into many new diseases and the pipeline delivers, making <span class="ent">Lilly</span> the most valuable drugmaker in the world.</p></div></div></div><div class="fld supply"><span class="lab">Supply links</span><p class="fld-p" data-src="None to the rest of your book. A partial, optional channel link exists to HIMS, which can distribute branded GLP-1, but the relationship is mostly competitive (compounded copies undercut the branded drug). Effectively a standalone name.">None to the rest of your book. A partial, optional channel link exists to HIMS, which can distribute branded GLP-1, but the relationship is mostly competitive (<span class="key">compounded</span> copies undercut the branded drug). Effectively a standalone name.</p></div></div></details><details class="co" id="co-HIMS" style="--cat:#34d399"><summary class="co-h"><span class="co-tk">HIMS</span><h4 class="co-n"><span data-src="Hims &amp; Hers">Hims &amp; Hers</span></h4><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></summary><div class="co-body"><div class="fld"><span class="lab">Role</span><p class="fld-p" data-src="A direct-to-consumer telehealth company (direct-to-consumer, or DTC, means it sells straight to the patient online rather than through a clinic or pharmacy chain). You answer questions online, a clinician reviews them, and treatments arrive by mail on a subscription. It started with everyday, often stigmatized needs (hair loss, erectile dysfunction) and expanded into skincare, mental health, and weight loss.">A direct-to-consumer telehealth company (direct-to-consumer, or DTC, means it sells straight to the patient online rather than through a clinic or pharmacy chain). You answer questions online, a clinician reviews them, and treatments arrive by mail on a subscription. It started with everyday, often stigmatized needs (hair loss, erectile dysfunction) and expanded into skincare, mental health, and weight loss.</p></div><div class="fld"><span class="lab">Revenue source</span><p class="fld-p" data-src="Monthly subscriptions, plus its own pharmacy and labs, which let it keep more of each sale than a reseller would. Sales grew 59% in 2025 to about 2.3 billion dollars, with about 2.5 million subscribers; its weight-loss line was projected near 725 million dollars. The driver is adding categories and keeping subscribers paying month after month.">Monthly subscriptions, plus its own pharmacy and labs, which let it keep more of each sale than a reseller would. Sales grew <span class="fig">59%</span> in 2025 to about <span class="fig">2.3 billion dollars</span>, with about 2.5 million subscribers; its weight-loss line was projected near <span class="fig">725 million dollars</span>. The driver is adding categories and keeping subscribers paying month after month.</p></div><div class="fld"><span class="lab">Competitive landscape</span><p class="fld-p" data-src="It competes with other direct-to-consumer telehealth brands, mainly Ro and LifeMD, and more broadly with general telehealth like Teladoc. It is not a drugmaker. In weight loss it both sells treatments and is squeezed by the branded GLP-1 makers (Lilly and Novo) cutting their direct prices by up to 80%, which slowed its growth in late 2025.">It competes with other direct-to-consumer telehealth brands, mainly <span class="ent">Ro</span> and <span class="ent">LifeMD</span>, and more broadly with general telehealth like <span class="ent">Teladoc</span>. It is not a drugmaker. In weight loss it both sells treatments and is squeezed by the branded GLP-1 makers (<span class="ent">Lilly</span> and <span class="ent">Novo</span>) cutting their direct prices by up to <span class="fig">80%</span>, which slowed its growth in late 2025.</p></div><div class="fld"><span class="lab">Moat</span><p class="fld-p" data-src="Moderate. Its advantages are a trusted consumer brand, a large and growing subscriber base, and vertical integration (owning the pharmacy and the customer data end to end). Its weakness is that switching costs are low and a big part of its weight-loss revenue depends on regulators continuing to allow compounded GLP-1, which is now being withdrawn as shortages end. The durable question is how much of the business survives without compounded GLP-1.">Moderate. Its advantages are a trusted consumer brand, a large and growing subscriber base, and <span class="key">vertical integration</span> (owning the pharmacy and the customer data end to end). Its weakness is that <span class="key">switching costs</span> are low and a big part of its weight-loss revenue depends on regulators continuing to allow <span class="key">compounded</span> GLP-1, which is now being withdrawn as shortages end. The durable question is how much of the business survives without <span class="key">compounded</span> GLP-1.</p></div><div class="fld"><span class="lab">Indicators to watch</span><p class="fld-p" data-src="Subscriber growth, revenue excluding GLP-1 (to see the durable base), retention, the regulatory status of compounded GLP-1, and new category launches.">Subscriber growth, revenue excluding GLP-1 (to see the durable base), retention, the regulatory status of <span class="key">compounded</span> GLP-1, and new category launches.</p></div><div class="fld"><span class="lab">Catalysts</span><p class="fld-p" data-src="New treatment categories, partnerships with the branded drugmakers, and proof that the model holds up after compounded GLP-1 goes away.">New treatment categories, partnerships with the branded drugmakers, and proof that the model holds up after <span class="key">compounded</span> GLP-1 goes away.</p></div><div class="scn-wrap"><span class="lab">Worst / Base / Best</span><div class="scn-rows"><div class="scn worst"><span class="scn-k">Worst</span><p class="scn-p" data-src="Regulators end compounded-GLP-1 access and that category stalls, hitting growth and trust.">Regulators end <span class="key">compounded</span>-GLP-1 access and that category stalls, hitting growth and trust.</p></div><div class="scn base"><span class="scn-k">Base</span><p class="scn-p" data-src="The subscriber base keeps compounding as it diversifies into more categories and weight loss matures into licensed offerings.">The subscriber base keeps compounding as it diversifies into more categories and weight loss matures into licensed offerings.</p></div><div class="scn best"><span class="scn-k">Best</span><p class="scn-p" data-src="It becomes the default consumer-health front door, cross-selling many treatments at high retention.">It becomes the default consumer-health front door, cross-selling many treatments at high retention.</p></div></div></div><div class="fld supply"><span class="lab">Supply links</span><p class="fld-p" data-src="A partial channel link from Lilly and Novo (it can distribute their branded GLP-1), otherwise independent of your book.">A partial channel link from <span class="ent">Lilly</span> and <span class="ent">Novo</span> (it can distribute their branded GLP-1), otherwise independent of your book.</p></div></div></details></div></section><section class="sec" id="sec-5" style="--cat:#34d399"><div class="sec-head"><span class="sec-no">V</span><div><span class="eyebrow">Researched, not recalled</span><h2>Sources</h2></div></div><div class="sources"><div class="srcrow"><span class="sl">Lilly vs Novo GLP-1 share and market size</span><span class="slk"><a href="https://www.spglobal.com/market-intelligence/en/news-insights/articles/2025/8/eli-lilly-set-to-leapfrog-novo-nordisk-in-weightloss-drug-race-91881065" target="_blank" rel="noreferrer">S&amp;P Global, 2025</a> <a href="https://www.cnbc.com/2026/02/04/eli-lilly-novo-nordisk-earnings-glp1-market.html" target="_blank" rel="noreferrer">CNBC, Feb 2026</a></span></div>
+<div class="srcrow"><span class="sl">GLP-1 mechanism</span><span class="slk"><a href="https://www.goodrx.com/classes/gip-receptor-glp-1-receptor-agonists/tirzepatide-mechanism-of-action" target="_blank" rel="noreferrer">GoodRx</a></span></div>
+<div class="srcrow"><span class="sl">Hims &amp; Hers results and GLP-1 exposure</span><span class="slk"><a href="https://www.fiercehealthcare.com/health-tech/hims-hers-bullish-weight-loss-business-despite-glp-1-market-shift" target="_blank" rel="noreferrer">Fierce Healthcare, 2025</a> <a href="https://www.statnews.com/2026/02/23/him-hers-earnings-2026-outlook-compounded-semaglutide/" target="_blank" rel="noreferrer">STAT, Feb 2026</a></span></div></div><footer>Field guide · Healthcare · the GLP-1 ecosystem</footer></section></main>
+</div>
+
+<script>
+const DATA = {};
+const TC = DATA.themeColor||{}, ICONS = DATA.icons||{}, SUP = DATA.supplies||{};
+const PH = {}; (DATA.phases||[]).forEach(p=>PH[p.theme]=p);
+function san(c){return c.replace(/[^A-Za-z]/g,'');}
+
+/* ---- L1 dependency map: concept nodes, "requires" arrows (tech only) ---- */
+if(document.getElementById('dep'))(function(){
+  const W=900,H=250,NS='http://www.w3.org/2000/svg';
+  const main=[
+    {l:'Demand for compute',x:14,c:'#7dd3fc'},
+    {l:'Cloud',x:150,c:'#fbbf63'},
+    {l:'Data center',x:262,c:'#fbbf63'},
+    {l:'Chip (GPU)',x:392,c:'#5ea8ff'},
+    {l:'Designer',x:512,c:'#5ea8ff'},
+    {l:'Foundry',x:626,c:'#2dd4bf'},
+    {l:'Equipment',x:752,c:'#e879c9'},
+  ];
+  const feed=[{l:'Memory',x:392,y:158,c:'#a78bfa'},{l:'Interconnect',x:262,y:158,c:'#fb7185'}];
+  const y=72,w=110,h=42;
+  let s=`<svg class="dep" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>`;
+  [...new Set([...main,...feed].map(n=>n.c))].forEach(c=>{
+    s+=`<marker id="m${san(c)}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${c}"/></marker>`;});
+  s+=`</defs>`;
+  s+=`<text x="${W-4}" y="14" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#5d626d">arrows read “requires” — follow the need rightward</text>`;
+  for(let i=0;i<main.length-1;i++){const a=main[i],b=main[i+1];
+    s+=`<path d="M${a.x+w},${y+h/2} L${b.x},${y+h/2}" stroke="${b.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san(b.c)})"/>`;}
+  feed.forEach(fd=>{s+=`<path d="M${fd.x+w/2},${fd.y} L${392+w/2},${y+h}" stroke="${fd.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san('#5ea8ff')})" opacity=".85"/>`;});
+  [...main.map(n=>({...n,y})),...feed].forEach(n=>{
+    s+=`<g class="dnode"><rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="10" fill="#13141a" stroke="${n.c}" stroke-width="1.5"/>`+
+       `<text x="${n.x+w/2}" y="${n.y+h/2+4}" text-anchor="middle" fill="${n.c}">${n.l}</text></g>`;});
+  document.getElementById('dep').innerHTML=s;
+})();
+
+/* ---- cycle gauges (the four numbers named in the verbatim sentence; tech only) ---- */
+if(document.getElementById('gauges')){
+const GA=[['AI capital spending','rising or being cut','#fbbf63'],['Equipment order books','filling or emptying','#e879c9'],['Memory prices','rising or falling','#a78bfa'],['Chip lead times','stretching or shrinking','#5ea8ff']];
+document.getElementById('gauges').innerHTML=GA.map(([n,v,c])=>`<div class="gauge" style="--cat:${c}"><div class="gn">${n}</div><div class="gv"><span class="gd"></span>${v}</div></div>`).join('');
+}
+
+/* ---- supply-chain map (owned tickers; tap to jump to the section; tech only) ---- */
+const LAYOUT={
+ 'semicap equipment':{x:48,y:24,w:320,h:118},
+ 'foundry':{x:48,y:196,w:320,h:74},
+ 'AI silicon':{x:48,y:324,w:320,h:100},
+ 'AI infrastructure':{x:48,y:478,w:320,h:74},
+ 'software':{x:48,y:606,w:320,h:92},
+ 'semiconductor IP':{x:410,y:214,w:300,h:74},
+ 'memory':{x:410,y:312,w:300,h:94},
+ 'optical/connectivity':{x:410,y:446,w:300,h:100},
+};
+const DOWN=[['semicap equipment','foundry'],['foundry','AI silicon'],['AI silicon','AI infrastructure'],['AI infrastructure','software']];
+const FEED=[['semiconductor IP','AI silicon'],['memory','AI silicon'],['optical/connectivity','AI infrastructure']];
+if(document.getElementById('map'))(function(){
+  const NS='http://www.w3.org/2000/svg',W=730,H=716;
+  const themes=Object.keys(LAYOUT);
+  const markers=themes.map(t=>`<marker id="ah-${san(t)}" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${TC[t]}"/></marker>`).join('');
+  const aDown=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],x=a.x+a.w/2;return `<path d="M${x},${a.y+a.h} L${x},${b.y}" stroke="${TC[t]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(t)})"/>`;};
+  const aFeed=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],sx=a.x,sy=a.y+a.h/2,ex=b.x+b.w,ey=b.y+b.h/2,cx=(sx+ex)/2;return `<path d="M${sx},${sy} C${cx},${sy} ${cx},${ey} ${ex},${ey}" stroke="${TC[f]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(f)})"/>`;};
+  const box=t=>{const b=LAYOUT[t],p=PH[t];const chips=p.tickers.map(tk=>`<span class="tkn" data-t="${tk}">${tk}</span>`).join('');
+    return `<foreignObject x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"><div xmlns="http://www.w3.org/1999/xhtml" class="nodebox" style="--c:${TC[t]}">
+      <div class="phaseboxh" data-p="${p.slug}">${ICONS[t]}<span class="t">${p.title}</span><span class="i">jump ›</span></div>
+      <div class="chips">${chips}</div></div></foreignObject>`;};
+  document.getElementById('map').innerHTML=`<svg class="map" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>${markers}</defs>`+
+    DOWN.map(a=>aDown(a[0],a[1])).join('')+FEED.map(a=>aFeed(a[0],a[1])).join('')+themes.map(box).join('')+`</svg>`;
+})();
+
+/* tap diagram -> jump to section/company (and open the collapsed card) */
+document.addEventListener('click',e=>{
+  const tk=e.target.closest('.tkn[data-t]');if(tk){const el=document.getElementById('co-'+tk.dataset.t);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});}return;}
+  const ph=e.target.closest('[data-p]');if(ph){const el=document.getElementById('phase-'+ph.dataset.p);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const ex=e.target.closest('.expand-all');if(ex){const list=ex.closest('.co-list');const cos=[...list.querySelectorAll('details.co')];
+    const open=cos.some(c=>!c.open);cos.forEach(c=>c.open=open);ex.textContent=open?'Collapse all':'Expand all';return;}
+});
+
+/* sticky nav active state */
+(function(){
+  const links=[...document.querySelectorAll('.nav a')];
+  const map={};links.forEach(a=>{const id=a.getAttribute('href').slice(1);map[id]=a;});
+  const targets=Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){
+    links.forEach(a=>a.classList.remove('active'));const a=map[en.target.id];if(a)a.classList.add('active');}});},
+    {rootMargin:'-15% 0px -75% 0px'});
+  targets.forEach(t=>io.observe(t));
+})();
+</script>
+</body>
+</html>

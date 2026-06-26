@@ -144,6 +144,13 @@
   .bar-track{height:15px;border-radius:8px;background:var(--surface-2);overflow:hidden}
   .bar-fill{display:block;height:100%;min-width:3px;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--cat) 60%,#000),var(--cat))}
   .bars .fig{background:none;box-shadow:none;color:var(--ink-0)}
+  /* mechanism diagram (e.g. GLP-1 three effects) */
+  .mech{display:flex;flex-wrap:wrap;gap:12px;width:100%}
+  .mech-card{flex:1 1 150px;border:1px solid var(--hairline);border-top:3px solid var(--cat);border-radius:13px;background:var(--surface-2);padding:15px;text-align:center}
+  .mech-ic{width:34px;height:34px;margin:0 auto 9px;color:var(--cat)}
+  .mech-ic svg{width:34px;height:34px}
+  .mech-t{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink-0)}
+  .mech-s{font-size:13px;color:var(--ink-2);margin-top:3px}
 
   /* company cards */
   .co-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 12px}
@@ -203,68 +210,18 @@
 </head>
 <body>
 <div class="layout">
-  <aside class="nav"><div class="nav-in">
-    <div class="nav-title">Field guide<br>· Technology ·</div>
-    __NAV__
-  </div></aside>
-
-  <main class="main">
-    <header class="hero">
-      <div class="eyebrow">The watchlist · a field guide</div>
-      <h1>The AI <em>build-out</em></h1>
-      __DECK__
-    </header>
-
-    <section class="sec" id="sec-1">
-      <div class="sec-head"><span class="sec-no">I</span><div><span class="eyebrow">The system</span><h2>How the ecosystem works</h2></div></div>
-      <div class="depmap breakout"><div id="dep"></div></div>
-      <div class="prose">__L1__</div>
-    </section>
-
-    <section class="sec" id="sec-2">
-      <div class="sec-head"><span class="sec-no">II</span><div><span class="eyebrow">What moves every stock</span><h2>The four forces</h2></div></div>
-      __FORCES_INTRO__
-      <div class="forces">__FORCES__</div>
-    </section>
-
-    <section class="sec" id="sec-3">
-      <div class="sec-head"><span class="sec-no">III</span><div><span class="eyebrow">Expansion or contraction</span><h2>Reading the cycle at a glance</h2></div></div>
-      __CYCLE__
-      <div class="gauges" id="gauges"></div>
-    </section>
-
-    <section class="sec" id="sec-4">
-      <div class="sec-head"><span class="sec-no">IV</span><div><span class="eyebrow">Phases &amp; companies</span><h2>The landscape</h2></div></div>
-      __L2INTRO__
-      <div class="supmap breakout">
-        <div class="legend-row"><span><b>arrows</b> = supplies / sells to</span><span>side boxes feed the machine</span><span><b>tap</b> a phase or ticker to jump to it</span></div>
-        <div id="map"></div>
-      </div>
-      __PHASES__
-    </section>
-
-    <section class="sec" id="sec-5">
-      <div class="sec-head"><span class="sec-no">V</span><div><span class="eyebrow">The short version</span><h2>Reading your tech book in one minute</h2></div></div>
-      <ul class="onemin">__ONEMIN__</ul>
-    </section>
-
-    <section class="sec" id="sec-6">
-      <div class="sec-head"><span class="sec-no">VI</span><div><span class="eyebrow">Researched, not recalled</span><h2>Sources</h2></div></div>
-      <p class="lead">Every market-share and revenue figure above is from these.</p>
-      <div class="sources">__SOURCES__</div>
-      <footer>Field guide · Technology · the AI build-out</footer>
-    </section>
-  </main>
+  <aside class="nav"><div class="nav-in">__NAV__</div></aside>
+  <main class="main">__MAIN__</main>
 </div>
 
 <script>
 const DATA = __DATA__;
-const TC = DATA.themeColor, ICONS = DATA.icons, SUP = DATA.supplies;
-const PH = {}; DATA.phases.forEach(p=>PH[p.theme]=p);
+const TC = DATA.themeColor||{}, ICONS = DATA.icons||{}, SUP = DATA.supplies||{};
+const PH = {}; (DATA.phases||[]).forEach(p=>PH[p.theme]=p);
 function san(c){return c.replace(/[^A-Za-z]/g,'');}
 
-/* ---- L1 dependency map: concept nodes, "requires" arrows ---- */
-(function(){
+/* ---- L1 dependency map: concept nodes, "requires" arrows (tech only) ---- */
+if(document.getElementById('dep'))(function(){
   const W=900,H=250,NS='http://www.w3.org/2000/svg';
   const main=[
     {l:'Demand for compute',x:14,c:'#7dd3fc'},
@@ -291,11 +248,13 @@ function san(c){return c.replace(/[^A-Za-z]/g,'');}
   document.getElementById('dep').innerHTML=s;
 })();
 
-/* ---- cycle gauges (the four numbers named in the verbatim sentence) ---- */
+/* ---- cycle gauges (the four numbers named in the verbatim sentence; tech only) ---- */
+if(document.getElementById('gauges')){
 const GA=[['AI capital spending','rising or being cut','#fbbf63'],['Equipment order books','filling or emptying','#e879c9'],['Memory prices','rising or falling','#a78bfa'],['Chip lead times','stretching or shrinking','#5ea8ff']];
 document.getElementById('gauges').innerHTML=GA.map(([n,v,c])=>`<div class="gauge" style="--cat:${c}"><div class="gn">${n}</div><div class="gv"><span class="gd"></span>${v}</div></div>`).join('');
+}
 
-/* ---- supply-chain map (owned tickers; tap to jump to the section) ---- */
+/* ---- supply-chain map (owned tickers; tap to jump to the section; tech only) ---- */
 const LAYOUT={
  'semicap equipment':{x:48,y:24,w:320,h:118},
  'foundry':{x:48,y:196,w:320,h:74},
@@ -308,7 +267,7 @@ const LAYOUT={
 };
 const DOWN=[['semicap equipment','foundry'],['foundry','AI silicon'],['AI silicon','AI infrastructure'],['AI infrastructure','software']];
 const FEED=[['semiconductor IP','AI silicon'],['memory','AI silicon'],['optical/connectivity','AI infrastructure']];
-(function(){
+if(document.getElementById('map'))(function(){
   const NS='http://www.w3.org/2000/svg',W=730,H=716;
   const themes=Object.keys(LAYOUT);
   const markers=themes.map(t=>`<marker id="ah-${san(t)}" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${TC[t]}"/></marker>`).join('');

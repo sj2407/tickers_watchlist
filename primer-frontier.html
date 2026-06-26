@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Primer · Field guide, Part 3: Frontier and enabling tech</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0d; --surface-1:#121217; --surface-2:#1a1b22; --hairline:rgba(255,255,255,.09);
+    --ink-0:#f4f5f7; --ink-1:#c7cad1; --ink-2:#9499a3; --ink-3:#5d626d;
+    --serif:'Fraunces',Georgia,serif; --sans:'Hanken Grotesk',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+    --cat:#5ea8ff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink-1);font-family:var(--sans);font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(1200px 700px at 82% -10%,rgba(94,168,255,.10),transparent 60%);}
+  ::selection{background:rgba(94,168,255,.28);color:#fff}
+  a{color:inherit}
+  h1,h2,h3,h4{text-wrap:balance}
+  p{text-wrap:pretty}
+
+  /* layout */
+  .layout{display:grid;grid-template-columns:236px minmax(0,1fr);max-width:1180px;margin:0 auto;gap:0}
+  .main{min-width:0;padding:40px clamp(18px,4vw,64px) 120px;max-width:920px}
+  .prose{max-width:720px}
+
+  /* sticky contents nav */
+  .nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:34px 14px 40px 24px;border-right:1px solid var(--hairline)}
+  .nav-title{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);line-height:1.5;margin-bottom:18px}
+  .nav a{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink-2);font-size:13px;padding:5px 0;transition:color .15s}
+  .nav a:hover{color:var(--ink-0)}
+  .nav-top{font-weight:600;color:var(--ink-1);margin-top:12px}
+  .nav-top .nr{font-family:var(--mono);font-size:10px;color:var(--ink-3);min-width:20px}
+  .nav-sub{padding-left:4px;font-size:12.5px}
+  .nav-sub .dot{width:8px;height:8px;border-radius:50%;flex:none;opacity:.85}
+  .nav a.active{color:var(--ink-0)}
+  .nav-sub.active{font-weight:600}
+
+  /* hero */
+  .eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--cat)}
+  .hero{padding:26px 0 8px}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,7vw,68px);line-height:1.04;letter-spacing:-.02em;margin:10px 0 0;color:var(--ink-0)}
+  h1 em{font-style:italic;color:var(--cat)}
+  .deck{font-size:20px;line-height:1.55;color:var(--ink-1);margin:18px 0 0;max-width:60ch}
+
+  /* section heads with ghosted numeral */
+  .sec{padding-top:84px;position:relative}
+  .sec-head{display:flex;align-items:flex-start;gap:18px;margin-bottom:18px;border-top:1px solid var(--hairline);padding-top:30px}
+  .sec-no{font-family:var(--serif);font-weight:600;font-size:56px;line-height:.8;color:var(--cat);flex:none;margin-top:-4px;
+    -webkit-text-fill-color:transparent;-webkit-text-stroke:1.5px var(--cat);text-shadow:0 0 24px color-mix(in srgb,var(--cat) 40%,transparent)}
+  .sec-head h2{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4vw,40px);line-height:1.08;letter-spacing:-.01em;margin:4px 0 0;color:var(--ink-0)}
+  .lead{font-size:18.5px;color:var(--ink-1);margin:0 0 18px;max-width:68ch}
+
+  /* figures / emphasis */
+  .fig{font-family:var(--mono);font-weight:600;font-size:.92em;font-variant-numeric:tabular-nums;letter-spacing:-.01em;color:var(--cat);white-space:nowrap}
+  .ent{font-weight:600;color:var(--ink-0)}
+  .key{font-style:italic;font-weight:600;color:var(--ink-0)}
+  .lead-in{font-weight:700;color:var(--ink-0)}
+  .takeaway{font-size:1.12em;line-height:1.5;color:var(--ink-0);margin:18px 0;padding:14px 0 14px 20px;
+    border-left:3px solid var(--cat);background:linear-gradient(90deg,color-mix(in srgb,var(--cat) 9%,transparent),transparent 62%)}
+  .takeaway p{margin:0}
+
+  /* L1 concept blocks */
+  .concept{margin:0 0 12px;padding:13px 16px;border:1px solid var(--hairline);border-radius:12px;background:var(--surface-1)}
+  .concept p{margin:0;font-size:16px;color:var(--ink-1)}
+  .concept.bullet{margin-left:18px;border-left:3px solid var(--cat)}
+
+  /* four forces */
+  .forces{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .force{border:1px solid var(--hairline);border-top:3px solid var(--cat);border-radius:14px;background:var(--surface-1);padding:16px 17px;display:flex;gap:13px}
+  .force .fn{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--cat);background:color-mix(in srgb,var(--cat) 16%,transparent);
+    border-radius:9px;height:30px;min-width:30px;display:flex;align-items:center;justify-content:center;flex:none}
+  .force .ft p{margin:0;font-size:15px;color:var(--ink-1)}
+
+  /* gauges */
+  .gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+  .gauge{border:1px solid var(--hairline);border-radius:13px;background:var(--surface-1);padding:14px 15px}
+  .gauge .gn{font-size:14.5px;font-weight:600;color:var(--ink-0)}
+  .gauge .gv{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:7px;display:flex;align-items:center;gap:7px}
+  .gauge .gd{width:9px;height:9px;border-radius:50%;background:var(--cat);box-shadow:0 0 10px var(--cat)}
+
+  /* breakout figures (diagrams) wider than prose */
+  .breakout{margin:6px 0 4px;width:100%}
+  .depmap,.supmap{border:1px solid var(--hairline);border-radius:18px;background:linear-gradient(180deg,rgba(94,168,255,.05),var(--surface-1));padding:12px}
+  svg.dep,svg.map{display:block;width:100%;height:auto}
+  .dnode{cursor:pointer}
+  .dnode:hover rect{filter:brightness(1.3)}
+  .dnode text{font-family:var(--mono);font-size:11px;font-weight:700;pointer-events:none}
+  .legend-row{display:flex;flex-wrap:wrap;gap:8px 18px;padding:6px 8px 12px;font-size:11.5px;color:var(--ink-2)}
+  .legend-row b{color:var(--ink-1)}
+
+  /* supply-chain map node boxes */
+  .nodebox{height:100%;border-radius:13px;border:1.5px solid var(--c);background:#13141a;box-shadow:0 12px 30px -18px var(--c);display:flex;flex-direction:column;overflow:hidden}
+  .phaseboxh{display:flex;align-items:center;gap:7px;padding:8px 11px;background:color-mix(in srgb,var(--c) 18%,transparent);border-bottom:1px solid color-mix(in srgb,var(--c) 32%,transparent);cursor:pointer}
+  .phaseboxh:hover{background:color-mix(in srgb,var(--c) 28%,transparent)}
+  .phaseboxh svg{width:15px;height:15px;color:var(--c);flex:none}
+  .phaseboxh .t{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--c);flex:1}
+  .phaseboxh .i{font-size:10px;color:var(--c);opacity:.7}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px;align-content:flex-start}
+  .tkn{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink-0);background:#20212a;border:1px solid var(--hairline);border-radius:7px;padding:3px 8px;cursor:pointer;transition:.14s;white-space:nowrap}
+  .tkn:hover{border-color:var(--c);color:#fff;transform:translateY(-1px)}
+
+  /* phase sections */
+  .phase{padding-top:54px}
+  .phase-band{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;margin-bottom:18px;
+    background:linear-gradient(100deg,color-mix(in srgb,var(--cat) 20%,transparent),color-mix(in srgb,var(--cat) 5%,transparent) 70%);
+    border:1px solid color-mix(in srgb,var(--cat) 30%,transparent)}
+  .phase-no{font-family:var(--serif);font-weight:600;font-size:40px;line-height:.8;color:var(--cat);flex:none;opacity:.85}
+  .phase-ic{width:30px;height:30px;color:var(--cat);flex:none}
+  .phase-ic svg{width:30px;height:30px}
+  .phase-tt .eyebrow{color:var(--cat)}
+  .phase-h{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.1;margin:3px 0 0;color:var(--ink-0)}
+
+  .glance{border:1px solid var(--hairline);border-left:3px solid var(--cat);border-radius:0 14px 14px 0;background:var(--surface-1);padding:6px 18px 10px;margin-bottom:18px}
+
+  /* labelled fields */
+  .fld{margin:16px 0}
+  .lab{display:block;font-family:var(--mono);font-size:15.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--cat);margin-bottom:5px}
+  .fld-p{margin:0;font-size:15.5px;color:var(--ink-1)}
+
+  /* charts */
+  .charts{display:flex;flex-wrap:wrap;gap:16px;margin:6px 0 20px}
+  .chart{flex:1 1 300px;min-width:280px;border:1px solid var(--hairline);border-radius:14px;background:var(--surface-1);padding:15px 16px;margin:0}
+  .chart-body{display:flex;align-items:center;gap:16px}
+  .donut{width:150px;height:150px;flex:none}
+  .d-big{font-family:var(--mono);font-weight:600;font-size:30px;fill:var(--ink-0);font-variant-numeric:tabular-nums}
+  .d-small{font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;fill:var(--ink-2)}
+  .legend{list-style:none;margin:0;padding:0;display:grid;gap:6px;flex:1;min-width:0}
+  .legend li{display:grid;grid-template-columns:11px 1fr auto;align-items:center;gap:9px;font-size:13px;color:var(--ink-2)}
+  .legend li.me{color:var(--ink-0);font-weight:600}
+  .legend .sw{width:11px;height:11px;border-radius:3px}
+  .legend .ln{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .legend .fig{background:none;box-shadow:none;color:var(--ink-2);padding:0}
+  .legend li.me .fig{color:var(--cat)}
+  figcaption{font-size:11.5px;color:var(--ink-3);margin-top:12px;font-family:var(--mono)}
+  /* bars */
+  .barset{display:grid;gap:11px}
+  .bar-row{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:13px}
+  .bar-label{font-size:14px;color:var(--ink-1)}
+  .bar-row.me .bar-label{color:var(--ink-0);font-weight:600}
+  .bar-track{height:15px;border-radius:8px;background:var(--surface-2);overflow:hidden}
+  .bar-fill{display:block;height:100%;min-width:3px;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--cat) 60%,#000),var(--cat))}
+  .bars .fig{background:none;box-shadow:none;color:var(--ink-0)}
+  /* mechanism diagram (e.g. GLP-1 three effects) */
+  .mech{display:flex;flex-wrap:wrap;gap:12px;width:100%}
+  .mech-card{flex:1 1 150px;border:1px solid var(--hairline);border-top:3px solid var(--cat);border-radius:13px;background:var(--surface-2);padding:15px;text-align:center}
+  .mech-ic{width:34px;height:34px;margin:0 auto 9px;color:var(--cat)}
+  .mech-ic svg{width:34px;height:34px}
+  .mech-t{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink-0)}
+  .mech-s{font-size:13px;color:var(--ink-2);margin-top:3px}
+
+  /* company cards */
+  .co-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 12px}
+  .co-list-lab{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-1)}
+  .co-count{font-size:12px;color:var(--bg);background:var(--cat);border-radius:20px;padding:1px 9px}
+  .expand-all{font-family:var(--mono);font-size:12px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--hairline);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .expand-all:hover{color:var(--ink-0);border-color:var(--ink-3)}
+  .co{border:1px solid var(--hairline);border-radius:16px;background:var(--surface-1);margin:11px 0;overflow:hidden}
+  .co[open]{border-color:color-mix(in srgb,var(--cat) 45%,var(--hairline))}
+  .co-h{display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;list-style:none;
+    background:linear-gradient(100deg,color-mix(in srgb,var(--cat) 13%,transparent),transparent 65%)}
+  .co-h::-webkit-details-marker{display:none}
+  .co[open] .co-h{border-bottom:1px solid var(--hairline)}
+  .co-h:hover{background:linear-gradient(100deg,color-mix(in srgb,var(--cat) 20%,transparent),transparent 65%)}
+  .co-tk{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--bg);background:var(--cat);border-radius:8px;padding:4px 11px;flex:none}
+  .co-n{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink-0);margin:0;flex:1}
+  .chev{width:20px;height:20px;color:var(--cat);flex:none;transition:transform .18s}
+  .co[open] .chev{transform:rotate(90deg)}
+  .co-body{padding:4px 18px 18px}
+
+  /* scenarios */
+  .scn-wrap{margin:16px 0 4px}
+  .scn-rows{display:grid;gap:8px}
+  .scn{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:start;padding:11px 13px;border-radius:11px;border:1px solid var(--hairline);background:var(--surface-2)}
+  .scn-k{font-family:var(--mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding-top:1px}
+  .scn-p{margin:0;font-size:15px;color:var(--ink-1)}
+  .scn.worst{border-left:3px solid #fb7185}.scn.worst .scn-k{color:#fb7185}
+  .scn.base{border-left:3px solid var(--ink-3)}.scn.base .scn-k{color:var(--ink-2)}
+  .scn.best{border-left:3px solid #4ade80}.scn.best .scn-k{color:#4ade80}
+
+  /* supply links */
+  .supply p{margin:0;font-size:14px;color:var(--ink-2)}
+  .supply .tk{font-family:var(--mono);font-weight:700;color:var(--ink-1);text-decoration:none;border-bottom:1px dotted var(--ink-3)}
+  .supply .tk:hover{color:var(--cat);border-color:var(--cat)}
+
+  /* one minute + sources */
+  .onemin{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+  .onemin li{border:1px solid var(--hairline);border-left:3px solid var(--cat);border-radius:0 12px 12px 0;background:var(--surface-1);padding:13px 16px;font-size:15.5px;color:var(--ink-1)}
+  .sources{display:grid}
+  .srcrow{display:grid;gap:3px;border-bottom:1px solid var(--hairline);padding:10px 0}
+  .srcrow .sl{font-size:14px;color:var(--ink-1)}
+  .srcrow .slk a{font-family:var(--mono);font-size:11px;color:var(--ink-3);text-decoration:none;margin-right:14px}
+  .srcrow .slk a:hover{color:var(--cat)}
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--hairline);font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--ink-3)}
+
+  @media(max-width:1040px){
+    .layout{grid-template-columns:1fr}
+    .nav{display:none}
+  }
+  @media(max-width:620px){
+    .forces{grid-template-columns:1fr}
+    .gauges{grid-template-columns:1fr 1fr}
+    .chart-body{flex-direction:column;align-items:flex-start}
+    .donut{width:130px;height:130px;align-self:center}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="nav"><div class="nav-in"><div class="nav-title">Field guide<br>· Frontier ·</div>
+<a class="nav-top" href="#sec-0"><span class="nr">·</span>What you are looking at</a>
+<a class="nav-sub" href="#phase-rare-earth-materials"><span class="dot" style="background:#fbbf63"></span>I · Critical materials</a>
+<a class="nav-sub" href="#phase-quantum-computing"><span class="dot" style="background:#a78bfa"></span>II · Quantum computing</a>
+<a class="nav-sub" href="#phase-lidar"><span class="dot" style="background:#2dd4bf"></span>III · 3D sensing and lidar</a>
+<a class="nav-top" href="#sec-src"><span class="nr">IV</span>Sources</a></div></aside>
+  <main class="main"><header class="hero" id="sec-0" style="--cat:#fbbf63"><div class="eyebrow">The watchlist · a field guide</div><h1>Frontier &amp; <em>enabling tech</em></h1><p class="deck" data-src="These three names are not one ecosystem and do not connect to each other or to the AI complex. Each is a separate bet on a different emerging field: critical materials (MP), quantum computing (IONQ), and 3D sensing (OUST). Read each on its own. Two of the three are early-stage and unproven, so the honest summary is that they are higher-risk, optional bets rather than businesses with defended profits today.">These three names are not one ecosystem and do not connect to each other or to the AI complex. Each is a separate bet on a different emerging field: critical materials (MP), quantum computing (IONQ), and 3D sensing (OUST). Read each on its own. Two of the three are early-stage and unproven, so the honest summary is that they are higher-risk, optional bets rather than businesses with defended profits today.</p></header><section class="sec" id="phase-rare-earth-materials" style="--cat:#fbbf63"><div class="sec-head"><span class="sec-no">I</span><div><span class="eyebrow">rare-earth materials</span><h2>Critical materials</h2></div></div><div class="fld"><span class="lab">The field</span><p class="fld-p" data-src="Rare earths are a group of 17 metals. Their most important product is the permanent magnet (a magnet that stays magnetized on its own), specifically the NdFeB magnet (neodymium-iron-boron, the strongest type made). These magnets are small but essential: they make the electric motors spin in EVs, drones, wind turbines, robots, and missiles. The strategic problem is concentration. China refines roughly 90% of high-performance NdFeB magnets and controls about 58% of mined supply, which lets it set prices and use export limits as leverage. Western governments want a home-grown alternative, which is the entire reason this is an investable theme.">Rare earths are a group of 17 metals. Their most important product is the <span class="key">permanent magnet</span> (a magnet that stays magnetized on its own), specifically the <span class="ent">NdFeB</span> magnet (neodymium-iron-boron, the strongest type made). These magnets are small but essential: they make the electric motors spin in EVs, drones, wind turbines, robots, and missiles. The <span class="key">strategic</span> problem is concentration. <span class="ent">China</span> refines roughly <span class="fig">90%</span> of high-performance <span class="ent">NdFeB</span> magnets and controls about <span class="fig">58%</span> of mined supply, which lets it set prices and use export limits as leverage. Western governments want a home-grown alternative, which is the entire reason this is an investable theme.</p></div><div class="charts"><figure class="chart" style="--cat:#fbbf63"><div class="chart-body"><svg viewBox="0 0 160 160" class="donut" role="img" aria-label="% of high-performance magnet output (China dominates)"><circle cx="80" cy="80" r="64" fill="none" stroke="#1a1b22" stroke-width="24"/><circle cx="80" cy="80" r="64" fill="none" stroke="#7b8190" stroke-width="24" stroke-linecap="butt" stroke-dasharray="359.4 42.7" stroke-dashoffset="-0.0" transform="rotate(-90 80 80)"/><circle cx="80" cy="80" r="64" fill="none" stroke="#fbbf63" stroke-width="28" stroke-linecap="butt" stroke-dasharray="37.7 364.4" stroke-dashoffset="-361.9" transform="rotate(-90 80 80)"/><text x="80" y="80" text-anchor="middle" class="d-big">10%</text><text x="80" y="98" text-anchor="middle" class="d-small">NdFeB magnets</text></svg><ul class="legend"><li class=""><span class="sw" style="background:#7b8190"></span><span class="ln">China</span><span class="fig">90%</span></li><li class="me"><span class="sw" style="background:#fbbf63"></span><span class="ln">Rest of world (incl. MP)</span><span class="fig">10%</span></li></ul></div><figcaption>% of high-performance magnet output (China dominates)</figcaption></figure></div><div class="co-list"><div class="co-list-head"><span class="co-list-lab">The bet <span class="co-count">1</span></span><button class="expand-all" type="button">Expand all</button></div><details class="co" id="co-MP" style="--cat:#fbbf63"><summary class="co-h"><span class="co-tk">MP</span><h4 class="co-n"><span data-src="MP Materials">MP Materials</span></h4><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></summary><div class="co-body"><div class="fld"><span class="lab">Role</span><p class="fld-p" data-src="Owns Mountain Pass, the only large rare-earth mine in the United States. It mines and refines rare earths and is building factories to turn them into finished magnets, moving up from raw material to higher-value product.">Owns <span class="ent">Mountain Pass</span>, the only large rare-earth mine in the United States. It mines and refines rare earths and is building factories to turn them into finished magnets, moving up from raw material to higher-value product.</p></div><div class="fld"><span class="lab">Revenue source</span><p class="fld-p" data-src="Today it mostly sells rare-earth concentrate and refined NdPr oxide (neodymium-praseodymium oxide, the processed feedstock that magnets are made from). The bet is earning far more per ton by making the finished magnets itself. The driver is magnet demand plus the Western push to stop depending on China.">Today it mostly sells rare-earth concentrate and refined <span class="ent">NdPr</span> oxide (neodymium-praseodymium oxide, the processed feedstock that magnets are made from). The bet is earning far more per ton by making the finished magnets itself. The driver is magnet demand plus the Western push to stop depending on <span class="ent">China</span>.</p></div><div class="fld"><span class="lab">Competitive landscape</span><p class="fld-p" data-src="China dominates: about 90% of magnet output and 58% of mined supply, with that share projected to fall toward 69% by 2030 as Western supply grows. MP&#x27;s new Fort Worth plant is expected to make about 1,000 tons of NdFeB magnets by the end of 2025, which is under 1% of China&#x27;s output. So MP is tiny globally, but it is the leading magnet maker outside China, and the US Department of Defense backs it with over 400 million dollars of investment and a guaranteed minimum price for its material."><span class="ent">China</span> dominates: about <span class="fig">90%</span> of magnet output and <span class="fig">58%</span> of mined supply, with that share projected to fall toward <span class="fig">69%</span> by 2030 as Western supply grows. MP&#x27;s new Fort Worth plant is expected to make about 1,000 tons of <span class="ent">NdFeB</span> magnets by the end of 2025, which is under <span class="fig">1%</span> of <span class="ent">China</span>&#x27;s output. So MP is tiny globally, but it is the leading magnet maker outside <span class="ent">China</span>, and the US Department of Defense backs it with over <span class="fig">400 million dollars</span> of investment and a guaranteed minimum price for its material.</p></div><div class="fld"><span class="lab">Moat</span><p class="fld-p" data-src="Strategic and political, not commercial scale. Its advantages are being the only scaled US rare-earth mine, integrating forward into magnets, and US government backing including a price floor that limits its downside. Against China&#x27;s scale it has no commercial moat; its value is that it exists at all as a Western source."><span class="key">Strategic</span> and political, not commercial scale. Its advantages are being the only scaled US rare-earth mine, integrating forward into magnets, and US government backing including a price floor that limits its downside. Against <span class="ent">China</span>&#x27;s scale it has no commercial moat; its value is that it exists at all as a Western source.</p></div><div class="fld"><span class="lab">Indicators to watch</span><p class="fld-p" data-src="NdPr prices, the magnet-plant production ramp, government and customer contracts, and China export-policy moves."><span class="ent">NdPr</span> prices, the magnet-plant production ramp, government and customer contracts, and <span class="ent">China</span> export-policy moves.</p></div><div class="fld"><span class="lab">Catalysts</span><p class="fld-p" data-src="China export restrictions (which raise prices and urgency), magnet-plant milestones, and new customers in autos and defense."><span class="ent">China</span> export restrictions (which raise prices and urgency), magnet-plant milestones, and new customers in autos and defense.</p></div><div class="scn-wrap"><span class="lab">Worst / Base / Best</span><div class="scn-rows"><div class="scn worst"><span class="scn-k">Worst</span><p class="scn-p" data-src="Rare-earth prices stay low because China floods supply, and the magnet ramp slips, so cash burns.">Rare-earth prices stay low because <span class="ent">China</span> floods supply, and the magnet ramp slips, so cash burns.</p></div><div class="scn base"><span class="scn-k">Base</span><p class="scn-p" data-src="The magnet plants ramp with government and customer backing and MP becomes the credible Western supplier.">The magnet plants ramp with government and customer backing and MP becomes the credible Western supplier.</p></div><div class="scn best"><span class="scn-k">Best</span><p class="scn-p" data-src="Supply-security urgency plus rising magnet demand give it real pricing power as a strategic Western champion.">Supply-security urgency plus rising magnet demand give it real pricing power as a <span class="key">strategic</span> Western champion.</p></div></div></div><div class="fld supply"><span class="lab">Supply links</span><p class="fld-p" data-src="None to your book. Its magnets go to EV, defense, and robotics makers outside your holdings. A standalone name.">None to your book. Its magnets go to EV, defense, and robotics makers outside your holdings. A standalone name.</p></div></div></details></div></section><section class="sec" id="phase-quantum-computing" style="--cat:#a78bfa"><div class="sec-head"><span class="sec-no">II</span><div><span class="eyebrow">quantum computing</span><h2>Quantum computing</h2></div></div><div class="fld"><span class="lab">The field</span><p class="fld-p" data-src="A normal computer stores information as bits, each a 0 or a 1. A quantum computer uses qubits (quantum bits), which can represent 0 and 1 at the same time, so the machine can explore many possibilities at once. In theory this lets it solve specific problems, such as simulating molecules for drug discovery or certain optimization problems, that no normal computer could finish in a reasonable time. It is very early. Today&#x27;s machines are small and error-prone, and the central challenge is error correction: bundling many shaky physical qubits into one reliable &quot;logical&quot; qubit. The field also splits by technology. Superconducting qubits (supercooled circuits, used by Google, IBM, and Rigetti) are the most mature at scale. Trapped-ion qubits (made from single charged atoms held in place by lasers, used by IonQ and Quantinuum) are slower but more accurate, which is measured as fidelity (how error-free each operation is).">A normal computer stores information as bits, each a 0 or a 1. A quantum computer uses qubits (quantum bits), which can represent 0 and 1 at the same time, so the machine can explore many possibilities at once. In theory this lets it solve specific problems, such as simulating molecules for drug discovery or certain optimization problems, that no normal computer could finish in a reasonable time. It is very early. Today&#x27;s machines are small and error-prone, and the central challenge is error correction: bundling many shaky physical qubits into one reliable &quot;logical&quot; qubit. The field also splits by technology. Superconducting qubits (supercooled circuits, used by <span class="ent">Google</span>, <span class="ent">IBM</span>, and <span class="ent">Rigetti</span>) are the most mature at scale. Trapped-ion qubits (made from single charged atoms held in place by lasers, used by IonQ and <span class="ent">Quantinuum</span>) are slower but more accurate, which is measured as fidelity (how error-free each operation is).</p></div><div class="co-list"><div class="co-list-head"><span class="co-list-lab">The bet <span class="co-count">1</span></span><button class="expand-all" type="button">Expand all</button></div><details class="co" id="co-IONQ" style="--cat:#a78bfa"><summary class="co-h"><span class="co-tk">IONQ</span><h4 class="co-n"><span data-src="IonQ">IonQ</span></h4><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></summary><div class="co-body"><div class="fld"><span class="lab">Role</span><p class="fld-p" data-src="Builds trapped-ion quantum computers and sells access to them over the cloud. It is a pure-play bet on quantum reaching usefulness.">Builds trapped-ion quantum computers and sells access to them over the cloud. It is a <span class="key">pure-play</span> bet on quantum reaching usefulness.</p></div><div class="fld"><span class="lab">Revenue source</span><p class="fld-p" data-src="Research contracts, government programs, and paid cloud access (through Amazon Braket and Microsoft Azure). Revenue was about 130 million dollars in 2025, with guidance of 225 to 245 million for 2026. It is not profitable; the real payoff, if it comes, is years away.">Research contracts, government programs, and paid cloud access (through <span class="ent">Amazon</span> Braket and <span class="ent">Microsoft</span> <span class="ent">Azure</span>). Revenue was about <span class="fig">130 million dollars</span> in 2025, with guidance of 225 to 245 million for 2026. It is not profitable; the real payoff, if it comes, is years away.</p></div><div class="fld"><span class="lab">Competitive landscape</span><p class="fld-p" data-src="The largest pure-play quantum company by revenue, but it competes with far deeper-pocketed giants and specialists. Google is ahead on demonstrating raw quantum advantage, IBM is ahead on ecosystem and industrial roadmap, and Quantinuum is ahead on error-corrected logical qubits, while IonQ leads on trapped-ion fidelity, with a reported two-qubit fidelity above 99.99%. It paid about 1.08 billion dollars in 2025 to acquire Oxford Ionics, a rival trapped-ion developer, to extend that lead.">The largest <span class="key">pure-play</span> quantum company by revenue, but it competes with far deeper-pocketed giants and specialists. <span class="ent">Google</span> is ahead on demonstrating raw quantum advantage, <span class="ent">IBM</span> is ahead on ecosystem and industrial roadmap, and <span class="ent">Quantinuum</span> is ahead on error-corrected logical qubits, while IonQ leads on trapped-ion fidelity, with a reported two-qubit fidelity above <span class="fig">99.99%</span>. It paid about <span class="fig">1.08 billion dollars</span> in 2025 to acquire <span class="ent">Oxford Ionics</span>, a rival trapped-ion developer, to extend that lead.</p></div><div class="fld"><span class="lab">Moat</span><p class="fld-p" data-src="Weak and unproven, which is normal for the field. Its edge is high-fidelity trapped-ion technology, its patents, and early commercial access, but no company has a durable moat in a technology that has not yet become useful, and it is heavily outspent by Google and IBM. This is a technology bet, not a defended business.">Weak and unproven, which is normal for the field. Its edge is high-fidelity trapped-ion technology, its patents, and early commercial access, but no company has a durable moat in a technology that has not yet become useful, and it is heavily outspent by <span class="ent">Google</span> and <span class="ent">IBM</span>. This is a technology bet, not a defended business.</p></div><div class="fld"><span class="lab">Indicators to watch</span><p class="fld-p" data-src="Hardware milestones (qubit count, fidelity, and progress on error-corrected logical qubits), contract wins, and cash burn and share dilution.">Hardware milestones (qubit count, fidelity, and progress on error-corrected logical qubits), contract wins, and cash burn and share dilution.</p></div><div class="fld"><span class="lab">Catalysts</span><p class="fld-p" data-src="A credible step toward useful, error-corrected machines, and large government or enterprise deals.">A credible step toward useful, error-corrected machines, and large government or enterprise deals.</p></div><div class="scn-wrap"><span class="lab">Worst / Base / Best</span><div class="scn-rows"><div class="scn worst"><span class="scn-k">Worst</span><p class="scn-p" data-src="Milestones slip and quantum stays a science project while dilution mounts.">Milestones slip and quantum stays a science project while dilution mounts.</p></div><div class="scn base"><span class="scn-k">Base</span><p class="scn-p" data-src="Steady milestone progress and government and enterprise pilots fund the journey.">Steady milestone progress and government and enterprise pilots fund the journey.</p></div><div class="scn best"><span class="scn-k">Best</span><p class="scn-p" data-src="Quantum reaches early commercial usefulness and IonQ&#x27;s approach leads, so the optionality pays off.">Quantum reaches early commercial usefulness and IonQ&#x27;s approach leads, so the optionality pays off.</p></div></div></div><div class="fld supply"><span class="lab">Supply links</span><p class="fld-p" data-src="None. A standalone name.">None. A standalone name.</p></div></div></details></div></section><section class="sec" id="phase-lidar" style="--cat:#2dd4bf"><div class="sec-head"><span class="sec-no">III</span><div><span class="eyebrow">lidar</span><h2>3D sensing and lidar</h2></div></div><div class="fld"><span class="lab">The field</span><p class="fld-p" data-src="Lidar (light detection and ranging) fires rapid laser pulses and times how long they take to bounce back, building a precise 3D map of the surroundings. It gives machines depth perception, so they can see shape and distance, not just a flat image. Uses run from robots and industrial automation to trucks, smart infrastructure, and self-driving cars. The market is growing fast, roughly 3.3 billion dollars in 2026 heading toward 7.8 billion by 2031, but adoption timelines are uncertain and it is crowded, especially with Chinese makers competing hard on price.">Lidar (light detection and ranging) fires rapid laser pulses and times how long they take to bounce back, building a precise 3D map of the surroundings. It gives machines depth perception, so they can see shape and distance, not just a flat image. Uses run from robots and industrial automation to trucks, smart infrastructure, and self-driving cars. The market is growing fast, roughly <span class="fig">3.3 billion dollars</span> in 2026 heading toward 7.8 billion by 2031, but adoption timelines are uncertain and it is crowded, especially with Chinese makers competing hard on price.</p></div><div class="charts"><figure class="chart" style="--cat:#2dd4bf"><div class="chart-body"><svg viewBox="0 0 160 160" class="donut" role="img" aria-label="% of automotive-lidar revenue (Chinese makers ~60%)"><circle cx="80" cy="80" r="64" fill="none" stroke="#1a1b22" stroke-width="24"/><circle cx="80" cy="80" r="64" fill="none" stroke="#7b8190" stroke-width="24" stroke-linecap="butt" stroke-dasharray="138.2 263.9" stroke-dashoffset="-0.0" transform="rotate(-90 80 80)"/><circle cx="80" cy="80" r="64" fill="none" stroke="#565c6b" stroke-width="24" stroke-linecap="butt" stroke-dasharray="86.0 316.2" stroke-dashoffset="-140.7" transform="rotate(-90 80 80)"/><circle cx="80" cy="80" r="64" fill="none" stroke="#2dd4bf" stroke-width="28" stroke-linecap="butt" stroke-dasharray="170.4 231.7" stroke-dashoffset="-229.2" transform="rotate(-90 80 80)"/><text x="80" y="80" text-anchor="middle" class="d-big">43%</text><text x="80" y="98" text-anchor="middle" class="d-small">Automotive lidar</text></svg><ul class="legend"><li class=""><span class="sw" style="background:#7b8190"></span><span class="ln">Hesai</span><span class="fig">35%</span></li><li class=""><span class="sw" style="background:#565c6b"></span><span class="ln">RoboSense</span><span class="fig">22%</span></li><li class="me"><span class="sw" style="background:#2dd4bf"></span><span class="ln">Others (incl. Ouster)</span><span class="fig">43%</span></li></ul></div><figcaption>% of automotive-lidar revenue (Chinese makers ~60%)</figcaption></figure></div><div class="co-list"><div class="co-list-head"><span class="co-list-lab">The bet <span class="co-count">1</span></span><button class="expand-all" type="button">Expand all</button></div><details class="co" id="co-OUST" style="--cat:#2dd4bf"><summary class="co-h"><span class="co-tk">OUST</span><h4 class="co-n"><span data-src="Ouster">Ouster</span></h4><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></summary><div class="co-body"><div class="fld"><span class="lab">Role</span><p class="fld-p" data-src="Makes digital lidar sensors (built around a standard chip rather than many discrete parts, which lowers cost and helps them scale) for robotics, industrial automation, trucking, and infrastructure, not only cars. It merged with its former rival Velodyne in 2023 to gain scale.">Makes digital lidar sensors (built around a standard chip rather than many discrete parts, which lowers cost and helps them scale) for robotics, industrial automation, trucking, and infrastructure, not only cars. It merged with its former rival <span class="ent">Velodyne</span> in 2023 to gain scale.</p></div><div class="fld"><span class="lab">Revenue source</span><p class="fld-p" data-src="Sells sensors, increasingly bundled with software. Revenue was about 67 million dollars in 2024, growing roughly 30% in 2025. It is still small and burning cash. The driver is automation spreading across industries.">Sells sensors, increasingly bundled with software. Revenue was about <span class="fig">67 million dollars</span> in 2024, growing roughly <span class="fig">30%</span> in 2025. It is still small and burning cash. The driver is automation spreading across industries.</p></div><div class="fld"><span class="lab">Competitive landscape</span><p class="fld-p" data-src="Crowded and led by Chinese firms. Hesai holds roughly 33 to 37% of automotive lidar and RoboSense about 22%, with Chinese makers together around 60% of automotive lidar revenue. Western rivals include Luminar (high-performance automotive) and Innoviz. Ouster trails the Chinese leaders in automotive but differentiates by serving many industries beyond cars.">Crowded and led by Chinese firms. <span class="ent">Hesai</span> holds roughly <span class="fig">33 to 37%</span> of automotive lidar and <span class="ent">RoboSense</span> about <span class="fig">22%</span>, with Chinese makers together around <span class="fig">60%</span> of automotive lidar revenue. Western rivals include <span class="ent">Luminar</span> (high-performance automotive) and <span class="ent">Innoviz</span>. Ouster trails the Chinese leaders in automotive but differentiates by serving many industries beyond cars.</p></div><div class="fld"><span class="lab">Moat</span><p class="fld-p" data-src="Weak. Its edge is a chip-based digital-lidar design that can scale in cost and the extra scale from the Velodyne merger. But lidar is competitive and commoditizing, switching costs are low, and Chinese price pressure is intense, so it has no strong moat.">Weak. Its edge is a chip-based digital-lidar design that can scale in cost and the extra scale from the <span class="ent">Velodyne</span> merger. But lidar is competitive and commoditizing, <span class="key">switching costs</span> are low, and Chinese price pressure is intense, so it has no strong moat.</p></div><div class="fld"><span class="lab">Indicators to watch</span><p class="fld-p" data-src="Unit shipments, revenue growth, gross margin (the path to profit), design wins in robotics and industrial, and cash burn.">Unit shipments, revenue growth, gross margin (the path to profit), design wins in robotics and industrial, and cash burn.</p></div><div class="fld"><span class="lab">Catalysts</span><p class="fld-p" data-src="An adoption inflection in robotics and industrial automation, large design wins, and reaching profitability.">An adoption inflection in robotics and industrial automation, large design wins, and reaching profitability.</p></div><div class="scn-wrap"><span class="lab">Worst / Base / Best</span><div class="scn-rows"><div class="scn worst"><span class="scn-k">Worst</span><p class="scn-p" data-src="Adoption stays slow while price wars and cash burn pressure it.">Adoption stays slow while price wars and cash burn pressure it.</p></div><div class="scn base"><span class="scn-k">Base</span><p class="scn-p" data-src="Robotics and industrial demand grow steadily and scale improves its economics.">Robotics and industrial demand grow steadily and scale improves its economics.</p></div><div class="scn best"><span class="scn-k">Best</span><p class="scn-p" data-src="Lidar becomes standard across robotics, autonomy, and infrastructure and Ouster is a scaled leader.">Lidar becomes standard across robotics, autonomy, and infrastructure and Ouster is a scaled leader.</p></div></div></div><div class="fld supply"><span class="lab">Supply links</span><p class="fld-p" data-src="None to your book. A standalone name.">None to your book. A standalone name.</p></div></div></details></div></section><section class="sec" id="sec-src"><div class="sec-head"><span class="sec-no">IV</span><div><span class="eyebrow">Researched, not recalled</span><h2>Sources</h2></div></div><div class="sources"><div class="srcrow"><span class="sl">Rare earths and MP Materials</span><span class="slk"><a href="https://www.bloomberg.com/company/press/world-scrambles-for-rare-earths-to-erode-chinas-dominance-from-90-to-69-market-share-and-gain-pricing-power-according-to-bloomberg-intelligence/" target="_blank" rel="noreferrer">Bloomberg Intelligence</a> <a href="https://www.idtechex.com/en/research-article/2025-to-be-a-defining-year-for-the-rare-earth-magnet-market/33601" target="_blank" rel="noreferrer">IDTechEx</a></span></div>
+<div class="srcrow"><span class="sl">Quantum computing landscape and IonQ</span><span class="slk"><a href="https://thequantuminsider.com/2025/05/16/quantum-computing-roadmaps-a-look-at-the-maps-and-predictions-of-major-quantum-players/" target="_blank" rel="noreferrer">The Quantum Insider</a></span></div>
+<div class="srcrow"><span class="sl">Lidar market and Ouster</span><span class="slk"><a href="https://www.marketsandmarkets.com/Market-Reports/lidar-market-1261.html" target="_blank" rel="noreferrer">MarketsandMarkets</a> <a href="https://seekingalpha.com/article/4848108-2026-investor-guide-to-western-lidar-companies" target="_blank" rel="noreferrer">Seeking Alpha, 2026 lidar guide</a></span></div></div><footer>Field guide · Frontier and enabling tech</footer></section></main>
+</div>
+
+<script>
+const DATA = {};
+const TC = DATA.themeColor||{}, ICONS = DATA.icons||{}, SUP = DATA.supplies||{};
+const PH = {}; (DATA.phases||[]).forEach(p=>PH[p.theme]=p);
+function san(c){return c.replace(/[^A-Za-z]/g,'');}
+
+/* ---- L1 dependency map: concept nodes, "requires" arrows (tech only) ---- */
+if(document.getElementById('dep'))(function(){
+  const W=900,H=250,NS='http://www.w3.org/2000/svg';
+  const main=[
+    {l:'Demand for compute',x:14,c:'#7dd3fc'},
+    {l:'Cloud',x:150,c:'#fbbf63'},
+    {l:'Data center',x:262,c:'#fbbf63'},
+    {l:'Chip (GPU)',x:392,c:'#5ea8ff'},
+    {l:'Designer',x:512,c:'#5ea8ff'},
+    {l:'Foundry',x:626,c:'#2dd4bf'},
+    {l:'Equipment',x:752,c:'#e879c9'},
+  ];
+  const feed=[{l:'Memory',x:392,y:158,c:'#a78bfa'},{l:'Interconnect',x:262,y:158,c:'#fb7185'}];
+  const y=72,w=110,h=42;
+  let s=`<svg class="dep" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>`;
+  [...new Set([...main,...feed].map(n=>n.c))].forEach(c=>{
+    s+=`<marker id="m${san(c)}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${c}"/></marker>`;});
+  s+=`</defs>`;
+  s+=`<text x="${W-4}" y="14" text-anchor="end" font-family="var(--mono)" font-size="10" fill="#5d626d">arrows read “requires” — follow the need rightward</text>`;
+  for(let i=0;i<main.length-1;i++){const a=main[i],b=main[i+1];
+    s+=`<path d="M${a.x+w},${y+h/2} L${b.x},${y+h/2}" stroke="${b.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san(b.c)})"/>`;}
+  feed.forEach(fd=>{s+=`<path d="M${fd.x+w/2},${fd.y} L${392+w/2},${y+h}" stroke="${fd.c}" stroke-width="2.2" fill="none" marker-end="url(#m${san('#5ea8ff')})" opacity=".85"/>`;});
+  [...main.map(n=>({...n,y})),...feed].forEach(n=>{
+    s+=`<g class="dnode"><rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="10" fill="#13141a" stroke="${n.c}" stroke-width="1.5"/>`+
+       `<text x="${n.x+w/2}" y="${n.y+h/2+4}" text-anchor="middle" fill="${n.c}">${n.l}</text></g>`;});
+  document.getElementById('dep').innerHTML=s;
+})();
+
+/* ---- cycle gauges (the four numbers named in the verbatim sentence; tech only) ---- */
+if(document.getElementById('gauges')){
+const GA=[['AI capital spending','rising or being cut','#fbbf63'],['Equipment order books','filling or emptying','#e879c9'],['Memory prices','rising or falling','#a78bfa'],['Chip lead times','stretching or shrinking','#5ea8ff']];
+document.getElementById('gauges').innerHTML=GA.map(([n,v,c])=>`<div class="gauge" style="--cat:${c}"><div class="gn">${n}</div><div class="gv"><span class="gd"></span>${v}</div></div>`).join('');
+}
+
+/* ---- supply-chain map (owned tickers; tap to jump to the section; tech only) ---- */
+const LAYOUT={
+ 'semicap equipment':{x:48,y:24,w:320,h:118},
+ 'foundry':{x:48,y:196,w:320,h:74},
+ 'AI silicon':{x:48,y:324,w:320,h:100},
+ 'AI infrastructure':{x:48,y:478,w:320,h:74},
+ 'software':{x:48,y:606,w:320,h:92},
+ 'semiconductor IP':{x:410,y:214,w:300,h:74},
+ 'memory':{x:410,y:312,w:300,h:94},
+ 'optical/connectivity':{x:410,y:446,w:300,h:100},
+};
+const DOWN=[['semicap equipment','foundry'],['foundry','AI silicon'],['AI silicon','AI infrastructure'],['AI infrastructure','software']];
+const FEED=[['semiconductor IP','AI silicon'],['memory','AI silicon'],['optical/connectivity','AI infrastructure']];
+if(document.getElementById('map'))(function(){
+  const NS='http://www.w3.org/2000/svg',W=730,H=716;
+  const themes=Object.keys(LAYOUT);
+  const markers=themes.map(t=>`<marker id="ah-${san(t)}" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${TC[t]}"/></marker>`).join('');
+  const aDown=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],x=a.x+a.w/2;return `<path d="M${x},${a.y+a.h} L${x},${b.y}" stroke="${TC[t]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(t)})"/>`;};
+  const aFeed=(f,t)=>{const a=LAYOUT[f],b=LAYOUT[t],sx=a.x,sy=a.y+a.h/2,ex=b.x+b.w,ey=b.y+b.h/2,cx=(sx+ex)/2;return `<path d="M${sx},${sy} C${cx},${sy} ${cx},${ey} ${ex},${ey}" stroke="${TC[f]}" stroke-width="2.4" fill="none" marker-end="url(#ah-${san(f)})"/>`;};
+  const box=t=>{const b=LAYOUT[t],p=PH[t];const chips=p.tickers.map(tk=>`<span class="tkn" data-t="${tk}">${tk}</span>`).join('');
+    return `<foreignObject x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"><div xmlns="http://www.w3.org/1999/xhtml" class="nodebox" style="--c:${TC[t]}">
+      <div class="phaseboxh" data-p="${p.slug}">${ICONS[t]}<span class="t">${p.title}</span><span class="i">jump ›</span></div>
+      <div class="chips">${chips}</div></div></foreignObject>`;};
+  document.getElementById('map').innerHTML=`<svg class="map" viewBox="0 0 ${W} ${H}" xmlns="${NS}"><defs>${markers}</defs>`+
+    DOWN.map(a=>aDown(a[0],a[1])).join('')+FEED.map(a=>aFeed(a[0],a[1])).join('')+themes.map(box).join('')+`</svg>`;
+})();
+
+/* tap diagram -> jump to section/company (and open the collapsed card) */
+document.addEventListener('click',e=>{
+  const tk=e.target.closest('.tkn[data-t]');if(tk){const el=document.getElementById('co-'+tk.dataset.t);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});}return;}
+  const ph=e.target.closest('[data-p]');if(ph){const el=document.getElementById('phase-'+ph.dataset.p);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const ex=e.target.closest('.expand-all');if(ex){const list=ex.closest('.co-list');const cos=[...list.querySelectorAll('details.co')];
+    const open=cos.some(c=>!c.open);cos.forEach(c=>c.open=open);ex.textContent=open?'Collapse all':'Expand all';return;}
+});
+
+/* sticky nav active state */
+(function(){
+  const links=[...document.querySelectorAll('.nav a')];
+  const map={};links.forEach(a=>{const id=a.getAttribute('href').slice(1);map[id]=a;});
+  const targets=Object.keys(map).map(id=>document.getElementById(id)).filter(Boolean);
+  const io=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){
+    links.forEach(a=>a.classList.remove('active'));const a=map[en.target.id];if(a)a.classList.add('active');}});},
+    {rootMargin:'-15% 0px -75% 0px'});
+  targets.forEach(t=>io.observe(t));
+})();
+</script>
+</body>
+</html>

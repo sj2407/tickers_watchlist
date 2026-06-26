@@ -20,6 +20,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SRC_TECH = ROOT / "primer-content-tech.md"
 OUT_TECH = ROOT / "primer-tech.html"
+SRC_HEALTH = ROOT / "primer-content-healthcare.md"
+OUT_HEALTH = ROOT / "primer-healthcare.html"
+SRC_FRONTIER = ROOT / "primer-content-frontier.md"
+OUT_FRONTIER = ROOT / "primer-frontier.html"
 
 # ---- theme taxonomy -> accent colour (vivid, AA on near-black; neighbours in the
 #      reading sequence differ in hue family so adjacent sections never clash) ----
@@ -171,6 +175,50 @@ def split_lead(raw):
     return "", debold(raw).strip()
 
 
+def find_heading(lines, *prefixes):
+    for i, ln in enumerate(lines):
+        if any(ln.startswith(p) for p in prefixes):
+            return i
+    return -1
+
+
+def clean_blocks(lines, a, b):
+    return [blk for blk in split_blocks(lines[a:b]) if strip_markers(blk["raw"])]
+
+
+def first_body(lines, a, b):
+    for blk in clean_blocks(lines, a, b):
+        return split_lead(blk["raw"])[1]
+    return ""
+
+
+def parse_sources(lines, i_sources):
+    out = []
+    for ln in lines[i_sources + 1:]:
+        s = ln.strip()
+        if not s.startswith("- "):
+            continue
+        s = s[2:]
+        out.append({"label": s.split(":", 1)[0].strip(),
+                    "links": [{"text": t, "url": u} for t, u in re.findall(r"\[([^\]]+)\]\(([^)]+)\)", s)]})
+    return out
+
+
+def parse_companies(lines, a, b):
+    comp_idx = [k for k in range(a, b) if lines[k].startswith("#### ")]
+    bounds = comp_idx + [b]
+    out = []
+    for ci in range(len(comp_idx)):
+        c_lines = lines[bounds[ci]:bounds[ci + 1]]
+        chm = re.match(r"^####\s+(.*?)\s*\(([A-Z]+)\)\s*$", c_lines[0])
+        comp = {"name": debold(chm.group(1).strip()), "ticker": chm.group(2).strip(), "fields": []}
+        for blk in clean_blocks(c_lines, 1, len(c_lines)):
+            lead, body = split_lead(blk["raw"])
+            comp["fields"].append({"lead": lead, "body": body})
+        out.append(comp)
+    return out
+
+
 def parse_tech(md_text):
     lines = md_text.split("\n")
     model = {
@@ -314,6 +362,12 @@ ENTITIES = [
     "OpenAI", "Anthropic", "ServiceNow", "CrowdStrike", "Ceva", "SentinelOne", "Atlassian",
     "Salesforce", "Zeiss", "Quantinuum", "Rigetti", "DeepMind", "VMware", "Apple", "Defender",
     "CUDA", "Arm", "AMD", "BMC", "Jira", "CXMT", "IBM", "AWS", "Azure", "xAI",
+    # healthcare
+    "Novo Nordisk", "Eli Lilly", "Lilly", "Novo", "Pfizer", "Amgen", "Teladoc", "LifeMD",
+    "Ozempic", "Wegovy", "Mounjaro", "Zepbound", "semaglutide", "tirzepatide", "orforglipron", "Ro",
+    # frontier
+    "Mountain Pass", "Hesai", "RoboSense", "Luminar", "Innoviz", "Velodyne", "Quantinuum",
+    "Rigetti", "Oxford Ionics", "China", "NdFeB", "NdPr",
 ]
 # Key concept terms that carry the "what kind of business is this" idea. Italic.
 TERMS = [
@@ -321,6 +375,7 @@ TERMS = [
     "lock-in", "leading edge", "leading-edge", "price maker", "price makers",
     "vertical integration", "vertically integrated", "switching cost", "switching costs",
     "network effects", "first-mover", "pure-play", "scarcity", "bottleneck", "neutral",
+    "agonist", "agonists", "compounded", "permanent magnet", "strategic",
 ]
 _ent_alt = "|".join(re.escape(e) for e in sorted(set(ENTITIES), key=len, reverse=True))
 _term_alt = "|".join(re.escape(t) for t in sorted(set(TERMS), key=len, reverse=True))
@@ -463,11 +518,18 @@ def supply_html(ticker, names):
 
 
 def company_html(c, accent, names):
-    fields = {f["lead"].rstrip("."): f for f in c["fields"] if f["lead"]}
-    body = "".join(field_html(fields[k]) for k in
-                   ("Role", "Revenue source", "Competitive landscape", "Moat", "Indicators to watch", "Catalysts")
-                   if k in fields)
-    wbb = fields.get("Worst / Base / Best")
+    """Order-preserving and sector-agnostic. Worst/Base/Best becomes scenario
+    rows; a verbatim 'Supply links' field (healthcare/frontier) is rendered as
+    such; tech, which has no such field, falls back to the derived edge note."""
+    body, wbb, sup_field = "", None, None
+    for f in c["fields"]:
+        lbl = f["lead"].rstrip(".") if f["lead"] else ""
+        if lbl == "Worst / Base / Best":
+            wbb = f
+        elif lbl == "Supply links":
+            sup_field = f
+        else:
+            body += field_html(f)
     scen = ""
     if wbb:
         parts = [p.strip() for p in wbb["body"].split(" / ")]
@@ -478,12 +540,18 @@ def company_html(c, accent, names):
             scen = f'<div class="scn-wrap"><span class="lab">Worst / Base / Best</span><div class="scn-rows">{rows}</div></div>'
         else:
             scen = field_html(wbb)
+    if sup_field:
+        supply = f'<div class="fld supply"><span class="lab">Supply links</span>{block(sup_field["body"], deco(sup_field["body"]), cls="fld-p")}</div>'
+    elif c["ticker"] in SUPPLIES:
+        supply = supply_html(c["ticker"], names)
+    else:
+        supply = ""
     chev = ('<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
             'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>')
     summary = (f'<summary class="co-h"><span class="co-tk">{c["ticker"]}</span>'
                f'<h4 class="co-n">{esc_block(c["name"], tag="span")}</h4>{chev}</summary>')
     return (f'<details class="co" id="co-{c["ticker"]}" style="--cat:{accent}">{summary}'
-            f'<div class="co-body">{body}{scen}{supply_html(c["ticker"], names)}</div></details>')
+            f'<div class="co-body">{body}{scen}{supply}</div></details>')
 
 
 GLANCE_LABELS = {"The role", "Where the profit concentrates", "Why this phase behaves differently",
@@ -515,16 +583,62 @@ def phase_html(phase, idx, names):
 
 
 # ----------------------------------------------------------------------------
-# RENDER
+# RENDER: a shared shell (page/section/hero/nav) + per-sector assembly.
 # ----------------------------------------------------------------------------
 
-def render(model):
+def page(title, nav_html, main_html, data):
+    html = TEMPLATE
+    for k, v in {"__TITLE__": htmllib.escape(title), "__NAV__": nav_html,
+                 "__MAIN__": main_html, "__DATA__": json.dumps(data, ensure_ascii=False)}.items():
+        html = html.replace(k, v)
+    return html
+
+
+def nav_block(sector_label, items):
+    """items: (kind, href, mark, label). kind 'top' (mark=roman) or 'sub' (mark=dot colour)."""
+    out = [f'<div class="nav-title">Field guide<br>· {htmllib.escape(sector_label)} ·</div>']
+    for kind, href, mark, label in items:
+        if kind == "top":
+            out.append(f'<a class="nav-top" href="{href}"><span class="nr">{mark}</span>{htmllib.escape(label)}</a>')
+        else:
+            out.append(f'<a class="nav-sub" href="{href}"><span class="dot" style="background:{mark}"></span>{label}</a>')
+    return "\n".join(out)
+
+
+def hero(eyebrow, title_html, deck_text, accent="#5ea8ff", hid=None):
+    idattr = f' id="{hid}"' if hid else ""
+    return (f'<header class="hero"{idattr} style="--cat:{accent}"><div class="eyebrow">{htmllib.escape(eyebrow)}</div>'
+            f'<h1>{title_html}</h1>{block(deck_text, deco(deck_text), tag="p", cls="deck")}</header>')
+
+
+def section(num, eyebrow, title, body, sid, accent=None):
+    style = f' style="--cat:{accent}"' if accent else ""
+    return (f'<section class="sec" id="{sid}"{style}><div class="sec-head"><span class="sec-no">{num}</span>'
+            f'<div><span class="eyebrow">{htmllib.escape(eyebrow)}</span><h2>{htmllib.escape(title)}</h2></div></div>'
+            f'{body}</section>')
+
+
+def charts_block(chart_list, accent):
+    items = "".join(donut_svg(c, accent) if c["type"] == "donut" else bars_html(c, accent) for c in chart_list)
+    return f'<div class="charts">{items}</div>'
+
+
+def sources_html(sources):
+    out = []
+    for s in sources:
+        links = " ".join(
+            f'<a href="{htmllib.escape(l["url"])}" target="_blank" rel="noreferrer">{htmllib.escape(l["text"])}</a>'
+            for l in s["links"])
+        out.append(f'<div class="srcrow"><span class="sl">{htmllib.escape(s["label"])}</span><span class="slk">{links}</span></div>')
+    return "\n".join(out)
+
+
+def build_tech(model):
     names = {c["ticker"]: c["name"] for ph in model["phases"] for c in ph["companies"]}
     data = {"phases": [{"theme": p["theme"], "title": p["title"], "slug": slug(p["theme"]),
                         "tickers": [c["ticker"] for c in p["companies"]]} for p in model["phases"]],
             "supplies": SUPPLIES, "themeColor": THEME_COLOR, "icons": ICONS}
 
-    # --- L1: concept blocks (bold lead-ins become scannable sub-labels) ---
     l1 = [block(model["l1_intro"], deco(model["l1_intro"]), cls="lead")]
     for it in model["l1_items"]:
         if it["lead"].startswith("The chain"):
@@ -533,7 +647,6 @@ def render(model):
             cls = "concept bullet" if it.get("bullet") else "concept"
             l1.append(f'<div class="{cls}">{lead_para(it["lead"], it["body"])}</div>')
 
-    # --- four forces: distinctly-coloured cards ---
     force_accents = ["#fbbf63", "#a78bfa", "#fb7185", "#5ea8ff"]
     forces = []
     for f in model["forces"]:
@@ -541,48 +654,189 @@ def render(model):
         forces.append(f'<div class="force" style="--cat:{ac}"><div class="fn">{f["num"]}</div>'
                       f'<div class="ft">{lead_para(f["lead"], f["body"])}</div></div>')
 
-    # --- phases ---
     phases = "".join(phase_html(p, i, names) for i, p in enumerate(model["phases"]))
-
-    # --- one minute ---
     onemin = "".join(f'<li>{block(t, deco(t), tag="span")}</li>' for t in model["onemin"])
+    supleg = ('<div class="legend-row"><span><b>arrows</b> = supplies / sells to</span>'
+              '<span>side boxes feed the machine</span><span><b>tap</b> a phase or ticker to jump to it</span></div>')
 
-    # --- sources ---
-    src = []
-    for s in model["sources"]:
-        links = " ".join(
-            f'<a href="{htmllib.escape(l["url"])}" target="_blank" rel="noreferrer">{htmllib.escape(l["text"])}</a>'
-            for l in s["links"])
-        src.append(f'<div class="srcrow"><span class="sl">{htmllib.escape(s["label"])}</span><span class="slk">{links}</span></div>')
+    main_html = (
+        hero("The watchlist · a field guide", 'The AI <em>build-out</em>', model["l0"])
+        + section("I", "The system", "How the ecosystem works",
+                  f'<div class="depmap breakout"><div id="dep"></div></div><div class="prose">{"".join(l1)}</div>', "sec-1")
+        + section("II", "What moves every stock", "The four forces",
+                  f'{block(model["forces_intro"], deco(model["forces_intro"]), cls="lead")}<div class="forces">{"".join(forces)}</div>', "sec-2")
+        + section("III", "Expansion or contraction", "Reading the cycle at a glance",
+                  f'{block(model["cycle"], deco(model["cycle"]), cls="lead")}<div class="gauges" id="gauges"></div>', "sec-3")
+        + section("IV", "Phases & companies", "The landscape",
+                  f'{block(model["l2_intro"], deco(model["l2_intro"]), cls="lead")}'
+                  f'<div class="supmap breakout">{supleg}<div id="map"></div></div>{phases}', "sec-4")
+        + section("V", "The short version", "Reading your tech book in one minute",
+                  f'<ul class="onemin">{onemin}</ul>', "sec-5")
+        + section("VI", "Researched, not recalled", "Sources",
+                  f'<p class="lead">Every market-share and revenue figure above is from these.</p>'
+                  f'<div class="sources">{sources_html(model["sources"])}</div>'
+                  f'<footer>Field guide · Technology · the AI build-out</footer>', "sec-6"))
 
-    # --- sticky contents nav ---
-    nav = ['<a class="nav-top" href="#sec-1"><span class="nr">I</span>How the ecosystem works</a>',
-           '<a class="nav-top" href="#sec-2"><span class="nr">II</span>The four forces</a>',
-           '<a class="nav-top" href="#sec-3"><span class="nr">III</span>Reading the cycle</a>',
-           '<a class="nav-top" href="#sec-4"><span class="nr">IV</span>The landscape</a>']
+    nav_items = [("top", "#sec-1", "I", "How the ecosystem works"),
+                 ("top", "#sec-2", "II", "The four forces"),
+                 ("top", "#sec-3", "III", "Reading the cycle"),
+                 ("top", "#sec-4", "IV", "The landscape")]
     for i, p in enumerate(model["phases"]):
-        nav.append(f'<a class="nav-sub" href="#phase-{slug(p["theme"])}">'
-                   f'<span class="dot" style="background:{THEME_COLOR[p["theme"]]}"></span>'
-                   f'{PHASE_ROMAN[i]} · {htmllib.escape(p["title"])}</a>')
+        nav_items.append(("sub", f'#phase-{slug(p["theme"])}', THEME_COLOR[p["theme"]],
+                          f'{PHASE_ROMAN[i]} · {htmllib.escape(p["title"])}'))
+    return page(model["title"], nav_block("Technology", nav_items), main_html, data)
 
-    html = TEMPLATE
-    repl = {
-        "__TITLE__": htmllib.escape(model["title"]),
-        "__DECK__": block(model["l0"], deco(model["l0"]), tag="p", cls="deck"),
-        "__NAV__": "\n".join(nav),
-        "__L1__": "\n".join(l1),
-        "__FORCES_INTRO__": block(model["forces_intro"], deco(model["forces_intro"]), cls="lead"),
-        "__FORCES__": "\n".join(forces),
-        "__CYCLE__": block(model["cycle"], deco(model["cycle"]), cls="lead"),
-        "__L2INTRO__": block(model["l2_intro"], deco(model["l2_intro"]), cls="lead"),
-        "__PHASES__": phases,
-        "__ONEMIN__": onemin,
-        "__SOURCES__": "\n".join(src),
-        "__DATA__": json.dumps(data, ensure_ascii=False),
-    }
-    for k, v in repl.items():
-        html = html.replace(k, v)
-    return html
+
+# ---- Healthcare -----------------------------------------------------------
+HEALTH_ACCENT = "#34d399"  # emerald — healthcare/GLP-1
+LILLY_DONUT = {"type": "donut", "title": "GLP-1", "cap": "% of the GLP-1 market, 2025 (Lilly and Novo own almost all of it)",
+               "rows": [["Eli Lilly", 57, 1], ["Novo Nordisk", 43, 0]]}
+MECH_ICONS = {
+    "brain": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V14a3 3 0 0 0 4 3 3 3 0 0 0 3 0V6a3 3 0 0 0-3-3z"/><path d="M15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V14a3 3 0 0 1-4 3"/></svg>',
+    "stomach": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a4 4 0 0 0 4 4h2a4 4 0 0 1 4 4 5 5 0 0 1-5 5c-5 0-8-3-8-8V6"/></svg>',
+    "sugar": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6 6 11a6 6 0 0 1-12 0c0-5 6-11 6-11z"/></svg>',
+}
+
+
+def glp1_mechanism_svg(accent):
+    eff = [("brain", "Brain", "feel full, less ghrelin"),
+           ("stomach", "Stomach", "empties slower"),
+           ("sugar", "Blood sugar", "better control")]
+    cards = "".join(f'<div class="mech-card"><div class="mech-ic">{MECH_ICONS[k]}</div>'
+                    f'<div class="mech-t">{t}</div><div class="mech-s">{s}</div></div>' for k, t, s in eff)
+    return (f'<figure class="chart" style="--cat:{accent}"><div class="mech">{cards}</div>'
+            f'<figcaption>How a GLP-1 drug works: it mimics the gut hormone and switches on the same three effects</figcaption></figure>')
+
+
+def parse_healthcare(md_text):
+    lines = md_text.split("\n")
+    model = {"title": debold(lines[0].lstrip("# ").strip()), "theme": "healthcare/GLP-1",
+             "l0": "", "l1": [], "forces": [], "indicators": "", "companies": [], "sources": []}
+    i_l0 = find_heading(lines, "## L0")
+    i_l1 = find_heading(lines, "## L1")
+    i_why = find_heading(lines, "### Why it exists")
+    i_how = find_heading(lines, "### How the drugs")
+    i_land = find_heading(lines, "### The landscape")
+    i_forces = find_heading(lines, "### The forces")
+    i_ind = find_heading(lines, "### Indicators")
+    i_l2 = find_heading(lines, "## L2")
+    i_sources = find_heading(lines, "## Sources")
+    model["l0"] = first_body(lines, i_l0 + 1, i_l1)
+    model["l1"] = [
+        {"head": "Why it exists", "body": first_body(lines, i_why + 1, i_how)},
+        {"head": "How the drugs actually work", "body": first_body(lines, i_how + 1, i_land)},
+        {"head": "The landscape", "body": first_body(lines, i_land + 1, i_forces)},
+    ]
+    for blk in clean_blocks(lines, i_forces + 1, i_ind):
+        lead, body = split_lead(blk["raw"])
+        if isinstance(blk["marker"], int):
+            model["forces"].append({"num": blk["marker"], "lead": lead, "body": body})
+    model["indicators"] = first_body(lines, i_ind + 1, i_l2)
+    model["companies"] = parse_companies(lines, i_l2, i_sources)
+    model["sources"] = parse_sources(lines, i_sources)
+    return model
+
+
+def build_healthcare(model):
+    accent = HEALTH_ACCENT
+    names = {c["ticker"]: c["name"] for c in model["companies"]}
+
+    parts = []
+    for sub in model["l1"]:
+        parts.append(f'<div class="fld"><span class="lab">{htmllib.escape(sub["head"])}</span>'
+                     f'{block(sub["body"], deco(sub["body"]), cls="fld-p")}</div>')
+        if sub["head"].startswith("How the drugs"):
+            parts.append(glp1_mechanism_svg(accent))
+        if sub["head"] == "The landscape":
+            parts.append(charts_block([LILLY_DONUT], accent))
+    l1_body = f'<div class="prose">{"".join(parts)}</div>'
+
+    force_accents = ["#fbbf63", "#a78bfa", "#fb7185", "#5ea8ff", "#2dd4bf"]
+    forces = "".join(
+        f'<div class="force" style="--cat:{force_accents[(f["num"] - 1) % len(force_accents)]}">'
+        f'<div class="fn">{f["num"]}</div><div class="ft">{lead_para(f["lead"], f["body"])}</div></div>'
+        for f in model["forces"])
+
+    co = "".join(company_html(c, accent, names) for c in model["companies"])
+    co_list = (f'<div class="co-list"><div class="co-list-head">'
+               f'<span class="co-list-lab">The companies <span class="co-count">{len(model["companies"])}</span></span>'
+               f'<button class="expand-all" type="button">Expand all</button></div>{co}</div>')
+
+    main_html = (
+        hero("The watchlist · a field guide", 'The <em>GLP-1</em> ecosystem', model["l0"], accent)
+        + section("I", "The system", "How the ecosystem works", l1_body, "sec-1", accent)
+        + section("II", "What moves it", "The forces that move it", f'<div class="forces">{forces}</div>', "sec-2", accent)
+        + section("III", "What to watch", "Indicators to watch",
+                  block(model["indicators"], deco(model["indicators"]), cls="lead"), "sec-3", accent)
+        + section("IV", "The names", "The companies", co_list, "sec-4", accent)
+        + section("V", "Researched, not recalled", "Sources",
+                  f'<div class="sources">{sources_html(model["sources"])}</div>'
+                  f'<footer>Field guide · Healthcare · the GLP-1 ecosystem</footer>', "sec-5", accent))
+
+    nav_items = [("top", "#sec-1", "I", "How the ecosystem works"),
+                 ("top", "#sec-2", "II", "The forces that move it"),
+                 ("top", "#sec-3", "III", "Indicators to watch"),
+                 ("top", "#sec-4", "IV", "The companies")]
+    for c in model["companies"]:
+        nav_items.append(("sub", f'#co-{c["ticker"]}', accent, f'{c["ticker"]} · {htmllib.escape(c["name"])}'))
+    nav_items.append(("top", "#sec-5", "V", "Sources"))
+    return page(model["title"], nav_block("Healthcare", nav_items), main_html, {})
+
+
+# ---- Frontier -------------------------------------------------------------
+FRONTIER_ACCENT = {"rare-earth materials": "#fbbf63", "quantum computing": "#a78bfa", "lidar": "#2dd4bf"}
+FRONTIER_CHARTS = {
+    "rare-earth materials": [{"type": "donut", "title": "NdFeB magnets", "cap": "% of high-performance magnet output (China dominates)",
+                              "rows": [["China", 90, 0], ["Rest of world (incl. MP)", 10, 1]]}],
+    "lidar": [{"type": "donut", "title": "Automotive lidar", "cap": "% of automotive-lidar revenue (Chinese makers ~60%)",
+               "rows": [["Hesai", 35, 0], ["RoboSense", 22, 0], ["Others (incl. Ouster)", 43, 1]]}],
+}
+
+
+def parse_frontier(md_text):
+    lines = md_text.split("\n")
+    model = {"title": debold(lines[0].lstrip("# ").strip()), "l0": "", "groups": [], "sources": []}
+    i_l0 = find_heading(lines, "## L0")
+    i_sources = find_heading(lines, "## Sources")
+    model["l0"] = first_body(lines, i_l0 + 1, find_heading(lines, "## Critical", "## Quantum", "## 3D"))
+    # each "## <title>  `theme: ...`" is an independent group with a "The field" intro + one company
+    grp_idx = [k for k in range(i_l0, i_sources)
+               if lines[k].startswith("## ") and "`theme:" in lines[k]]
+    bounds = grp_idx + [i_sources]
+    for gi in range(len(grp_idx)):
+        g_lines = lines[bounds[gi]:bounds[gi + 1]]
+        hm = re.match(r"^##\s*(.*?)\s*`theme:\s*(.*?)`", g_lines[0])
+        comp_at = next((k for k, ln in enumerate(g_lines) if ln.startswith("#### ")), len(g_lines))
+        field = first_body(g_lines, 1, comp_at)  # the "The field." intro paragraph
+        comps = parse_companies(g_lines, comp_at, len(g_lines))
+        model["groups"].append({"title": debold(hm.group(1).strip()), "theme": hm.group(2).strip(),
+                                "field": field, "companies": comps})
+    model["sources"] = parse_sources(lines, i_sources)
+    return model
+
+
+def build_frontier(model):
+    sections, nav_items = [], [("top", "#sec-0", "·", "What you are looking at")]
+    main_html = hero("The watchlist · a field guide", 'Frontier &amp; <em>enabling tech</em>',
+                     model["l0"], "#fbbf63", hid="sec-0")
+    for i, g in enumerate(model["groups"]):
+        accent = FRONTIER_ACCENT.get(g["theme"], "#5ea8ff")
+        roman = ["I", "II", "III", "IV", "V"][i]
+        field = f'<div class="fld"><span class="lab">The field</span>{block(g["field"], deco(g["field"]), cls="fld-p")}</div>'
+        charts = charts_block(FRONTIER_CHARTS[g["theme"]], accent) if g["theme"] in FRONTIER_CHARTS else ""
+        co = "".join(company_html(c, accent, {c["ticker"]: c["name"] for c in g["companies"]}) for c in g["companies"])
+        body = (f'{field}{charts}<div class="co-list"><div class="co-list-head">'
+                f'<span class="co-list-lab">The bet <span class="co-count">{len(g["companies"])}</span></span>'
+                f'<button class="expand-all" type="button">Expand all</button></div>{co}</div>')
+        sid = f'phase-{slug(g["theme"])}'
+        sections.append(section(roman, htmllib.escape(g["theme"]), g["title"], body, sid, accent))
+        nav_items.append(("sub", f'#{sid}', accent, f'{roman} · {htmllib.escape(g["title"])}'))
+    src = section(["I", "II", "III", "IV", "V"][len(model["groups"])], "Researched, not recalled", "Sources",
+                  f'<div class="sources">{sources_html(model["sources"])}</div>'
+                  f'<footer>Field guide · Frontier and enabling tech</footer>', "sec-src")
+    main_html += "".join(sections) + src
+    nav_items.append(("top", "#sec-src", ["I", "II", "III", "IV", "V"][len(model["groups"])], "Sources"))
+    return page(model["title"], nav_block("Frontier", nav_items), main_html, {})
 
 
 # ----------------------------------------------------------------------------
@@ -671,21 +925,47 @@ def audit(html_text, md_text):
 TEMPLATE = (ROOT / "primer_template.html").read_text(encoding="utf-8")
 
 
+def count_companies(model):
+    if "phases" in model:
+        return sum(len(p["companies"]) for p in model["phases"])
+    if "groups" in model:
+        return sum(len(g["companies"]) for g in model["groups"])
+    return len(model.get("companies", []))
+
+
+SECTORS = [
+    ("tech", SRC_TECH, OUT_TECH, "parse_tech", "build_tech"),
+    ("healthcare", SRC_HEALTH, OUT_HEALTH, "parse_healthcare", "build_healthcare"),
+    ("frontier", SRC_FRONTIER, OUT_FRONTIER, "parse_frontier", "build_frontier"),
+]
+
+
 def main():
-    md = SRC_TECH.read_text(encoding="utf-8")
-    model = parse_tech(md)
-    out = render(model)
-    OUT_TECH.write_text(out, encoding="utf-8")
-    print(f"wrote {OUT_TECH} ({len(out)} bytes), {sum(len(p['companies']) for p in model['phases'])} companies")
-    if "--audit" in sys.argv:
-        problems = audit(out, md)
-        if not problems:
-            print("AUDIT PASS: every approved sentence is present verbatim; no paraphrase detected.")
-        else:
-            print(f"AUDIT FAIL: {len(problems)} issue(s):")
-            for kind, txt in problems[:40]:
-                print(f"  [{kind}] {txt}")
-            sys.exit(1)
+    audit_mode = "--audit" in sys.argv
+    only = [a for a in sys.argv[1:] if not a.startswith("-")]
+    g = globals()
+    failed = False
+    for name, src, out_path, parse_fn, build_fn in SECTORS:
+        if only and name not in only:
+            continue
+        if parse_fn not in g or build_fn not in g:
+            continue  # sector not implemented yet
+        md = src.read_text(encoding="utf-8")
+        model = g[parse_fn](md)
+        html = g[build_fn](model)
+        out_path.write_text(html, encoding="utf-8")
+        print(f"[{name}] wrote {out_path.name} ({len(html)} bytes), {count_companies(model)} companies")
+        if audit_mode:
+            problems = audit(html, md)
+            if problems:
+                failed = True
+                print(f"[{name}] AUDIT FAIL: {len(problems)} issue(s):")
+                for kind, txt in problems[:30]:
+                    print(f"    [{kind}] {txt}")
+            else:
+                print(f"[{name}] AUDIT PASS")
+    if failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

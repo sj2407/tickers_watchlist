@@ -463,21 +463,22 @@ def donut_svg(chart, accent):
     for i, (label, val, owned) in enumerate(rows):
         frac = val / total
         arc = max(frac * C - 2.5, 0.5)
-        seg.append(f'<circle cx="{cx}" cy="{cx}" r="{r}" fill="none" stroke="{cols[i]}" '
+        seg.append(f'<circle class="seg" data-i="{i}" cx="{cx}" cy="{cx}" r="{r}" fill="none" stroke="{cols[i]}" '
                    f'stroke-width="{sw + (4 if owned else 0)}" stroke-linecap="butt" '
                    f'stroke-dasharray="{arc:.1f} {C - arc:.1f}" stroke-dashoffset="{-off:.1f}" '
                    f'transform="rotate(-90 {cx} {cx})"/>')
         off += frac * C
     big = (f"{owned_sum:g}%" if owned_sum else htmllib.escape(chart["title"]))
     small = htmllib.escape(chart["title"]) if owned_sum else ""
-    svg = (f'<svg viewBox="0 0 160 160" class="donut" role="img" aria-label="{htmllib.escape(chart["cap"])}">'
+    svg = (f'<svg viewBox="0 0 160 160" class="donut" role="img" aria-label="{htmllib.escape(chart["cap"])}" '
+           f'data-dbig="{big}" data-dsmall="{small}">'
            f'<circle cx="{cx}" cy="{cx}" r="{r}" fill="none" stroke="#1a1b22" stroke-width="{sw}"/>'
            + "".join(seg)
            + f'<text x="{cx}" y="{cx + (0 if small else 6)}" text-anchor="middle" class="d-big">{big}</text>'
            + (f'<text x="{cx}" y="{cx + 18}" text-anchor="middle" class="d-small">{small}</text>' if small else "")
            + "</svg>")
     legend = '<ul class="legend">' + "".join(
-        f'<li class="{"me" if o else ""}"><span class="sw" style="background:{cols[i]}"></span>'
+        f'<li class="{"me" if o else ""}" data-i="{i}"><span class="sw" style="background:{cols[i]}"></span>'
         f'<span class="ln">{htmllib.escape(lab)}</span><span class="fig">{v:g}%</span></li>'
         for i, (lab, v, o) in enumerate(rows)) + "</ul>"
     return (f'<figure class="chart" style="--cat:{accent}"><div class="chart-body">{svg}{legend}</div>'
@@ -651,9 +652,17 @@ def tech_parts(model, pfx=""):
 
     force_accents = ["#fbbf63", "#a78bfa", "#fb7185", "#5ea8ff"]
     forces = []
+    fic = [
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg>',  # capital cycle
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="6" width="16" height="4" rx="1"/><rect x="4" y="13" width="16" height="4" rx="1"/><path d="M8 6V4M16 6V4M8 20v-3M16 20v-3"/></svg>',  # memory cycle
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>',  # geography globe
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 21h14M3 7h18M7 7l-3 6a3 3 0 0 0 6 0zM17 7l-3 6a3 3 0 0 0 6 0z"/></svg>',  # monopoly vs commodity
+    ]
     for f in model["forces"]:
         ac = force_accents[(f["num"] - 1) % len(force_accents)]
-        forces.append(f'<div class="force" style="--cat:{ac}"><div class="fn">{f["num"]}</div>'
+        ic = fic[(f["num"] - 1) % len(fic)]
+        forces.append(f'<div class="force" style="--cat:{ac}"><div class="force-side"><span class="fn">{f["num"]}</span>'
+                      f'<span class="force-ic">{ic}</span></div>'
                       f'<div class="ft">{lead_para(f["lead"], f["body"])}</div></div>')
 
     phases = "".join(phase_html(p, i, names) for i, p in enumerate(model["phases"]))

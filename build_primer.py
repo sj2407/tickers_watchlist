@@ -24,6 +24,7 @@ SRC_HEALTH = ROOT / "primer-content-healthcare.md"
 OUT_HEALTH = ROOT / "primer-healthcare.html"
 SRC_FRONTIER = ROOT / "primer-content-frontier.md"
 OUT_FRONTIER = ROOT / "primer-frontier.html"
+OUT_ALL = ROOT / "web" / "public" / "primer.html"  # consolidated, deployable static file
 
 # ---- theme taxonomy -> accent colour (vivid, AA on near-black; neighbours in the
 #      reading sequence differ in hue family so adjacent sections never clash) ----
@@ -633,7 +634,7 @@ def sources_html(sources):
     return "\n".join(out)
 
 
-def build_tech(model):
+def tech_parts(model, pfx=""):
     names = {c["ticker"]: c["name"] for ph in model["phases"] for c in ph["companies"]}
     data = {"phases": [{"theme": p["theme"], "title": p["title"], "slug": slug(p["theme"]),
                         "tickers": [c["ticker"] for c in p["companies"]]} for p in model["phases"]],
@@ -659,32 +660,41 @@ def build_tech(model):
     supleg = ('<div class="legend-row"><span><b>arrows</b> = supplies / sells to</span>'
               '<span>side boxes feed the machine</span><span><b>tap</b> a phase or ticker to jump to it</span></div>')
 
+    def sid(n):
+        return f"{pfx}sec-{n}"
+
     main_html = (
         hero("The watchlist · a field guide", 'The AI <em>build-out</em>', model["l0"])
         + section("I", "The system", "How the ecosystem works",
-                  f'<div class="depmap breakout"><div id="dep"></div></div><div class="prose">{"".join(l1)}</div>', "sec-1")
+                  f'<div class="depmap breakout"><div id="dep"></div></div><div class="prose">{"".join(l1)}</div>', sid(1))
         + section("II", "What moves every stock", "The four forces",
-                  f'{block(model["forces_intro"], deco(model["forces_intro"]), cls="lead")}<div class="forces">{"".join(forces)}</div>', "sec-2")
+                  f'{block(model["forces_intro"], deco(model["forces_intro"]), cls="lead")}<div class="forces">{"".join(forces)}</div>', sid(2))
         + section("III", "Expansion or contraction", "Reading the cycle at a glance",
-                  f'{block(model["cycle"], deco(model["cycle"]), cls="lead")}<div class="gauges" id="gauges"></div>', "sec-3")
+                  f'{block(model["cycle"], deco(model["cycle"]), cls="lead")}<div class="gauges" id="gauges"></div>', sid(3))
         + section("IV", "Phases & companies", "The landscape",
                   f'{block(model["l2_intro"], deco(model["l2_intro"]), cls="lead")}'
-                  f'<div class="supmap breakout">{supleg}<div id="map"></div></div>{phases}', "sec-4")
+                  f'<div class="supmap breakout">{supleg}<div id="map"></div></div>{phases}', sid(4))
         + section("V", "The short version", "Reading your tech book in one minute",
-                  f'<ul class="onemin">{onemin}</ul>', "sec-5")
+                  f'<ul class="onemin">{onemin}</ul>', sid(5))
         + section("VI", "Researched, not recalled", "Sources",
                   f'<p class="lead">Every market-share and revenue figure above is from these.</p>'
                   f'<div class="sources">{sources_html(model["sources"])}</div>'
-                  f'<footer>Field guide · Technology · the AI build-out</footer>', "sec-6"))
+                  f'<footer>Field guide · Technology · the AI build-out</footer>', sid(6)))
 
-    nav_items = [("top", "#sec-1", "I", "How the ecosystem works"),
-                 ("top", "#sec-2", "II", "The four forces"),
-                 ("top", "#sec-3", "III", "Reading the cycle"),
-                 ("top", "#sec-4", "IV", "The landscape")]
+    nav_items = [("top", f"#{sid(1)}", "I", "How the ecosystem works"),
+                 ("top", f"#{sid(2)}", "II", "The four forces"),
+                 ("top", f"#{sid(3)}", "III", "Reading the cycle"),
+                 ("top", f"#{sid(4)}", "IV", "The landscape")]
     for i, p in enumerate(model["phases"]):
         nav_items.append(("sub", f'#phase-{slug(p["theme"])}', THEME_COLOR[p["theme"]],
                           f'{PHASE_ROMAN[i]} · {htmllib.escape(p["title"])}'))
-    return page(model["title"], nav_block("Technology", nav_items), main_html, data)
+    return {"label": "Technology", "title": model["title"], "main": main_html,
+            "nav_items": nav_items, "data": data}
+
+
+def build_tech(model):
+    p = tech_parts(model)
+    return page(p["title"], nav_block(p["label"], p["nav_items"]), p["main"], p["data"])
 
 
 # ---- Healthcare -----------------------------------------------------------
@@ -737,9 +747,12 @@ def parse_healthcare(md_text):
     return model
 
 
-def build_healthcare(model):
+def healthcare_parts(model, pfx=""):
     accent = HEALTH_ACCENT
     names = {c["ticker"]: c["name"] for c in model["companies"]}
+
+    def sid(n):
+        return f"{pfx}sec-{n}"
 
     parts = []
     for sub in model["l1"]:
@@ -764,23 +777,29 @@ def build_healthcare(model):
 
     main_html = (
         hero("The watchlist · a field guide", 'The <em>GLP-1</em> ecosystem', model["l0"], accent)
-        + section("I", "The system", "How the ecosystem works", l1_body, "sec-1", accent)
-        + section("II", "What moves it", "The forces that move it", f'<div class="forces">{forces}</div>', "sec-2", accent)
+        + section("I", "The system", "How the ecosystem works", l1_body, sid(1), accent)
+        + section("II", "What moves it", "The forces that move it", f'<div class="forces">{forces}</div>', sid(2), accent)
         + section("III", "What to watch", "Indicators to watch",
-                  block(model["indicators"], deco(model["indicators"]), cls="lead"), "sec-3", accent)
-        + section("IV", "The names", "The companies", co_list, "sec-4", accent)
+                  block(model["indicators"], deco(model["indicators"]), cls="lead"), sid(3), accent)
+        + section("IV", "The names", "The companies", co_list, sid(4), accent)
         + section("V", "Researched, not recalled", "Sources",
                   f'<div class="sources">{sources_html(model["sources"])}</div>'
-                  f'<footer>Field guide · Healthcare · the GLP-1 ecosystem</footer>', "sec-5", accent))
+                  f'<footer>Field guide · Healthcare · the GLP-1 ecosystem</footer>', sid(5), accent))
 
-    nav_items = [("top", "#sec-1", "I", "How the ecosystem works"),
-                 ("top", "#sec-2", "II", "The forces that move it"),
-                 ("top", "#sec-3", "III", "Indicators to watch"),
-                 ("top", "#sec-4", "IV", "The companies")]
+    nav_items = [("top", f"#{sid(1)}", "I", "How the ecosystem works"),
+                 ("top", f"#{sid(2)}", "II", "The forces that move it"),
+                 ("top", f"#{sid(3)}", "III", "Indicators to watch"),
+                 ("top", f"#{sid(4)}", "IV", "The companies")]
     for c in model["companies"]:
         nav_items.append(("sub", f'#co-{c["ticker"]}', accent, f'{c["ticker"]} · {htmllib.escape(c["name"])}'))
-    nav_items.append(("top", "#sec-5", "V", "Sources"))
-    return page(model["title"], nav_block("Healthcare", nav_items), main_html, {})
+    nav_items.append(("top", f"#{sid(5)}", "V", "Sources"))
+    return {"label": "Healthcare", "title": model["title"], "main": main_html,
+            "nav_items": nav_items, "data": {}}
+
+
+def build_healthcare(model):
+    p = healthcare_parts(model)
+    return page(p["title"], nav_block(p["label"], p["nav_items"]), p["main"], p["data"])
 
 
 # ---- Frontier -------------------------------------------------------------
@@ -815,28 +834,55 @@ def parse_frontier(md_text):
     return model
 
 
-def build_frontier(model):
-    sections, nav_items = [], [("top", "#sec-0", "·", "What you are looking at")]
+def frontier_parts(model, pfx=""):
+    roman = ["I", "II", "III", "IV", "V"]
+    sec0, secsrc = f"{pfx}sec-0", f"{pfx}sec-src"
+    sections, nav_items = [], [("top", f"#{sec0}", "·", "What you are looking at")]
     main_html = hero("The watchlist · a field guide", 'Frontier &amp; <em>enabling tech</em>',
-                     model["l0"], "#fbbf63", hid="sec-0")
+                     model["l0"], "#fbbf63", hid=sec0)
     for i, g in enumerate(model["groups"]):
         accent = FRONTIER_ACCENT.get(g["theme"], "#5ea8ff")
-        roman = ["I", "II", "III", "IV", "V"][i]
         field = f'<div class="fld"><span class="lab">The field</span>{block(g["field"], deco(g["field"]), cls="fld-p")}</div>'
         charts = charts_block(FRONTIER_CHARTS[g["theme"]], accent) if g["theme"] in FRONTIER_CHARTS else ""
         co = "".join(company_html(c, accent, {c["ticker"]: c["name"] for c in g["companies"]}) for c in g["companies"])
         body = (f'{field}{charts}<div class="co-list"><div class="co-list-head">'
                 f'<span class="co-list-lab">The bet <span class="co-count">{len(g["companies"])}</span></span>'
                 f'<button class="expand-all" type="button">Expand all</button></div>{co}</div>')
-        sid = f'phase-{slug(g["theme"])}'
-        sections.append(section(roman, htmllib.escape(g["theme"]), g["title"], body, sid, accent))
-        nav_items.append(("sub", f'#{sid}', accent, f'{roman} · {htmllib.escape(g["title"])}'))
-    src = section(["I", "II", "III", "IV", "V"][len(model["groups"])], "Researched, not recalled", "Sources",
+        gid = f'phase-{slug(g["theme"])}'
+        sections.append(section(roman[i], htmllib.escape(g["theme"]), g["title"], body, gid, accent))
+        nav_items.append(("sub", f'#{gid}', accent, f'{roman[i]} · {htmllib.escape(g["title"])}'))
+    n = len(model["groups"])
+    src = section(roman[n], "Researched, not recalled", "Sources",
                   f'<div class="sources">{sources_html(model["sources"])}</div>'
-                  f'<footer>Field guide · Frontier and enabling tech</footer>', "sec-src")
+                  f'<footer>Field guide · Frontier and enabling tech</footer>', secsrc)
     main_html += "".join(sections) + src
-    nav_items.append(("top", "#sec-src", ["I", "II", "III", "IV", "V"][len(model["groups"])], "Sources"))
-    return page(model["title"], nav_block("Frontier", nav_items), main_html, {})
+    nav_items.append(("top", f"#{secsrc}", roman[n], "Sources"))
+    return {"label": "Frontier", "title": model["title"], "main": main_html,
+            "nav_items": nav_items, "data": {}}
+
+
+def build_frontier(model):
+    p = frontier_parts(model)
+    return page(p["title"], nav_block(p["label"], p["nav_items"]), p["main"], p["data"])
+
+
+# ---- Consolidated (all three, with a sector toggle) -----------------------
+def build_all():
+    parts = [
+        ("tech", tech_parts(parse_tech(SRC_TECH.read_text(encoding="utf-8")), "t-")),
+        ("healthcare", healthcare_parts(parse_healthcare(SRC_HEALTH.read_text(encoding="utf-8")), "h-")),
+        ("frontier", frontier_parts(parse_frontier(SRC_FRONTIER.read_text(encoding="utf-8")), "f-")),
+    ]
+    switch = '<div class="sector-switch">' + "".join(
+        f'<button class="sw-btn{" on" if i == 0 else ""}" data-sector="{k}" type="button">{p["label"]}</button>'
+        for i, (k, p) in enumerate(parts)) + "</div>"
+    main = switch + "".join(
+        f'<div class="sector" data-sector="{k}"{"" if i == 0 else " hidden"}>{p["main"]}</div>'
+        for i, (k, p) in enumerate(parts))
+    nav = "".join(
+        f'<div class="nav-sector" data-sector="{k}"{"" if i == 0 else " hidden"}>{nav_block(p["label"], p["nav_items"])}</div>'
+        for i, (k, p) in enumerate(parts))
+    return page("The watchlist · field guide", nav, main, parts[0][1]["data"])
 
 
 # ----------------------------------------------------------------------------
@@ -898,6 +944,24 @@ def build_prose_chunks(html_text):
     attribute (all prose is rendered inline; the DATA blob holds no prose)."""
     return [htmllib.unescape(m.group(1)) for m in re.finditer(r'data-src="([^"]*)"', html_text)
             if htmllib.unescape(m.group(1)).strip()]
+
+
+def audit_combined(html_text, md_texts):
+    """Audit the consolidated build against the union of all sector .md files:
+    every shown chunk must be verbatim from SOME sector, and every sentence of
+    EACH sector must appear in the build."""
+    hay = " ".join(md_haystack(m) for m in md_texts)
+    chunks = build_prose_chunks(html_text)
+    build_join = norm(" ".join(chunks))
+    problems = []
+    for ch in chunks:
+        if norm(ch) not in hay:
+            problems.append(("NOT-IN-SOURCE", ch[:140]))
+    for m in md_texts:
+        for sent in md_prose_corpus(m):
+            if sent not in build_join:
+                problems.append(("MISSING-FROM-BUILD", sent[:140]))
+    return problems
 
 
 def audit(html_text, md_text):
@@ -964,6 +1028,25 @@ def main():
                     print(f"    [{kind}] {txt}")
             else:
                 print(f"[{name}] AUDIT PASS")
+
+    # consolidated build (all three with a sector toggle)
+    if not only or "all" in only:
+        combined = build_all()
+        OUT_ALL.parent.mkdir(parents=True, exist_ok=True)
+        OUT_ALL.write_text(combined, encoding="utf-8")
+        print(f"[all] wrote {OUT_ALL.relative_to(ROOT)} ({len(combined)} bytes)")
+        if audit_mode:
+            mds = [SRC_TECH.read_text(encoding="utf-8"), SRC_HEALTH.read_text(encoding="utf-8"),
+                   SRC_FRONTIER.read_text(encoding="utf-8")]
+            problems = audit_combined(combined, mds)
+            if problems:
+                failed = True
+                print(f"[all] AUDIT FAIL: {len(problems)} issue(s):")
+                for kind, txt in problems[:30]:
+                    print(f"    [{kind}] {txt}")
+            else:
+                print("[all] AUDIT PASS")
+
     if failed:
         sys.exit(1)
 

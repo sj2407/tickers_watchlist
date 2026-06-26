@@ -39,6 +39,13 @@
   .nav a.active{color:var(--ink-0)}
   .nav-sub.active{font-weight:600}
 
+  /* sector toggle (consolidated build) */
+  .sector-switch{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:6px;padding:14px 0 12px;margin-bottom:4px;background:linear-gradient(180deg,var(--bg) 72%,transparent)}
+  .sw-btn{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);background:var(--surface-1);border:1px solid var(--hairline);border-radius:10px;padding:9px 18px;cursor:pointer;transition:.15s}
+  .sw-btn:hover{color:var(--ink-0)}
+  .sw-btn.on{color:var(--ink-0);border-color:var(--ink-3);background:var(--surface-2)}
+  [hidden]{display:none!important}
+
   /* hero */
   .eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--cat)}
   .hero{padding:26px 0 8px}
@@ -290,6 +297,11 @@ if(document.getElementById('map'))(function(){
 
 /* tap diagram -> jump to section/company (and open the collapsed card) */
 document.addEventListener('click',e=>{
+  const sw=e.target.closest('.sw-btn');if(sw){const k=sw.dataset.sector;
+    document.querySelectorAll('.sw-btn').forEach(b=>b.classList.toggle('on',b.dataset.sector===k));
+    document.querySelectorAll('.sector').forEach(s=>{s.hidden=s.dataset.sector!==k;});
+    document.querySelectorAll('.nav-sector').forEach(n=>{n.hidden=n.dataset.sector!==k;});
+    window.scrollTo({top:0});return;}
   const tk=e.target.closest('.tkn[data-t]');if(tk){const el=document.getElementById('co-'+tk.dataset.t);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});}return;}
   const ph=e.target.closest('[data-p]');if(ph){const el=document.getElementById('phase-'+ph.dataset.p);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return;}
   const ex=e.target.closest('.expand-all');if(ex){const list=ex.closest('.co-list');const cos=[...list.querySelectorAll('details.co')];

@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The AI Supply Chain · Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0d; --panel:#17171c; --panel2:#101015; --ring:#2a2a31; --ring2:#3a3a44;
+    --ink:#fbfbfc; --ink2:#e6e6ea; --ink3:#c0c0c8; --ink4:#8a8a95;     /* brighter greys for contrast */
+    --materials:#f5a524; --equipment:#38bdf8; --foundry:#7c83ff; --memory:#c084fc;
+    --designers:#34d399; --optical:#2dd4bf; --cloud:#22d3ee; --software:#f472b6;
+    --frontier:#a78bfa; --healthcare:#fb7185;
+    --serif:'Fraunces',Georgia,serif; --sans:'Hanken Grotesk',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+  body{background-image:radial-gradient(1000px 600px at 75% -8%,rgba(124,131,255,.10),transparent 60%),radial-gradient(800px 500px at 10% 30%,rgba(52,211,153,.06),transparent 60%)}
+  .wrap{max-width:780px;margin:0 auto;padding:30px 18px 90px}
+  a{color:var(--equipment)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--designers)}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(32px,7vw,48px);line-height:1.02;margin:8px 0 0;letter-spacing:-.015em}
+  h1 em{font-style:italic;color:var(--equipment)}
+  .sub{color:var(--ink2);font-size:16px;margin-top:11px;max-width:56ch}
+  .draft{margin-top:16px;border:1px solid #4a3a0e;background:rgba(245,165,36,.10);color:#fcd98a;font-size:12.5px;padding:9px 13px;border-radius:11px;display:flex;gap:8px}
+
+  .h2{font-family:var(--serif);font-size:24px;font-weight:600;margin:34px 0 4px}
+  .lead{font-size:15.5px;color:var(--ink2);margin:0 0 6px;max-width:64ch}
+
+  /* ---------- DIAGRAM ---------- */
+  .stage{margin-top:18px;border:1px solid var(--ring);border-radius:20px;background:linear-gradient(180deg,rgba(124,131,255,.05),var(--panel2));padding:8px 6px 12px;position:relative}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;padding:12px 14px 6px;font-size:12px;color:var(--ink3)}
+  .legend .li{display:flex;align-items:center;gap:6px}
+  .legend .ln{width:18px;height:0;border-top:2px solid var(--ink3)}
+  .legend .ln.dash{border-top-style:dashed}
+  .legend b{color:var(--ink2);font-weight:600}
+  svg.map{display:block;width:100%;height:auto}
+  .node{cursor:pointer}
+  .nodebox{height:100%;border-radius:13px;border:1.5px solid var(--c);background:#14141a;
+    box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 10px 24px -16px var(--c);
+    display:flex;flex-direction:column;overflow:hidden}
+  .nodebox .nh{display:flex;align-items:center;gap:7px;padding:7px 11px;background:color-mix(in srgb,var(--c) 16%, transparent);border-bottom:1px solid color-mix(in srgb,var(--c) 30%, transparent)}
+  .nodebox .nh svg{width:15px;height:15px;color:var(--c);flex:none}
+  .nodebox .nh .t{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--c)}
+  .nodebox .chips{display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px;align-content:flex-start}
+  .tkn{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink);background:#1f1f27;border:1px solid var(--ring2);border-radius:7px;padding:3px 8px;cursor:pointer;transition:.14s;white-space:nowrap}
+  .tkn:hover{border-color:var(--c);color:#fff;transform:translateY(-1px)}
+  .tkn .nmf{color:var(--ink4);font-family:var(--sans);font-weight:500;font-size:11px;margin-left:5px}
+  .outside-label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;fill:var(--ink4)}
+
+  /* ---------- DRAWER ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(4,4,6,.66);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:.22s;z-index:40}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;z-index:50;left:50%;bottom:0;transform:translate(-50%,102%);width:min(560px,100%);
+    max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--ring2);border-bottom:none;
+    border-radius:20px 20px 0 0;transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+  .drawer.on{transform:translate(-50%,0)}
+  .dh{position:sticky;top:0;background:linear-gradient(180deg,var(--panel),rgba(23,23,28,.92));backdrop-filter:blur(6px);
+    display:flex;align-items:center;gap:11px;padding:16px 18px 12px;border-bottom:1px solid var(--ring)}
+  .dh .dtk{font-family:var(--mono);font-size:12px;font-weight:700;color:#06121d;background:var(--c);border-radius:8px;padding:4px 9px}
+  .dh .dn{font-size:17px;font-weight:700;flex:1}
+  .dh .dlayer{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--c)}
+  .dh .x{font-size:20px;color:var(--ink3);cursor:pointer;line-height:1;padding:2px 6px}
+  .dbody{padding:14px 18px 22px}
+  .dsum{font-size:15px;color:var(--ink);line-height:1.5;margin:0 0 4px}
+  .field{margin-top:15px}
+  .flabel{font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+  .flabel svg{width:13px;height:13px}
+  .field p{margin:0;font-size:14.5px;color:var(--ink2)}
+  .l-what{color:var(--equipment)}.l-where{color:var(--frontier)}.l-money{color:var(--designers)}.l-cmr{color:var(--materials)}
+  .cmr{display:grid;gap:7px}.cmr .mini{font-size:14px;color:var(--ink2)}.cmr .mini b{color:var(--ink);font-weight:700}
+
+  .scen{margin-top:17px;border:1px solid var(--ring2);border-radius:13px;background:var(--panel2);padding:13px}
+  .scen .st{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:9px}
+  .track{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+  .seg{font-family:var(--mono);font-size:11.5px;font-weight:700;text-align:center;padding:9px 4px;border-radius:9px;border:1.5px solid var(--ring2);background:var(--panel);color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
+  .seg svg{width:13px;height:13px}
+  .seg[data-s="worst"].on{border-color:var(--healthcare);background:rgba(251,113,133,.16);color:#ffd0d6}
+  .seg[data-s="base"].on{border-color:var(--ink4);background:rgba(230,230,234,.14);color:#fff}
+  .seg[data-s="best"].on{border-color:var(--designers);background:rgba(52,211,153,.16);color:#bbf7e0}
+  .scen-body{margin-top:12px}.scen-body p{margin:0;font-size:14.5px;color:var(--ink)}
+  .drivers{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .drv{font-family:var(--mono);font-size:10.5px;color:var(--ink2);background:#20202a;border:1px solid var(--ring2);border-radius:999px;padding:3px 10px}
+
+  .gloss{margin-top:38px;border:1px solid var(--ring);border-radius:18px;background:var(--panel2);padding:18px}
+  .gloss h2{font-family:var(--serif);font-size:19px;font-weight:600;margin:0 0 13px}
+  .gloss dl{margin:0;display:grid;gap:12px}
+  .gloss dt{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--equipment)}
+  .gloss dd{margin:3px 0 0;font-size:14px;color:var(--ink2)}
+  footer{margin-top:30px;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--ink4);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">The watchlist · a field guide</div>
+  <h1>How your companies <em>connect</em></h1>
+  <p class="sub">Most of these names are one machine: the supply chain that builds AI. The map shows who feeds whom. Tap any ticker to open its story.</p>
+  <div class="draft"><span>⚠</span><span><b>Design mockup.</b> Draft write-ups (to be fact-checked) · hand-drawn icons, no external images.</span></div>
+
+  <h2 class="h2">The AI supply chain</h2>
+  <p class="lead">Read it top to bottom — raw inputs become machines, chips, clusters, and finally software. Solid arrows are direct hand-offs; the two side feeders (memory &amp; optical) join the chain in <b>parallel</b>.</p>
+
+  <div class="stage">
+    <div class="legend">
+      <span class="li"><span class="ln"></span> <b>solid</b> = direct supplier → customer</span>
+      <span class="li"><span class="ln dash"></span> <b>dashed</b> = broad / indirect input</span>
+      <span class="li">↘ side boxes = <b>parallel feeders</b></span>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <div class="gloss"><h2>Plain-English glossary</h2><dl id="glossList"></dl></div>
+  <footer>BUSINESS PRIMER · DESIGN MOCKUP · NOT YET WIRED INTO THE APP</footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer"></div>
+
+<script>
+/* ===== icons ===== */
+const I={
+ materials:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 4v8a6 6 0 0 0 12 0V4"/><path d="M4 4h4M16 4h4"/></svg>',
+ equipment:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>',
+ foundry:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 21V11l5 3V11l5 3V8l5 3v10z"/><path d="M3 21h18"/></svg>',
+ memory:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="6" width="16" height="4" rx="1"/><rect x="4" y="13" width="16" height="4" rx="1"/><path d="M8 6V4M16 6V4M8 20v-3M16 20v-3"/></svg>',
+ designers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><rect x="10" y="10" width="4" height="4"/><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3"/></svg>',
+ optical:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="6" cy="12" r="2"/><path d="M9 12h11"/><path d="M14 9l3 3-3 3"/></svg>',
+ cloud:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 9.5a3.5 3.5 0 0 1 0 8.5z"/></svg>',
+ software:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M9 14l-2 2 2 2M14 14l2 2-2 2"/></svg>',
+ frontier:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="1.6"/><ellipse cx="12" cy="12" rx="10" ry="4.3"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.3" transform="rotate(120 12 12)"/></svg>',
+ healthcare:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="4"/><path d="M12 8v8"/></svg>',
+ worst:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l7 7 3-3 6 6"/><path d="M20 17v-5h-5"/></svg>',
+ base:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h16"/></svg>',
+ best:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l7-7 3 3 6-6"/><path d="M20 7v5h-5"/></svg>',
+ what:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .8-1 1.7"/><path d="M12 17h.01"/></svg>',
+ where:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+ money:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.3c-.6-.8-1.6-1.1-2.5-1.1-1.3 0-2.4.7-2.4 1.9 0 2.6 5 1.4 5 4 0 1.2-1.1 2-2.6 2-1 0-2-.4-2.6-1.2"/></svg>',
+ cmr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6z"/></svg>',
+};
+const LMETA={materials:'Raw materials',equipment:'Chip-making equipment',foundry:'Foundry',memory:'Memory',designers:'Chip designers',optical:'Optical interconnect',cloud:'AI cloud',software:'Software',frontier:'Frontier compute & sensing',healthcare:'Healthcare'};
+
+/* ===== data (one record per company) ===== */
+const D=(o)=>o;
+const COMPANIES=[
+ D({t:'MP',name:'MP Materials',layer:'materials',summary:`America’s rare-earth company — the magnets that power motors in robots, EVs and defense. China controls almost all of them; MP is the home-grown alternative.`,
+  what:`Owns the only large US rare-earth mine and is building magnet factories. Rare-earth magnets are small but critical parts that make electric motors spin.`,
+  where:`A foundational physical input — it feeds the hardware world (motors, robotics, defense) rather than the chips directly.`,
+  money:`Sells rare-earth concentrate today; the bet is moving up into magnets, worth far more. Drivers: magnet demand and supply-security reshoring.`,
+  competes:`China, which processes most of the world’s rare earths.`,moat:`The only scaled US source, integrating into magnets, with government backing.`,risk:`Volatile rare-earth prices and an unproven magnet ramp.`,
+  scen:{worst:{t:`Prices stay low as China floods supply and the magnet ramp slips; cash burns.`,d:['rare-earth prices','execution']},base:{t:`Magnet plants ramp with government and customer backing; the credible Western supplier.`,d:['reshoring','DoD support']},best:{t:`Supply-security urgency plus magnet demand give it pricing power as a strategic champion.`,d:['decoupling','EV/defense']}}}),
+ D({t:'ASML',name:'ASML',layer:'equipment',summary:`Makes the single most complex machine on Earth — the only tool that prints the finest details on a cutting-edge chip. Every advanced chipmaker must buy from it.`,
+  what:`Builds lithography machines that use light to print microscopic circuits onto silicon. Its EUV machines cost $200M+ each, and no one else can make one.`,
+  where:`Near the start of the chain. Foundries can’t build leading-edge chips without it.`,money:`Sells a few extremely expensive machines plus years of service. Driver: the race for smaller, faster chips.`,
+  competes:`A literal monopoly in EUV; Canon/Nikon only in older tools.`,moat:`A technological monopoly from decades of R&D and a unique supplier network.`,risk:`Cyclical capex, China-restriction exposure, lumpy orders.`,
+  scen:{worst:{t:`A deep chip downturn and tighter China bans delay orders for a year or two.`,d:['capex cycle','China rules']},base:{t:`AI and advanced-node demand keep the order book full; the monopoly compounds.`,d:['AI demand','leading-edge race']},best:{t:`EUV and High-NA become essential for every AI chip — the bottleneck of the decade.`,d:['High-NA','AI scaling']}}}),
+ D({t:'AMAT',name:'Applied Materials',layer:'equipment',summary:`If ASML prints the pattern, Applied supplies many of the other machines that build a chip up, layer by layer — the broadest toolkit for the chip factory.`,
+  what:`The largest chip-equipment company by breadth — machines for depositing films, etching and implanting ions across the hundreds of steps that build a chip.`,
+  where:`Equipment layer, alongside ASML, KLA and Lam.`,money:`Machines plus steady service on a huge installed base. Drivers: fab spending and advanced packaging.`,
+  competes:`Lam, KLA and Tokyo Electron.`,moat:`Breadth, scale, recurring service, and deep materials know-how.`,risk:`Cyclicality, China, memory swings.`,
+  scen:{worst:{t:`A memory glut and China pullback shrink equipment budgets.`,d:['memory cycle','China']},base:{t:`Broad exposure rides the AI capex wave; service smooths the cycle.`,d:['fab capex','packaging']},best:{t:`Advanced packaging and new transistor designs need more of its tools per chip.`,d:['packaging','GAA']}}}),
+ D({t:'LRCX',name:'Lam Research',layer:'equipment',summary:`Its machines etch and stack the microscopic layers of a chip — especially the towering 3D structures inside memory. More layers means more Lam tools.`,
+  what:`Specializes in etching and deposition, and is particularly strong in memory, now built as tall 3D stacks.`,where:`Equipment layer, with a memory tilt.`,money:`Machines plus service. Drivers: memory capex and more etch/dep steps per chip.`,
+  competes:`Applied and Tokyo Electron.`,moat:`Deep etch/deposition specialization plus installed base.`,risk:`Tied to the volatile memory cycle and China.`,
+  scen:{worst:{t:`A memory downturn — its biggest exposure — hits hard.`,d:['memory cycle']},base:{t:`More 3D layers and AI memory keep demand growing.`,d:['HBM','3D NAND']},best:{t:`HBM and taller stacks drive a multi-year etch/dep super-cycle.`,d:['HBM scaling']}}}),
+ D({t:'KLAC',name:'KLA',layer:'equipment',summary:`Quality control for chipmaking — its machines hunt for defects invisible to the eye. As chips get more complex, you inspect more, not less.`,
+  what:`Dominates inspection and measurement: tools that scan chips mid-manufacture to catch defects and verify precision.`,where:`Equipment layer — it watches manufacturing rather than performing it.`,money:`High-margin machines plus service. Driver: rising complexity makes inspection grow faster than the rest.`,
+  competes:`Leads inspection by a wide margin.`,moat:`Near-dominant inspection share, defect know-how, high margins.`,risk:`Cyclical spending and China.`,
+  scen:{worst:{t:`A capex pause trims inspection spend and margins compress.`,d:['capex cycle']},base:{t:`Complexity makes inspection grow faster than the market; steady high margins.`,d:['node complexity']},best:{t:`AI-node yields make inspection non-negotiable; share and pricing strengthen.`,d:['yield economics']}}}),
+ D({t:'TSM',name:'TSMC',layer:'foundry',summary:`The contract factory that physically builds the chips other companies design. Nvidia draws the blueprint; TSMC manufactures it — best in the world.`,
+  what:`The world’s largest foundry: it manufactures chips for everyone (Nvidia, Apple, AMD) and leads the most advanced manufacturing and packaging.`,
+  where:`The hinge of the chain — it buys machines below and builds chips for the designers above.`,money:`Charges to manufacture wafers; the most advanced work is most in demand. Drivers: AI demand and scarce leading-edge/packaging capacity.`,
+  competes:`Samsung and Intel foundry — but it holds the cutting-edge lead.`,moat:`Manufacturing leadership, scale, a neutral position, and huge capital barriers.`,risk:`Taiwan geopolitics above all; then cyclicality and capex.`,
+  scen:{worst:{t:`A Taiwan shock or AI digestion dents demand and re-rates it.`,d:['geopolitics','AI digestion']},base:{t:`It stays the leader; AI and packaging keep advanced capacity sold out.`,d:['AI demand','CoWoS']},best:{t:`It cements an unassailable lead and prices scarce capacity for record margins.`,d:['process lead','pricing power']}}}),
+ D({t:'MU',name:'Micron',layer:'memory',summary:`AI chips are useless without fast memory to feed them. Micron is one of only three companies that make it — a commodity business, critical right now.`,
+  what:`Makes DRAM and NAND; the AI-critical piece is HBM, memory stacked next to AI processors so data flows fast enough.`,where:`Memory feeds the chip designers in parallel — every AI system needs it.`,money:`Sells memory by the bit, so profits swing with supply/demand. Drivers: HBM demand and the price cycle.`,
+  competes:`Samsung and SK Hynix; three players control the market.`,moat:`A three-player oligopoly with a huge capital barrier.`,risk:`Brutal price cycles, heavy capex, an emerging Chinese rival.`,
+  scen:{worst:{t:`A classic glut crushes prices and profits swing negative.`,d:['oversupply']},base:{t:`HBM demand tightens the market and lifts the cycle above past peaks.`,d:['HBM','AI memory']},best:{t:`AI keeps memory structurally short and discipline drives a long up-cycle.`,d:['HBM scarcity','discipline']}}}),
+ D({t:'SNDK',name:'SanDisk',layer:'memory',summary:`Makes flash storage — the chips that hold data in phones, SSDs and data centers. Newly spun out, it’s a pure bet on the storage cycle.`,
+  what:`A pure-play NAND flash maker, spun off from Western Digital. Its chips end up in SSDs, phones and AI data centers.`,where:`Memory layer, the storage half.`,money:`Sells flash by the bit, living by the NAND price cycle. Driver: storage demand vs supply.`,
+  competes:`Samsung, SK Hynix, Micron, Kioxia.`,moat:`Scale, brand, a manufacturing JV.`,risk:`NAND prices are even more volatile than DRAM; plus new-independence costs.`,
+  scen:{worst:{t:`A NAND price crash pressures the new company.`,d:['NAND cycle']},base:{t:`AI storage demand firms the cycle as a focused pure-play.`,d:['AI storage']},best:{t:`Undersupply plus AI data growth drive a strong cycle and re-rating.`,d:['undersupply']}}}),
+ D({t:'NVDA',name:'Nvidia',layer:'designers',summary:`Makes the “engines” that power AI — the chips that train and run models like ChatGPT. The pick-and-shovel seller of the AI gold rush.`,
+  what:`Designs GPUs plus the networking that links thousands of them, and CUDA — the software almost every AI developer builds on. It designs; TSMC manufactures.`,
+  where:`The center of gravity — most names here supply it or depend on it.`,money:`Sells chips and full AI systems at high margins. Driver: the data-center build-out.`,
+  competes:`AMD, and customers’ own custom chips (Google, Amazon) built with Broadcom/Marvell.`,moat:`The CUDA software lock-in, a full-stack lead, and relentless pace.`,risk:`Custom customer chips, a spending digestion, China limits, high expectations.`,
+  scen:{worst:{t:`Custom chips and a capex digestion slow growth; expectations reset.`,d:['custom silicon','digestion']},base:{t:`It stays the default AI engine; CUDA keeps share high.`,d:['AI buildout','CUDA']},best:{t:`AI compounds for years and it expands into systems and software.`,d:['AI scaling','full-stack']}}}),
+ D({t:'AVGO',name:'Broadcom',layer:'designers',summary:`Two companies in one: it co-designs custom AI chips for giants like Google (an alternative to Nvidia), and sells software that runs corporate data centers.`,
+  what:`Half semiconductors — networking plus custom AI accelerators built with hyperscalers — and half infrastructure software (VMware).`,where:`Chip-designer layer; its networking also wires AI systems.`,money:`Custom chips, networking, and sticky software. Drivers: custom AI silicon and VMware.`,
+  competes:`Marvell in custom silicon; Nvidia in networking.`,moat:`Deep custom-silicon relationships, networking IP, sticky software.`,risk:`Customer concentration, M&A debt, cyclicality.`,
+  scen:{worst:{t:`A key custom customer in-sources or delays; cyclicality bites.`,d:['concentration','cycle']},base:{t:`Custom silicon and VMware compound; a diversified AI winner.`,d:['custom silicon','software']},best:{t:`Several hyperscaler programs scale at once — the clear #2 AI-silicon force.`,d:['XPU ramp']}}}),
+ D({t:'MRVL',name:'Marvell',layer:'designers',summary:`Like Broadcom, it helps cloud giants design their own AI chips and builds the high-speed connections inside data centers — a smaller, focused challenger.`,
+  what:`Designs custom silicon for hyperscalers and makes the connectivity chips that move data around data centers.`,where:`Chip-designer layer with a foot in connectivity.`,money:`Design wins plus networking/optics. Driver: the AI build-out and ramping programs.`,
+  competes:`Broadcom; Nvidia in networking.`,moat:`Sticky custom-silicon wins and connectivity IP.`,risk:`Concentration, lumpy timing, a larger Broadcom.`,
+  scen:{worst:{t:`Design wins slip or Broadcom out-competes.`,d:['competition','timing']},base:{t:`Custom programs ramp; connectivity grows with AI.`,d:['custom silicon','optics DSP']},best:{t:`It wins a bigger slice of custom silicon — a core AI name.`,d:['hyperscaler wins']}}}),
+ D({t:'CRDO',name:'Credo',layer:'designers',summary:`As AI data centers cram thousands of chips together, moving data without melting becomes the bottleneck. Credo makes smart cables that do it faster and cooler.`,
+  what:`A connectivity specialist; its niche is power-efficient Active Electrical Cables for short links inside a rack.`,where:`Between chip designers and the optical layer — the wiring of a cluster.`,money:`Sells connectivity tied to cluster size. Driver: more chips means exponentially more connections.`,
+  competes:`Broadcom, Marvell and cable/optics vendors.`,moat:`A focused cable-niche lead and a power-efficiency edge.`,risk:`Small, customer-concentrated, vs bigger rivals.`,
+  scen:{worst:{t:`Bigger rivals or optics displace its niche; customers pause.`,d:['competition','concentration']},base:{t:`AEC adoption grows with cluster size.`,d:['AEC adoption']},best:{t:`AECs become a standard for short links; it scales fast.`,d:['standardization']}}}),
+ D({t:'CEVA',name:'Ceva',layer:'designers',summary:`Doesn’t make chips — it rents out chip blueprints (Bluetooth, on-device AI) and collects a royalty on every device that ships.`,
+  what:`An IP licensor: it designs reusable building blocks, licenses them, and earns per-chip royalties. Asset-light.`,where:`Upstream of the designers — design ingredients others bake in.`,money:`Licensing fees plus royalties. Driver: smart, connected, AI-enabled devices.`,
+  competes:`Arm (much larger), plus in-house designs.`,moat:`Niche IP embedded in customers’ chips.`,risk:`Small scale, royalties depend on customers, big rivals.`,
+  scen:{worst:{t:`Edge-AI/IoT volumes stay soft while Arm squeezes royalties.`,d:['unit volumes','competition']},base:{t:`Connected-device growth lifts royalties steadily.`,d:['IoT/edge AI']},best:{t:`On-device AI everywhere drives a royalty inflection.`,d:['edge-AI']}}}),
+ D({t:'COHR',name:'Coherent',layer:'optical',summary:`Inside AI data centers, data moves between machines as pulses of light. Coherent makes the lasers and optical transceivers that send and receive it.`,
+  what:`A lasers-and-optics company; for AI it makes the transceivers that turn electrical signals into light — and the laser chips inside them.`,where:`Optical interconnect — it links racks of chips into a data center, in parallel with the main chain.`,money:`Optical components, transceivers and industrial lasers. Driver: AI bandwidth pushing faster transceivers.`,
+  competes:`Lumentum and others.`,moat:`Vertical integration (its own laser chips), scale, breadth.`,risk:`Cyclicality, pricing, acquisition debt.`,
+  scen:{worst:{t:`Pricing competition and cyclicality squeeze margins; debt weighs.`,d:['pricing','debt']},base:{t:`AI bandwidth drives faster transceivers; integration protects margin.`,d:['800G/1.6T']},best:{t:`A top optical supplier for AI clusters as speeds keep doubling.`,d:['optics scaling']}}}),
+ D({t:'LITE',name:'Lumentum',layer:'optical',summary:`Like Coherent, it makes the optical parts that shuttle data as light inside and between data centers — a direct pick on AI bandwidth.`,
+  what:`Makes optical components, transceivers and lasers. Data-center optics is the AI growth engine.`,where:`Optical-interconnect layer.`,money:`Optics for cloud customers, plus telecom and lasers. Driver: cloud capex on AI networking.`,
+  competes:`Coherent, Marvell and other optics makers.`,moat:`Optical/laser IP and in-house chips.`,risk:`Weak telecom, concentration, cyclicality.`,
+  scen:{worst:{t:`Telecom stays weak and cloud orders are lumpy; recovery stalls.`,d:['telecom','timing']},base:{t:`Data-center optics offsets soft telecom; gradual recovery.`,d:['cloud optics']},best:{t:`AI optical demand inflects and its tech wins share.`,d:['AI bandwidth']}}}),
+ D({t:'CRWV',name:'CoreWeave',layer:'cloud',summary:`Rents out Nvidia chips by the hour — a specialized cloud built only for AI. A GPU landlord that borrows heavily to buy chips, then leases the compute.`,
+  what:`An AI cloud, purpose-built to provide huge fleets of Nvidia GPUs on long contracts.`,where:`Turns the physical chips into rentable computing power for the software above.`,money:`Charges for GPU compute on multi-year contracts. Driver: insatiable AI-compute demand.`,
+  competes:`AWS, Azure, Google and other GPU clouds.`,moat:`Speed/scale of build-out, a close Nvidia tie, long contracts.`,risk:`Huge debt and capex, customer concentration, depreciating chips.`,
+  scen:{worst:{t:`A big customer slows, GPUs depreciate faster, and debt bites.`,d:['concentration','debt']},base:{t:`Contracted demand keeps utilization high; it scales.`,d:['compute demand']},best:{t:`AI compute stays scarce and its speed makes it a key provider.`,d:['scarcity']}}}),
+ D({t:'NOW',name:'ServiceNow',layer:'software',summary:`The behind-the-scenes operating system big companies use to run internal processes — IT, HR and support “tickets” often flow through ServiceNow.`,
+  what:`An enterprise platform that digitizes and automates workflows, now adding AI “agents.”`,where:`Top of the stack — software on the cloud and compute below.`,money:`Recurring subscriptions that expand with departments and AI features.`,
+  competes:`Salesforce, SAP, Microsoft, legacy tools.`,moat:`Deep workflow lock-in, a sticky platform, high retention.`,risk:`IT budgets, big competitors, a high valuation bar.`,
+  scen:{worst:{t:`IT budgets tighten and AI repricing pressures seats.`,d:['IT budgets','AI pricing']},base:{t:`Digitization and AI agents expand its footprint; durable growth.`,d:['digitization','AI add-ons']},best:{t:`It becomes the platform for enterprise AI workflows.`,d:['AI agents']}}}),
+ D({t:'CRWD',name:'CrowdStrike',layer:'software',summary:`The security guard for company computers — software on laptops and servers that uses AI to spot attackers, sold increasingly as a whole platform.`,
+  what:`Cybersecurity: its Falcon agent uses cloud-scale data and AI to stop breaches, expanding into a broad suite.`,where:`Software layer — protecting everything on the stack.`,money:`Per-device subscriptions that grow with modules. Driver: security spend and tool consolidation.`,
+  competes:`Microsoft, Palo Alto, SentinelOne, Zscaler.`,moat:`A single-agent platform, data network effects, retention.`,risk:`Microsoft bundling, the 2024 outage overhang, valuation.`,
+  scen:{worst:{t:`Microsoft bundling and the outage overhang slow new business.`,d:['competition','reputation']},base:{t:`Consolidation drives module adoption; retention compounds.`,d:['consolidation']},best:{t:`It becomes the default security platform at scale.`,d:['platformization']}}}),
+ D({t:'IONQ',name:'IonQ',layer:'frontier',summary:`Quantum computers promise to solve problems no normal computer can. IonQ uses trapped ions — a real lab with real machines, but a long-dated science bet.`,
+  what:`Builds trapped-ion quantum computers and sells cloud access; the promise is solving specific problems that defeat normal computers.`,where:`A frontier bet beside the chain — a possible future computing platform.`,money:`Mostly research contracts and early access today; payoff is years away.`,
+  competes:`IBM, Google, Rigetti — different qubit tech, far from settled.`,moat:`Its trapped-ion approach and early access — unproven at scale.`,risk:`Highly speculative: pre-revenue, technical risk, long timeline, dilution.`,
+  scen:{worst:{t:`Milestones slip and quantum stays a science project; dilution mounts.`,d:['technical risk','timeline']},base:{t:`Steady milestone progress and pilots fund the journey.`,d:['milestones','contracts']},best:{t:`Quantum reaches early usefulness and its approach leads.`,d:['quantum advantage']}}}),
+ D({t:'OUST',name:'Ouster',layer:'frontier',summary:`Lidar gives machines 3D “eyes” by bouncing laser light off the world. Ouster makes these sensors for robots, trucks and infrastructure.`,
+  what:`Makes lidar sensors that time laser bounce-backs to build a precise 3D map, for robotics, industrial, trucking and infrastructure.`,where:`A frontier sensing bet — hardware that lets machines perceive the world (and a customer for MP’s motor magnets).`,money:`Sells sensors, increasingly with software. Driver: automation adoption plus post-merger scale.`,
+  competes:`Other lidar makers and camera-only approaches.`,moat:`A chip-based (“digital”) lidar design that scales in cost.`,risk:`Slow adoption, price competition, cash burn.`,
+  scen:{worst:{t:`Adoption stays slow while price wars and burn pressure it.`,d:['adoption','competition']},base:{t:`Robotics and industrial demand grow; scale improves economics.`,d:['automation demand']},best:{t:`Lidar becomes standard across robotics, AVs and infrastructure.`,d:['lidar adoption']}}}),
+ D({t:'LLY',name:'Eli Lilly',layer:'healthcare',summary:`The drugmaker behind the breakthrough weight-loss and diabetes injections (Mounjaro, Zepbound) — one of two companies dominating that gold rush.`,
+  what:`A 150-year-old pharma company that owns one of the decade’s most important drugs, tirzepatide, plus an approved Alzheimer’s treatment and a deep pipeline.`,where:`Outside the tech stack entirely — its chain is labs, trials and injectable manufacturing.`,money:`Sells patented drugs at high margins; the engine is GLP-1, where demand far exceeds supply.`,
+  competes:`Novo Nordisk; together they own GLP-1.`,moat:`Patents, trial data, doctor trust, hard-to-build manufacturing.`,risk:`A cheaper oral rival, pricing politics, manufacturing limits.`,
+  scen:{worst:{t:`A safer/cheaper oral rival and pricing pressure cap GLP-1 economics.`,d:['GLP-1 competition','pricing']},base:{t:`Demand outruns supply for years; Lilly and Novo split a vast market.`,d:['obesity demand','manufacturing']},best:{t:`GLP-1 expands into new uses and the pipeline delivers; the most valuable drugmaker.`,d:['label expansion','pipeline']}}}),
+ D({t:'HIMS',name:'Hims & Hers',layer:'healthcare',summary:`A direct-to-consumer health brand: subscribe online for treatments (hair, skin, weight loss, mental health) shipped to your door — skipping doctor’s-office friction.`,
+  what:`A consumer brand wrapped around telehealth, with its own pharmacy and labs; expanded from everyday needs into weight loss and mental health.`,where:`A consumer-facing application — the top of the chain, where tech meets a customer.`,money:`Monthly subscriptions plus owned pharmacy economics. Driver: adding categories and retaining subscribers.`,
+  competes:`Ro, pharmacies, branded drugmakers.`,moat:`A trusted brand, big subscriber base, end-to-end ownership.`,risk:`Compounded-GLP-1 regulation, category concentration, competition.`,
+  scen:{worst:{t:`Regulators end compounded-GLP-1 access and a category stalls.`,d:['regulation','concentration']},base:{t:`The subscriber base compounds as it adds categories.`,d:['subscriptions','new categories']},best:{t:`It becomes the default consumer-health front door, cross-selling at high retention.`,d:['brand','cross-sell']}}}),
+];
+const GLOSSARY=[
+ ['Fabless','Designs chips but pays someone else to make them (e.g. Nvidia). The opposite of a foundry.'],
+ ['Foundry','A factory that manufactures chips designed by other companies. TSMC is the largest.'],
+ ['EUV','The most advanced way to print circuits onto silicon, using extreme-ultraviolet light. Only ASML makes the machines.'],
+ ['GPU','A processor originally for graphics that turned out ideal for AI. Nvidia’s specialty.'],
+ ['HBM','High-Bandwidth Memory — stacked next to an AI chip so data flows fast enough to keep it busy.'],
+ ['Hyperscaler','A giant cloud operator (Amazon, Microsoft, Google) buying chips and building data centers at vast scale.'],
+ ['Transceiver','Turns data into pulses of light to send across fiber between machines — a data center’s fast plumbing.'],
+ ['Moat','A durable advantage that makes a business hard to attack — a monopoly, lock-in, or scale.'],
+ ['GLP-1','The drug class (Mounjaro, Ozempic) for diabetes and weight loss that has reshaped healthcare.'],
+];
+
+/* ===== diagram ===== */
+const NS='http://www.w3.org/2000/svg';
+const W=680;
+const byLayer=(l)=>COMPANIES.filter(c=>c.layer===l);
+/* box layout in design coords */
+const BOX={
+ materials:{x:60,y:24,w:300,h:74},
+ equipment:{x:60,y:150,w:300,h:104},
+ foundry:{x:60,y:306,w:300,h:74},
+ designers:{x:60,y:432,w:300,h:118},
+ cloud:{x:60,y:602,w:300,h:74},
+ software:{x:60,y:728,w:300,h:96},
+ memory:{x:392,y:386,w:248,h:96},
+ optical:{x:392,y:560,w:248,h:96},
+ frontier:{x:60,y:872,w:300,h:104},
+ healthcare:{x:392,y:872,w:248,h:104},
+};
+const Hh=1000;
+const ARROWS=[
+ ['materials','equipment','down',true],
+ ['equipment','foundry','down',false],
+ ['foundry','designers','down',false],
+ ['memory','designers','feedL',false],
+ ['designers','cloud','down',false],
+ ['optical','cloud','feedL',false],
+ ['cloud','software','down',false],
+];
+function boxHTML(layer){
+  const b=BOX[layer], comps=byLayer(layer);
+  const chips=comps.map(c=>`<span class="tkn" data-t="${c.t}">${c.t}</span>`).join('');
+  return `<foreignObject x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" class="node">
+    <div xmlns="http://www.w3.org/1999/xhtml" class="nodebox" style="--c:var(--${layer})">
+      <div class="nh">${I[layer]}<span class="t">${LMETA[layer]}</span></div>
+      <div class="chips">${chips}</div>
+    </div></foreignObject>`;
+}
+function arrow(a){
+  const [from,to,kind,dashed]=a, f=BOX[from], t=BOX[to];
+  const col=`var(--${from})`, dash=dashed?'stroke-dasharray="7 6"':'';
+  let d, mid;
+  if(kind==='down'){
+    const x=f.x+f.w/2, y1=f.y+f.h, y2=t.y;
+    d=`M${x},${y1} L${x},${y2-2}`; mid=[x,(y1+y2)/2];
+  }else{ // feedL: from a right-side box into the left chain box's right edge
+    const sx=f.x, sy=f.y+f.h/2, ex=t.x+t.w, ey=t.y+t.h/2;
+    const cx=(sx+ex)/2;
+    d=`M${sx},${sy} C${cx},${sy} ${cx},${ey} ${ex+2},${ey}`; mid=[(sx+ex)/2,(sy+ey)/2];
+  }
+  return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.4" ${dash} marker-end="url(#ah-${from})"/>`;
+}
+function buildMap(){
+  const layers=['materials','equipment','foundry','designers','cloud','software','memory','optical','frontier','healthcare'];
+  const markers=layers.map(l=>`<marker id="ah-${l}" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--${l})"/></marker>`).join('');
+  const boxes=layers.map(boxHTML).join('');
+  const arrows=ARROWS.map(arrow).join('');
+  // dividing label for "outside the chain"
+  const outLabel=`<line x1="40" y1="850" x2="640" y2="850" stroke="var(--ring)" stroke-dasharray="4 6"/>
+    <text x="40" y="843" class="outside-label">Outside the AI chain · their own worlds</text>`;
+  // parallel feeder hint labels
+  const feedLbl=`<text x="392" y="380" class="outside-label" fill="var(--memory)">feeds in parallel ↘</text>
+    <text x="392" y="554" class="outside-label" fill="var(--optical)">connects clusters ↘</text>`;
+  document.getElementById('map').innerHTML=
+   `<svg class="map" viewBox="0 0 ${W} ${Hh}" xmlns="${NS}"><defs>${markers}</defs>${arrows}${outLabel}${feedLbl}${boxes}</svg>`;
+}
+buildMap();
+
+/* ===== drawer ===== */
+const scrim=document.getElementById('scrim'), drawer=document.getElementById('drawer');
+function scenHTML(c){const o=['worst','base','best'],l={worst:'Worst',base:'Base',best:'Best'};
+ return `<div class="scen" data-scen><div class="st">If things go…</div>
+   <div class="track">${o.map(s=>`<button class="seg ${s==='base'?'on':''}" data-s="${s}">${I[s]}${l[s]}</button>`).join('')}</div>
+   <div class="scen-body">${o.map(s=>`<div data-state="${s}" style="display:${s==='base'?'block':'none'}"><p>${c.scen[s].t}</p><div class="drivers">${c.scen[s].d.map(x=>`<span class="drv">${x}</span>`).join('')}</div></div>`).join('')}</div></div>`;}
+function openDrawer(t){
+  const c=COMPANIES.find(x=>x.t===t); if(!c)return;
+  drawer.style.setProperty('--c',`var(--${c.layer})`);
+  drawer.innerHTML=`<div class="dh"><span class="dtk">${c.t}</span>
+    <span class="dn">${c.name}<div class="dlayer">${LMETA[c.layer]}</div></span><span class="x" id="dx">✕</span></div>
+   <div class="dbody"><p class="dsum">${c.summary}</p>
+     <div class="field"><div class="flabel l-what">${I.what} What it does</div><p>${c.what}</p></div>
+     <div class="field"><div class="flabel l-where">${I.where} Where it sits</div><p>${c.where}</p></div>
+     <div class="field"><div class="flabel l-money">${I.money} How it makes money</div><p>${c.money}</p></div>
+     <div class="field"><div class="flabel l-cmr">${I.cmr} Competition · moat · risk</div>
+       <div class="cmr"><div class="mini"><b>Competes:</b> ${c.competes}</div><div class="mini"><b>Moat:</b> ${c.moat}</div><div class="mini"><b>Risk:</b> ${c.risk}</div></div></div>
+     ${scenHTML(c)}</div>`;
+  scrim.classList.add('on'); drawer.classList.add('on');
+}
+function closeDrawer(){scrim.classList.remove('on');drawer.classList.remove('on');}
+document.addEventListener('click',e=>{
+  const tk=e.target.closest('.tkn[data-t]'); if(tk){openDrawer(tk.dataset.t);return;}
+  if(e.target.id==='dx'){closeDrawer();return;}
+  const seg=e.target.closest('.seg'); if(seg){const b=seg.closest('[data-scen]');
+    b.querySelectorAll('.seg').forEach(s=>s.classList.toggle('on',s===seg));
+    b.querySelectorAll('[data-state]').forEach(st=>st.style.display=st.dataset.state===seg.dataset.s?'block':'none');return;}
+});
+scrim.addEventListener('click',closeDrawer);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
+
+/* glossary */
+const dl=document.getElementById('glossList');
+GLOSSARY.forEach(([t,d])=>{const a=document.createElement('dt');a.textContent=t;const b=document.createElement('dd');b.textContent=d;dl.append(a,b);});
+</script>
+</body>
+</html>

@@ -1,10 +1,19 @@
 # Primer Brief: the "catch up on a sector" document
 
 This is the spec for the `/primer` tab (and a candidate to become a reusable skill for
-other sectors and domains). If you are a new session picking this up, read this first.
-It defines the goal, the rules, the structure, and what "good" means. Two working files
-sit beside it: `primer-content-tech.md` (drafted content) and `primer-mockup.html`
-(visual prototypes, superseded often). The brief is the source of truth for intent.
+other sectors and domains). If you are a new session picking this up, read this first,
+then read section 12 (the visual-build directive) and section 13 (next steps) before
+touching anything.
+
+The APPROVED, LOCKED content (the user reviewed every word) lives in three files:
+`primer-content-tech.md`, `primer-content-healthcare.md`, `primer-content-frontier.md`.
+
+> **PRIME DIRECTIVE for the visual build: the approved text is verbatim.** The build renders
+> those three files word for word, same order, same flow. You ONLY add a visual layer on top
+> (bold/highlight, color, diagrams, charts, the portfolio graph). You may NOT paraphrase,
+> condense, reorder, substitute, or delete a single sentence in the first draft. See section 12.
+> `primer.html` is a REJECTED prototype that broke this rule (it paraphrased); use it only for
+> visual/interaction ideas, never for its words.
 
 ---
 
@@ -219,10 +228,48 @@ market share, moat, and supply links per company.
   drug mechanism explained.
 - Frontier content (MP, IONQ, OUST): `primer-content-frontier.md`. Three standalone bets.
 
-**Next phase: the visual masterclass build.** Derive a data model from the three content files
-(one record per company plus phase explainers, four-force dynamics, market shares, and the
-supply-link edges), then build the interactive views per section 6: the ecosystem diagrams with
-arrows and color, market-share bars, two-level drill-down (phase then company), and the portfolio
-supply-chain graph. High contrast, self-contained SVG, responsive. Verify each piece in a browser
-before presenting. The prior prototype `primer-mockup.html` is a superseded reference (its
-supply-chain flow diagram and drawer pattern worked well and can be reused).
+**Visual build: ATTEMPTED AND REJECTED.** A first build (`primer.html`) re-typed the content into
+a JS data model and paraphrased it. The user caught this: the text drifted from the approved
+wording (e.g. the L1 "compute" explainer read "The raw work AI does..." instead of the approved
+"An AI model is a huge collection of numbers..."). That approach is wrong. The visual layer is good
+(supply-chain diagram, phase/company drawers, market-share bars, scenario toggles, drill-down) and
+can be reused as *interaction* reference, but its TEXT must be thrown out and replaced verbatim.
+See section 12 for how to do it correctly.
+
+---
+
+## 12. The visual-build directive (READ BEFORE BUILDING ANYTHING)
+
+The three content files are the approved, locked text. The user reviewed every word. They are the
+literal source. The build is a presentation layer over them, nothing more.
+
+**First-draft rule, absolute:** render the content text VERBATIM. Same words, same sentences, same
+order, same flow, same structure. Then ADD a visual layer on top, and only that:
+- bold and highlight the important phrases,
+- color-code by phase / theme (use the same accents across diagram, chart, and text),
+- add diagrams, charts, market-share bars, and the portfolio supply-chain graph, all BUILT FROM
+  the figures and relationships already written in the text,
+- icons.
+
+You may NOT, in the first draft: paraphrase, condense, shorten, reword, reorder, merge, split,
+substitute, or delete any sentence. If you find yourself typing the content into a JS object or
+rewording for "flow", STOP. That is the exact mistake that lost and drifted the text. Instead,
+consume the markdown as-is (render the markdown to HTML, then decorate it), or copy each sentence
+character for character. Before showing the user, AUDIT the build against the content files for
+verbatim fidelity (the rendered prose must match the `.md` word for word). Only after the user
+approves the first draft may edits be proposed, and then sentence by sentence with their sign-off.
+
+## 13. Next steps (immediate, for the new session)
+
+1. **Build the visual document by rendering the three content `.md` files verbatim**, adding the
+   visual layer on top (bold, color, diagrams, charts, the portfolio supply-chain graph from the
+   `theme` taxonomy and the per-company supply links). Change no words. Lose nothing.
+2. **Deliver as a standalone HTML** the user opens directly in a browser, for review, before any
+   app integration. Verify it renders (screenshots) and audit it for verbatim fidelity first.
+3. **Then integrate** as the `/primer` tab (matches the app's dark theme; see sections 5-7).
+4. Apply the same to all three sections (Tech, Healthcare, Frontier) and the portfolio graph.
+
+Reusable interaction ideas from the rejected `primer.html`: the SVG supply-chain diagram with
+color-coded phase boxes and supplier arrows; tap a phase for a drawer, tap a company for a drawer;
+market-share bars with the owned name highlighted; a Worst/Base/Best toggle; the supply-link edges.
+Keep the *mechanics*, replace the *text* with the verbatim content.

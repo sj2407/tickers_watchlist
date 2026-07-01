@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addTransaction } from "@/lib/data";
+import { addTransaction, getCurrentPositions } from "@/lib/data";
 
 export type TradeInput = {
   ticker: string;
@@ -18,7 +18,11 @@ export type TradeInput = {
  * fetch() to a Route Handler only revalidates the current route, which is why the
  * board total used to lag the per-ticker shares after a trade.
  */
-export async function recordTrade(input: TradeInput): Promise<{ ok: boolean; error?: string }> {
+export type TradePosition = { shares: number; avg_cost: number | null; invested: number | null };
+
+export async function recordTrade(
+  input: TradeInput,
+): Promise<{ ok: boolean; error?: string; position?: TradePosition }> {
   if (!input?.ticker || (input.side !== "buy" && input.side !== "sell")) {
     return { ok: false, error: "ticker and side (buy|sell) required" };
   }
@@ -33,5 +37,16 @@ export async function recordTrade(input: TradeInput): Promise<{ ok: boolean; err
   // "layout" at the root invalidates every page (board + all ticker pages), so the
   // book-value total and per-name shares can never disagree after a trade.
   revalidatePath("/", "layout");
-  return { ok: true };
+  // Read back the derived position so the client can confirm the trade with real
+  // numbers (a full exit drops out of current_positions → report shares 0).
+  let position: TradePosition | undefined;
+  try {
+    const p = (await getCurrentPositions())[input.ticker.toUpperCase()];
+    position = p
+      ? { shares: p.shares, avg_cost: p.avg_cost, invested: p.invested }
+      : { shares: 0, avg_cost: null, invested: null };
+  } catch {
+    /* confirmation numbers are best-effort; the trade itself already succeeded */
+  }
+  return { ok: true, position };
 }

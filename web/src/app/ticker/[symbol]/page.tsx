@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTicker, getLatestSnapshot, getLivePositions } from "@/lib/data";
+import { getTicker, getLatestSnapshot, getLivePositions, getLeanHistory, getTradeHistory } from "@/lib/data";
 import { usd, pct, num, signClass, rsiWord, trendWord, earningsWhen, leanLabel, leanTextClass } from "@/lib/format";
 import { LeanPill, SentimentChip, Metric, SectionHeader } from "@/components/ui";
 import PriceChart from "@/components/PriceChart";
@@ -8,6 +8,9 @@ import PositionPanel from "@/components/PositionPanel";
 import TickerNav from "@/components/TickerNav";
 import RichText from "@/components/RichText";
 import DecisionMatrix from "@/components/DecisionMatrix";
+import LeanHistory from "@/components/LeanHistory";
+import TradeHistory from "@/components/TradeHistory";
+import PositionPriceChart from "@/components/PositionPriceChart";
 import TargetRange from "@/components/TargetRange";
 import { tickerOrder } from "@/lib/order";
 import type { Lean } from "@/lib/types";
@@ -30,6 +33,10 @@ export default async function TickerPage({
   // snapshot's position in file mode. The analysis (lean/technicals) is as-of-last-run.
   const { byTicker } = await getLivePositions(snap);
   const pos = byTicker[t.ticker] ?? t.position;
+  const [leanHistory, tradeHistory] = await Promise.all([
+    getLeanHistory(t.ticker),
+    getTradeHistory(t.ticker),
+  ]);
 
   // Ordered names for the switcher / swipe (held first, then watch-only).
   const heldSet = new Set(
@@ -75,6 +82,10 @@ export default async function TickerPage({
             <PositionPanel ticker={t.ticker} pos={pos} lastPrice={t.price.last} minPos={minPos} />
           </div>
 
+          {/* Your trades over price + the full add/trim log (self-hide with no trades) */}
+          <PositionPriceChart series={t.series} trades={tradeHistory} />
+          <TradeHistory trades={tradeHistory} />
+
           {/* The call, in plain English */}
           <section className="mt-4 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-900/50 p-4 ring-1 ring-zinc-800">
             {(t.narrative_freshness === "carried" || t.narrative_freshness === "stale") && t.narrative_as_of && (
@@ -104,6 +115,9 @@ export default async function TickerPage({
 
           {/* Why this call — every metric placed on the action axis */}
           <DecisionMatrix t={t} />
+
+          {/* Call history — how the lean moved run over run (DB only) */}
+          <LeanHistory points={leanHistory} />
 
           {/* What's happening — news & sentiment narrative */}
           {t.catalyst_summary && (

@@ -218,6 +218,7 @@
     "num_analysts": 20,
     "source": "yfinance"
    },
+   "prior_lean": "hold",
    "rationale": "Prior rationale",
    "relative_strength": {
     "rs20d": 0.23,
@@ -1830,6 +1831,7 @@
     "prev_close": 380.48
    },
    "price_target": null,
+   "prior_lean": null,
    "rationale": null,
    "relative_strength": {
     "rs20d": 0.0,

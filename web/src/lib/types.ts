@@ -193,6 +193,12 @@ export interface Ticker {
   rationale: string | null;
   entry_guidance?: string | null;
   invalidation?: string | null;
+  // The board's call at the last enriched run (Python-owned anchor). Lets the UI show
+  // run-over-run flips and gives the routine a diff to justify against.
+  prior_lean?: Lean | null;
+  // The fresh development the routine named when the lean diverged from the quant
+  // proposal or from prior_lean. Null when nothing material changed.
+  lean_change_reason?: string | null;
   // validation provenance (P2): set when the pipeline coerced/rejected a
   // routine-written lean that broke the action vocabulary.
   lean_coerced_from?: string | null;

@@ -210,6 +210,13 @@ def build_snapshot(mode: str) -> dict[str, Any]:
         row = build_ticker_row(tk, hists[tk], quotes[tk], last_prices[tk], cfg, today,
                                bench_hist, book_value, holdings, mode)
 
+        # Anchor for "what changed": the lean the board showed at the last enriched run.
+        # Python-owned — the routine NEVER overwrites this (it's not a narrative field),
+        # so it survives the routine rewriting final_lean and lets both the routine and
+        # the UI compare THIS run's call against the prior one (run-over-run flips) and
+        # against the quant proposal (overrides). None on a first-ever run for a name.
+        row["prior_lean"] = (prior_by_ticker.get(tk) or {}).get("final_lean")
+
         # Intraday = light entry-watch: only fetch news for names that trip a fresh
         # trigger (deduped once per ET day). Full runs always fetch news.
         if mode == "intraday":
@@ -353,6 +360,10 @@ def _data_health(snap: dict[str, Any], mode: str) -> dict[str, Any]:
 NARRATIVE_TICKER_FIELDS = (
     "takeaway", "sentiment", "catalyst_summary", "earnings_recap",
     "final_lean", "rationale", "entry_guidance", "invalidation",
+    # the fresh development that justified this call, written by the routine whenever
+    # the lean diverged from the quant proposal or its own prior call — carried WITH
+    # the lean it explains (and reset when the routine writes a fresh lean without one):
+    "lean_change_reason",
     # validation provenance travels WITH the lean it explains (cleared when the
     # routine writes a fresh valid lean — see enrich.apply_enrichment):
     "lean_coerced_from", "lean_rejected",

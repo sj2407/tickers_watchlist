@@ -14,6 +14,7 @@ enrichment.json shape:
       "takeaway": "...", "sentiment": "bullish|bearish|neutral|mixed",
       "catalyst_summary": "...", "earnings_recap": "... or null",
       "final_lean": "pile_on|hold|trim|exit|watch", "rationale": "...",
+      "lean_change_reason": "... or null",  # REQUIRED when final_lean != prior_lean or != provisional
       "entry_guidance": "... or null", "invalidation": "... or null"
     }
   }
@@ -36,6 +37,7 @@ _TICKER_FIELDS = (
     "earnings_recap",
     "final_lean",
     "rationale",
+    "lean_change_reason",
     "entry_guidance",
     "invalidation",
 )
@@ -80,14 +82,25 @@ def apply_enrichment(snapshot_path: Path = SNAPSHOT, enrichment_path: Path = ENR
             # NEW lean is also invalid).
             row["lean_coerced_from"] = None
             row["lean_rejected"] = None
+            # A change reason belongs to the lean it explains: if the routine wrote a
+            # fresh lean but no reason, drop any carried reason so a stale "why" never
+            # sits under a new call. (When present it already merged in the loop above.)
+            if "lean_change_reason" not in e:
+                row["lean_change_reason"] = None
 
     # Enforce the action vocabulary on ALL rows (overlaid AND carried) — see
     # signals.validate_leans. Never trust the LLM's labels blindly.
     from . import signals
-    from .snapshot import grade_narrative_freshness
+    from .snapshot import grade_narrative_freshness, narrative_freshness
 
     signals.validate_leans(snap)
     grade_narrative_freshness(snap)  # fresh / carried / stale per ticker (P8)
+    # The market recap + market_narrative_as_of may have just been overwritten
+    # above, but build_snapshot graded market_narrative_freshness against the
+    # CARRIED stamp. Regrade it here so a freshly regenerated recap isn't
+    # mislabeled "carried" (the per-ticker grader already reruns just above).
+    snap["market_narrative_freshness"] = narrative_freshness(
+        snap.get("market_narrative_as_of"), snap.get("generated_at"))
 
     snapshot_path.write_text(json.dumps(snap, indent=2, default=str))
 

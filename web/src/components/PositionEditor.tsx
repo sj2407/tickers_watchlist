@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usd } from "@/lib/format";
+import { usd, num } from "@/lib/format";
 import { recordTrade } from "@/app/actions";
 
 // Only the fields the editor reads — satisfied by both Position and LivePos.
@@ -39,6 +39,14 @@ export default function PositionEditor({
   const [amount, setAmount] = useState(200);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // A prominent, self-dismissing confirmation of the last trade (so a fill is an
+  // *event*, not a silent number change you have to hunt for).
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 7000);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   const shares = position.shares ?? 0;
   const value = position.market_value ?? (lastPrice ? shares * lastPrice : 0);
@@ -62,24 +70,46 @@ export default function PositionEditor({
     const res = await recordTrade({ ticker, side, shares: +dShares.toFixed(6), price: lastPrice, note: `${side} $${amount} via app` });
     setBusy(false);
     if (res.ok) {
-      setMsg(`${side === "buy" ? "Added" : "Trimmed"} ${usd(amount, 0)}. Your position and book value updated.`);
+      const p = res.position;
+      const posPart = p && p.shares > 0
+        ? `Position now ${num(p.shares, 2)} sh${p.avg_cost != null ? `, avg cost ${usd(p.avg_cost)}` : ""}.`
+        : "Position fully closed.";
+      setToast(`${side === "buy" ? "Added" : "Trimmed"} ${usd(amount, 0)} · ${num(+dShares.toFixed(4), 4)} sh @ ${usd(lastPrice!)}. ${posPart}`);
+      setMsg(null);
       router.refresh();
     } else {
       setMsg(res.error ? `Save failed: ${res.error}` : "Save failed.");
     }
   }
 
+  // Fixed, dismissible confirmation shown after a fill — survives the router.refresh()
+  // (client state is preserved) and auto-hides. Rendered from both editor states.
+  const toastEl = toast ? (
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-in fade-in slide-in-from-bottom-2">
+      <div className="flex items-start gap-3 rounded-xl bg-zinc-900 p-3 text-sm text-zinc-100 shadow-lg ring-1 ring-emerald-500/40">
+        <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-emerald-500/20 text-[11px] text-emerald-300">✓</span>
+        <p className="leading-snug">{toast}</p>
+        <button onClick={() => setToast(null)} className="ml-1 flex-none text-zinc-500 hover:text-zinc-300" aria-label="Dismiss">✕</button>
+      </div>
+    </div>
+  ) : null;
+
   if (!open) {
-    if (!showTrigger) return null;
+    if (!showTrigger) return toastEl;
     return (
-      <button onClick={() => setOpen(true)}
-        className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-200 ring-1 ring-zinc-700 hover:bg-zinc-700">
-        Trim / add
-      </button>
+      <>
+        {toastEl}
+        <button onClick={() => setOpen(true)}
+          className="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-200 ring-1 ring-zinc-700 hover:bg-zinc-700">
+          Trim / add
+        </button>
+      </>
     );
   }
 
   return (
+    <>
+    {toastEl}
     <div className="mt-3 space-y-3 rounded-xl bg-zinc-950/60 p-4 ring-1 ring-zinc-800">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-zinc-200">Trade {ticker}</span>
@@ -118,5 +148,6 @@ export default function PositionEditor({
       </div>
       {msg && <p className="text-xs text-zinc-300">{msg}</p>}
     </div>
+    </>
   );
 }

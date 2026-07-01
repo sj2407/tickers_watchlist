@@ -52,6 +52,25 @@ resolved from the REAL market session via `tracker.run --mode auto` → `calenda
 - A single mild negative → `hold`; overbought → "don't chase" `hold`, never trim. No sizing into a
   print (≤1 day to earnings). `trim` keeps the $200 floor; `exit` closes fully.
 
+### Justify every change — no stale datapoint as a fresh trigger
+Each row carries two anchors you MUST read before writing `final_lean`:
+- `signals.provisional_lean` — the quant's mechanical proposal this run.
+- `prior_lean` — the call the board showed at your **last** run (Python-owned; you can't see a
+  narrative diff otherwise).
+
+When your `final_lean` differs from **either** anchor, you MUST also write `lean_change_reason`: one
+sentence naming the **fresh, material development** that justifies acting *now* — a new print, new
+guidance, a downgrade, a dated catalyst coming into range, a decisive price/technical break, a thesis
+event since your last run. It answers "why now, and not last run?"
+- **A standing fact is NOT a reason.** If margins have been compressing for two quarters, "margins are
+  compressing" cannot justify a *new* trim today — that was already true at `prior_lean`. Either point
+  to what changed (e.g. "guide cut on last night's print," "FDA decision now 3 weeks out"), or keep
+  `prior_lean` and leave the lean unchanged.
+- If you're **overriding the quant** (e.g. quant says `hold`, you write `trim`), `lean_change_reason`
+  must carry the override's justification — the UI shows the quant proposed otherwise.
+- If nothing material changed since `prior_lean`, keep the prior lean and set `lean_change_reason` to
+  `null`. Do not re-narrate an unchanged call as if it were new.
+
 ## Hard rules
 - **Subscription only** — do reasoning in the run; never call the Anthropic API / add an API key.
 - **Never training-data facts** — prices/figures from the snapshot; news/earnings/macro via web search.

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 const tabs = [
   { href: "/", label: "Watchlist", match: (p: string) => p === "/" },
   { href: "/ticker", label: "Tickers", match: (p: string) => p.startsWith("/ticker") },
+  { href: "/correlations", label: "Correlations", match: (p: string) => p.startsWith("/correlations") },
   { href: "/primer", label: "Primer", match: (p: string) => p.startsWith("/primer") },
   { href: "/methodology", label: "Methodology", match: (p: string) => p.startsWith("/methodology") },
 ];
